@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import {
-    ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers
+    ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink
 } from '@lucide/vue';
 import GedcomAncestorNode from './GedcomAncestorNode.vue';
 import GedcomDescendantNode from './GedcomDescendantNode.vue';
@@ -20,6 +20,7 @@ const treeData = ref<any>(null);
 const zoomLevel = ref(1);
 const ancestorLevels = ref(2);
 const descendantLevels = ref(2);
+const isFullscreen = ref(false);
 
 const fetchTreeData = async (id: string) => {
     loading.value = true;
@@ -68,18 +69,68 @@ const zoomIn = () => {
 };
 
 const zoomOut = () => {
-    zoomLevel.value = Math.max(0.5, zoomLevel.value - 0.15);
+    zoomLevel.value = Math.max(0.4, zoomLevel.value - 0.15);
 };
 
 const resetZoom = () => {
     zoomLevel.value = 1;
 };
+
+const toggleFullscreen = () => {
+    isFullscreen.value = !isFullscreen.value;
+    if (isFullscreen.value) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+};
+
+const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isFullscreen.value) {
+        isFullscreen.value = false;
+        document.body.style.overflow = '';
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = '';
+});
 </script>
 
 <template>
-    <div class="relative bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl min-h-[680px] flex flex-col">
+    <div
+        :class="[
+            'transition-all duration-300 flex flex-col',
+            isFullscreen
+                ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-950 border-none p-0 shadow-none'
+                : 'relative bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl min-h-[750px] h-[82vh]'
+        ]"
+    >
         <!-- Floating Tree Controls Bar -->
-        <div class="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-3 bg-slate-900/90 backdrop-blur-md p-2.5 rounded-2xl border border-slate-800 shadow-xl">
+        <div
+            :class="[
+                'absolute z-20 flex flex-wrap items-center gap-3 bg-slate-900/90 backdrop-blur-md p-2.5 rounded-2xl border border-slate-800 shadow-xl',
+                isFullscreen ? 'top-6 left-6' : 'top-4 left-4'
+            ]"
+        >
+            <!-- Full Screen Toggle Button -->
+            <button
+                @click="toggleFullscreen"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
+                :title="isFullscreen ? 'Exit Full Screen (Esc)' : 'Expand to Full Screen'"
+            >
+                <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
+                <Expand v-else class="w-3.5 h-3.5" />
+                <span>{{ isFullscreen ? 'Exit Full Screen' : 'Full Screen' }}</span>
+            </button>
+
+            <div class="h-4 w-px bg-slate-800"></div>
+
             <!-- Zoom controls -->
             <div class="flex items-center gap-1">
                 <button
@@ -150,7 +201,7 @@ const resetZoom = () => {
         </div>
 
         <!-- Tree Canvas -->
-        <div class="flex-1 overflow-auto p-12 flex items-center justify-center cursor-grab active:cursor-grabbing">
+        <div class="flex-1 overflow-auto p-16 sm:p-24 flex items-center justify-center cursor-grab active:cursor-grabbing select-none">
             <div
                 v-if="loading"
                 class="flex flex-col items-center justify-center py-20 text-slate-400"
@@ -161,16 +212,16 @@ const resetZoom = () => {
 
             <div
                 v-else-if="treeData"
-                class="transition-transform duration-200 ease-out origin-center flex flex-col items-center gap-12"
+                class="transition-transform duration-200 ease-out origin-center flex flex-col items-center gap-14 py-8 px-12"
                 :style="{ transform: `scale(${zoomLevel})` }"
             >
                 <!-- Ancestors Section (Top) -->
                 <div v-if="ancestorLevels > 0 && treeData.ancestors && treeData.ancestors.parents && treeData.ancestors.parents.length > 0" class="flex flex-col items-center gap-6">
-                    <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-950/80 px-3 py-1 rounded-full border border-indigo-800/50">
+                    <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-950/80 px-3.5 py-1 rounded-full border border-indigo-800/50 shadow-md">
                         {{ ancestorBadgeLabel }}
                     </span>
 
-                    <div class="flex items-start gap-8">
+                    <div class="flex items-start gap-8 sm:gap-12">
                         <GedcomAncestorNode
                             v-for="parent in treeData.ancestors.parents"
                             :key="parent.id"
@@ -216,11 +267,11 @@ const resetZoom = () => {
 
                 <!-- Descendants Section (Bottom) -->
                 <div v-if="descendantLevels > 0 && treeData.descendants && treeData.descendants.children && treeData.descendants.children.length > 0" class="flex flex-col items-center gap-6">
-                    <span class="text-[11px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800/50">
+                    <span class="text-[11px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950/80 px-3.5 py-1 rounded-full border border-emerald-800/50 shadow-md">
                         {{ descendantBadgeLabel }}
                     </span>
 
-                    <div class="flex flex-wrap justify-center items-start gap-8">
+                    <div class="flex flex-wrap justify-center items-start gap-8 sm:gap-12">
                         <GedcomDescendantNode
                             v-for="child in treeData.descendants.children"
                             :key="child.id"
