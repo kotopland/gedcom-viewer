@@ -25,9 +25,10 @@ const props = defineProps<{
         top_surnames: Record<string, number>;
     };
     rootPersonId: string | null;
+    defaultTab?: 'directory' | 'tree' | 'media';
 }>();
 
-const activeTab = ref<'directory' | 'tree' | 'media'>('directory');
+const activeTab = ref<'directory' | 'tree' | 'media'>(props.defaultTab || 'directory');
 const selectedPersonId = ref<string | null>(null);
 const currentRootPersonId = ref<string | null>(props.rootPersonId);
 const isReimporting = ref(false);

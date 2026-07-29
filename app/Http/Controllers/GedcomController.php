@@ -15,21 +15,66 @@ class GedcomController extends Controller
     {
         $data = $parser->getOrParseData();
 
-        // Pick a good root person (e.g., someone named Family or Smith with media)
+        $envPerson = trim((string) (
+            env('GEDCOM_START_PERSON') ?:
+            env('GEDCOM_ROOT_PERSON') ?:
+            env('GEDCOM_DEFAULT_PERSON') ?:
+            env('GEDCOM_DEFAULT_PERSON_ID') ?:
+            env('GEDCOM_DEFAULT_PERSON_NAME') ?:
+            env('GEDCOM_PERSON_ID') ?:
+            env('GEDCOM_PERSON_NAME') ?:
+            env('GEDCOM_PERSON') ?: ''
+        ));
+
         $rootPersonId = null;
-        foreach ($data['individuals'] as $id => $ind) {
-            if ($rootPersonId === null) {
-                $rootPersonId = $id;
+        $hasEnvDefault = false;
+
+        if ($envPerson !== '') {
+            $cleanEnvId = trim($envPerson, '@');
+            if (isset($data['individuals'][$cleanEnvId])) {
+                $rootPersonId = $cleanEnvId;
+                $hasEnvDefault = true;
+            } else {
+                // Try searching by name (exact match first, then partial match)
+                $envLower = strtolower($envPerson);
+                $partialMatchId = null;
+
+                foreach ($data['individuals'] as $id => $ind) {
+                    $indNameLower = strtolower($ind['name'] ?? '');
+                    if ($indNameLower === $envLower) {
+                        $rootPersonId = $id;
+                        $hasEnvDefault = true;
+                        break;
+                    }
+                    if ($partialMatchId === null && str_contains($indNameLower, $envLower)) {
+                        $partialMatchId = $id;
+                    }
+                }
+
+                if (!$rootPersonId && $partialMatchId !== null) {
+                    $rootPersonId = $partialMatchId;
+                    $hasEnvDefault = true;
+                }
             }
-            if ($ind['primary_media'] !== null && (str_contains(strtolower($ind['surname']), 'topland') || str_contains(strtolower($ind['surname']), 'mikaelsen'))) {
-                $rootPersonId = $id;
-                break;
+        }
+
+        // Fallback if no env variable or match found
+        if ($rootPersonId === null) {
+            foreach ($data['individuals'] as $id => $ind) {
+                if ($rootPersonId === null) {
+                    $rootPersonId = $id;
+                }
+                if ($ind['primary_media'] !== null && (str_contains(strtolower($ind['surname']), 'topland') || str_contains(strtolower($ind['surname']), 'mikaelsen'))) {
+                    $rootPersonId = $id;
+                    break;
+                }
             }
         }
 
         return Inertia::render('Gedcom/Index', [
             'stats' => $data['stats'],
             'rootPersonId' => $rootPersonId,
+            'defaultTab' => $hasEnvDefault ? 'tree' : 'directory',
         ]);
     }
 
