@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import {
-    ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink
+    ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink,
+    SlidersHorizontal, ChevronRight, ChevronLeft
 } from '@lucide/vue';
 import GedcomAncestorNode from './GedcomAncestorNode.vue';
 import GedcomDescendantNode from './GedcomDescendantNode.vue';
@@ -21,6 +22,7 @@ const zoomLevel = ref(1);
 const ancestorLevels = ref(2);
 const descendantLevels = ref(2);
 const isFullscreen = ref(false);
+const isControlsCollapsed = ref(true);
 
 const fetchTreeData = async (id: string) => {
     loading.value = true;
@@ -114,89 +116,135 @@ onUnmounted(() => {
         <!-- Floating Tree Controls Bar -->
         <div
             :class="[
-                'absolute z-20 flex flex-wrap items-center gap-3 bg-slate-900/90 backdrop-blur-md p-2.5 rounded-2xl border border-slate-800 shadow-xl',
+                'absolute z-20 transition-all duration-300',
                 isFullscreen ? 'top-6 left-6' : 'top-4 left-4'
             ]"
         >
-            <!-- Full Screen Toggle Button -->
-            <button
-                @click="toggleFullscreen"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
-                :title="isFullscreen ? 'Exit Full Screen (Esc)' : 'Expand to Full Screen'"
+            <!-- Minimized / Collapsed Controls Pill -->
+            <div
+                v-if="isControlsCollapsed"
+                class="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-xl"
             >
-                <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
-                <Expand v-else class="w-3.5 h-3.5" />
-                <span>{{ isFullscreen ? 'Exit Full Screen' : 'Full Screen' }}</span>
-            </button>
+                <button
+                    @click="isControlsCollapsed = false"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                    title="Expand Tree Controls & Settings"
+                >
+                    <SlidersHorizontal class="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                    <span>Controls</span>
+                    <span class="text-[10px] text-slate-400 font-medium px-1 bg-slate-700/60 rounded-md">
+                        {{ Math.round(zoomLevel * 100) }}%
+                    </span>
+                    <ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                </button>
 
-            <div class="h-4 w-px bg-slate-800"></div>
-
-            <!-- Zoom controls -->
-            <div class="flex items-center gap-1">
                 <button
-                    @click="zoomIn"
-                    class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                    title="Zoom In"
+                    @click="toggleFullscreen"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-extrabold transition-all shadow-xs active:scale-95 cursor-pointer"
+                    :title="isFullscreen ? 'Exit Full Screen (Esc)' : 'Full Screen'"
                 >
-                    <ZoomIn class="w-4 h-4" />
+                    <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
+                    <Expand v-else class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">{{ isFullscreen ? 'Exit' : 'Full Screen' }}</span>
                 </button>
-                <button
-                    @click="zoomOut"
-                    class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                    title="Zoom Out"
-                >
-                    <ZoomOut class="w-4 h-4" />
-                </button>
-                <button
-                    @click="resetZoom"
-                    class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                    title="Reset Zoom"
-                >
-                    <Maximize2 class="w-4 h-4" />
-                </button>
-                <span class="text-xs font-semibold text-slate-400 px-1">
-                    {{ Math.round(zoomLevel * 100) }}%
-                </span>
             </div>
 
-            <div class="h-4 w-px bg-slate-800"></div>
-
-            <!-- Ancestor levels dropdown -->
-            <div class="flex items-center gap-2">
-                <label class="text-xs font-medium text-slate-400 flex items-center gap-1">
-                    <Layers class="w-3.5 h-3.5 text-indigo-400" />
-                    Ancestors:
-                </label>
-                <select
-                    v-model.number="ancestorLevels"
-                    class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
+            <!-- Expanded Controls Bar -->
+            <div
+                v-else
+                class="flex flex-wrap items-center gap-3 bg-slate-900/95 backdrop-blur-md p-2.5 rounded-2xl border border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            >
+                <!-- Full Screen Toggle Button -->
+                <button
+                    @click="toggleFullscreen"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
+                    :title="isFullscreen ? 'Exit Full Screen (Esc)' : 'Expand to Full Screen'"
                 >
-                    <option :value="0">0 (Hide)</option>
-                    <option :value="1">1 (Parents)</option>
-                    <option :value="2">2 (Grandparents)</option>
-                    <option :value="3">3 (Gt-Grandparents)</option>
-                    <option :value="4">4 Generations</option>
-                    <option :value="5">5 Generations</option>
-                </select>
-            </div>
+                    <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
+                    <Expand v-else class="w-3.5 h-3.5" />
+                    <span>{{ isFullscreen ? 'Exit Full Screen' : 'Full Screen' }}</span>
+                </button>
 
-            <!-- Descendant levels dropdown -->
-            <div class="flex items-center gap-2">
-                <label class="text-xs font-medium text-slate-400 flex items-center gap-1">
-                    <Layers class="w-3.5 h-3.5 text-emerald-400" />
-                    Descendants:
-                </label>
-                <select
-                    v-model.number="descendantLevels"
-                    class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:outline-hidden focus:border-emerald-500 transition-colors cursor-pointer"
+                <div class="h-4 w-px bg-slate-800"></div>
+
+                <!-- Zoom controls -->
+                <div class="flex items-center gap-1">
+                    <button
+                        @click="zoomIn"
+                        class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                        title="Zoom In"
+                    >
+                        <ZoomIn class="w-4 h-4" />
+                    </button>
+                    <button
+                        @click="zoomOut"
+                        class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                        title="Zoom Out"
+                    >
+                        <ZoomOut class="w-4 h-4" />
+                    </button>
+                    <button
+                        @click="resetZoom"
+                        class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                        title="Reset Zoom"
+                    >
+                        <Maximize2 class="w-4 h-4" />
+                    </button>
+                    <span class="text-xs font-semibold text-slate-400 px-1">
+                        {{ Math.round(zoomLevel * 100) }}%
+                    </span>
+                </div>
+
+                <div class="h-4 w-px bg-slate-800"></div>
+
+                <!-- Ancestor levels dropdown -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <Layers class="w-3.5 h-3.5 text-indigo-400" />
+                        Ancestors:
+                    </label>
+                    <select
+                        v-model.number="ancestorLevels"
+                        class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
+                    >
+                        <option :value="0">0 (Hide)</option>
+                        <option :value="1">1 (Parents)</option>
+                        <option :value="2">2 (Grandparents)</option>
+                        <option :value="3">3 (Gt-Grandparents)</option>
+                        <option :value="4">4 Generations</option>
+                        <option :value="5">5 Generations</option>
+                    </select>
+                </div>
+
+                <!-- Descendant levels dropdown -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <Layers class="w-3.5 h-3.5 text-emerald-400" />
+                        Descendants:
+                    </label>
+                    <select
+                        v-model.number="descendantLevels"
+                        class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:outline-hidden focus:border-emerald-500 transition-colors cursor-pointer"
+                    >
+                        <option :value="0">0 (Hide)</option>
+                        <option :value="1">1 (Children)</option>
+                        <option :value="2">2 (Grandchildren)</option>
+                        <option :value="3">3 (Gt-Grandchildren)</option>
+                        <option :value="4">4 Generations</option>
+                        <option :value="5">5 Generations</option>
+                    </select>
+                </div>
+
+                <div class="h-4 w-px bg-slate-800"></div>
+
+                <!-- Minimize Button -->
+                <button
+                    @click="isControlsCollapsed = true"
+                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="Minimize Controls"
                 >
-                    <option :value="0">0 (Hide)</option>
-                    <option :value="1">1 (Children)</option>
-                    <option :value="2">2 (Grandchildren)</option>
-                    <option :value="3">3 (Gt-Grandchildren)</option>
-                    <option :value="4">4 Generations</option>
-                    <option :value="5">5 Generations</option>
-                </select>
+                    <ChevronLeft class="w-4 h-4" />
+                </button>
             </div>
         </div>
 

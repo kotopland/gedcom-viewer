@@ -2,8 +2,7 @@
 import { ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import {
-    Users, Heart, Image as ImageIcon, FileCode, Music, GitBranch,
-    Search, FolderArchive, ArrowLeft, RefreshCw
+    Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw
 } from '@lucide/vue';
 import { router } from '@inertiajs/vue3';
 
@@ -138,65 +137,6 @@ const changeRootPerson = (id: string) => {
         </header>
 
         <main :class="activeTab === 'tree' ? 'max-w-[96rem] mx-auto px-2 sm:px-4 lg:px-6 py-6 space-y-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8'">
-            <!-- Summary Stats Banner -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
-                        <Users class="w-6 h-6" />
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-white tracking-tight">
-                            {{ stats.total_individuals.toLocaleString() }}
-                        </div>
-                        <div class="text-xs font-semibold text-slate-400 mt-0.5">
-                            Total Relatives
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center shrink-0 border border-pink-500/20">
-                        <Heart class="w-6 h-6" />
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-white tracking-tight">
-                            {{ stats.total_families.toLocaleString() }}
-                        </div>
-                        <div class="text-xs font-semibold text-slate-400 mt-0.5">
-                            Family Units
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                        <ImageIcon class="w-6 h-6" />
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-white tracking-tight">
-                            {{ stats.media_types.photos.toLocaleString() }}
-                        </div>
-                        <div class="text-xs font-semibold text-slate-400 mt-0.5">
-                            Linked Photos
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
-                        <FileCode class="w-6 h-6" />
-                    </div>
-                    <div>
-                        <div class="text-2xl font-extrabold text-white tracking-tight">
-                            {{ (stats.media_types.documents + stats.media_types.audio).toLocaleString() }}
-                        </div>
-                        <div class="text-xs font-semibold text-slate-400 mt-0.5">
-                            PDFs & Audio Recordings
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Active View Container -->
             <div>
                 <!-- Directory View -->

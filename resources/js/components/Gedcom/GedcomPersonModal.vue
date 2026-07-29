@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import {
     X, User, Calendar, MapPin, Heart, Users, FileText, Image as ImageIcon,
     FileCode, Music, Volume2, Download, ExternalLink, ChevronRight,
@@ -45,6 +45,20 @@ watch(() => props.personId, (newId) => {
         personData.value = null;
     }
 }, { immediate: true });
+
+const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && props.personId) {
+        emit('close');
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+});
 
 const getGenderColor = (sex: string) => {
     if (sex === 'M') return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800';
@@ -93,14 +107,21 @@ const getEventBadgeStyle = (tag: string) => {
 </script>
 
 <template>
-    <div v-if="personId" class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end transition-opacity">
-        <div class="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl min-h-screen flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300">
+    <div
+        v-if="personId"
+        @click="emit('close')"
+        class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end transition-opacity cursor-pointer"
+    >
+        <div
+            @click.stop
+            class="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl min-h-screen flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300 cursor-default"
+        >
             <!-- Header section -->
             <div class="relative bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-6 pb-8 border-b border-slate-800">
                 <button
                     @click="emit('close')"
                     class="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
-                    title="Close"
+                    title="Close (Esc)"
                 >
                     <X class="w-5 h-5" />
                 </button>
