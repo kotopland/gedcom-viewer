@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
     ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink,
     SlidersHorizontal, ChevronRight, ChevronLeft
@@ -23,6 +23,30 @@ const ancestorLevels = ref(2);
 const descendantLevels = ref(2);
 const isFullscreen = ref(false);
 const isControlsCollapsed = ref(true);
+const canvasContainerRef = ref<HTMLElement | null>(null);
+
+const centerScroll = () => {
+    if (canvasContainerRef.value) {
+        const { scrollWidth, clientWidth } = canvasContainerRef.value;
+        if (scrollWidth > clientWidth) {
+            canvasContainerRef.value.scrollLeft = (scrollWidth - clientWidth) / 2;
+        }
+    }
+};
+
+// Auto-adjust zoom scale whenever generation depth changes to fit entire tree on screen
+watch([ancestorLevels, descendantLevels], ([aL, dL]) => {
+    const maxL = Math.max(aL, dL);
+    if (maxL <= 2) {
+        zoomLevel.value = 1.0;
+    } else if (maxL === 3) {
+        zoomLevel.value = 0.85;
+    } else if (maxL === 4) {
+        zoomLevel.value = 0.65;
+    } else if (maxL >= 5) {
+        zoomLevel.value = 0.50;
+    }
+});
 
 const fetchTreeData = async (id: string) => {
     loading.value = true;
@@ -30,6 +54,8 @@ const fetchTreeData = async (id: string) => {
         const res = await fetch(`/api/gedcom/tree/${id}?ancestors=${ancestorLevels.value}&descendants=${descendantLevels.value}`);
         if (res.ok) {
             treeData.value = await res.json();
+            await nextTick();
+            setTimeout(centerScroll, 60);
         }
     } catch (e) {
         console.error('Failed to fetch tree data:', e);
@@ -71,11 +97,15 @@ const zoomIn = () => {
 };
 
 const zoomOut = () => {
-    zoomLevel.value = Math.max(0.4, zoomLevel.value - 0.15);
+    zoomLevel.value = Math.max(0.3, zoomLevel.value - 0.15);
 };
 
 const resetZoom = () => {
-    zoomLevel.value = 1;
+    const maxL = Math.max(ancestorLevels.value, descendantLevels.value);
+    if (maxL <= 2) zoomLevel.value = 1.0;
+    else if (maxL === 3) zoomLevel.value = 0.85;
+    else if (maxL === 4) zoomLevel.value = 0.65;
+    else zoomLevel.value = 0.50;
 };
 
 const toggleFullscreen = () => {
@@ -85,6 +115,7 @@ const toggleFullscreen = () => {
     } else {
         document.body.style.overflow = '';
     }
+    setTimeout(centerScroll, 100);
 };
 
 const handleKeyDown = (e: KeyboardEvent) => {
@@ -249,10 +280,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Tree Canvas -->
-        <div class="flex-1 overflow-auto p-16 sm:p-24 flex items-center justify-center cursor-grab active:cursor-grabbing select-none">
+        <div
+            ref="canvasContainerRef"
+            class="flex-1 overflow-auto flex cursor-grab active:cursor-grabbing select-none"
+        >
             <div
                 v-if="loading"
-                class="flex flex-col items-center justify-center py-20 text-slate-400"
+                class="m-auto flex flex-col items-center justify-center py-20 text-slate-400"
             >
                 <div class="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                 <p class="mt-4 text-xs font-semibold text-slate-300">Rendering visual tree graph...</p>
@@ -260,7 +294,7 @@ onUnmounted(() => {
 
             <div
                 v-else-if="treeData"
-                class="transition-transform duration-200 ease-out origin-center flex flex-col items-center gap-14 py-8 px-12"
+                class="m-auto min-w-max p-16 sm:p-24 transition-transform duration-200 ease-out origin-top flex flex-col items-center gap-14"
                 :style="{ transform: `scale(${zoomLevel})` }"
             >
                 <!-- Ancestors Section (Top) -->
@@ -269,12 +303,13 @@ onUnmounted(() => {
                         {{ ancestorBadgeLabel }}
                     </span>
 
-                    <div class="flex items-start gap-8 sm:gap-12">
+                    <div class="flex items-start gap-4 sm:gap-6">
                         <GedcomAncestorNode
-                            v-for="parent in treeData.ancestors.parents"
+                            v-for="(parent, idx) in treeData.ancestors.parents"
                             :key="parent.id"
                             :person="parent"
                             :level="1"
+                            :parent-index="idx"
                             @select-person="emit('select-person', $event)"
                             @change-root="emit('change-root', $event)"
                         />
@@ -319,7 +354,7 @@ onUnmounted(() => {
                         {{ descendantBadgeLabel }}
                     </span>
 
-                    <div class="flex flex-wrap justify-center items-start gap-8 sm:gap-12">
+                    <div class="flex flex-wrap justify-center items-start gap-4 sm:gap-6">
                         <GedcomDescendantNode
                             v-for="child in treeData.descendants.children"
                             :key="child.id"
