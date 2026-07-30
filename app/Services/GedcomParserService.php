@@ -38,7 +38,7 @@ class GedcomParserService
                 return $dir;
             }
 
-            return storage_path('app/private/Family tree of Family & Smith.zip');
+            return $dir;
         }
 
         // Return the most recently modified zip file

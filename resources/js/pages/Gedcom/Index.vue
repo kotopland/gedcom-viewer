@@ -67,7 +67,7 @@ const changeRootPerson = (id: string) => {
 </script>
 
 <template>
-    <Head title="Family Tree Archive - Family & Smith" />
+    <Head title="Family Tree Archive" />
 
     <div class="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
         <!-- Main Top Bar -->
@@ -87,10 +87,10 @@ const changeRootPerson = (id: string) => {
                         </div>
                         <div>
                             <h1 class="text-sm font-extrabold tracking-tight text-white leading-none">
-                                Family & Smith
+                                Family Tree Archive
                             </h1>
                             <p class="text-[11px] font-medium text-indigo-400 mt-0.5">
-                                MacFamilyTree 11 GEDCOM Archive
+                                GEDCOM Genealogy Viewer
                             </p>
                         </div>
                     </div>

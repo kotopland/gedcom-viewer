@@ -64,7 +64,7 @@ class GedcomController extends Controller
                 if ($rootPersonId === null) {
                     $rootPersonId = $id;
                 }
-                if ($ind['primary_media'] !== null && (str_contains(strtolower($ind['surname']), 'topland') || str_contains(strtolower($ind['surname']), 'mikaelsen'))) {
+                if ($ind['primary_media'] !== null) {
                     $rootPersonId = $id;
                     break;
                 }
