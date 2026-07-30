@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\GedcomController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
@@ -9,7 +10,12 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'superuser.verified'])->group(function () {
-    Route::inertia('/', 'Welcome')->name('home');
+    Route::get('/', function (Request $request) {
+        if ($request->user()->isSuperuser()) {
+            return redirect()->route('dashboard');
+        }
+        return redirect()->route('gedcom.index');
+    })->name('home');
 
     Route::get('/gedcom', [GedcomController::class, 'index'])->name('gedcom.index');
     Route::get('/storage/gedcom/media/{filename}', [GedcomController::class, 'serveMedia'])->where('filename', '.*')->name('gedcom.storage.media');
@@ -20,19 +26,22 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
         Route::get('/person/{id}', [GedcomController::class, 'person'])->name('gedcom.api.person');
         Route::get('/tree/{id}', [GedcomController::class, 'tree'])->name('gedcom.api.tree');
         Route::get('/media', [GedcomController::class, 'media'])->name('gedcom.api.media');
-        Route::match(['get', 'post'], '/reimport', [GedcomController::class, 'reimport'])->name('gedcom.api.reimport');
     });
-
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
 });
 
-Route::middleware(['auth', 'superuser.verified', 'superuser'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::patch('/users/{user}/verify', [UserController::class, 'verify'])->name('users.verify');
-    Route::patch('/users/{user}/unverify', [UserController::class, 'unverify'])->name('users.unverify');
-    Route::patch('/users/{user}/toggle-superuser', [UserController::class, 'toggleSuperuser'])->name('users.toggle-superuser');
-    Route::patch('/users/{user}/start-person', [UserController::class, 'updateStartPerson'])->name('users.start-person');
-    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+// Admin / Superuser-only routes
+Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function () {
+    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::post('/api/gedcom/reimport', [GedcomController::class, 'reimport'])->name('gedcom.api.reimport');
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::patch('/users/{user}/verify', [UserController::class, 'verify'])->name('users.verify');
+        Route::patch('/users/{user}/unverify', [UserController::class, 'unverify'])->name('users.unverify');
+        Route::patch('/users/{user}/toggle-superuser', [UserController::class, 'toggleSuperuser'])->name('users.toggle-superuser');
+        Route::patch('/users/{user}/start-person', [UserController::class, 'updateStartPerson'])->name('users.start-person');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    });
 });
 
 require __DIR__.'/settings.php';

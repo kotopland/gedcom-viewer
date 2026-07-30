@@ -18,7 +18,11 @@ class EnsureSuperuser
         $user = $request->user();
 
         if (! $user || ! $user->isSuperuser()) {
-            abort(403, 'Unauthorized. Superuser access required.');
+            if ($request->expectsJson()) {
+                abort(403, 'Unauthorized. Superuser access required.');
+            }
+
+            return redirect()->route('gedcom.index');
         }
 
         return $next($request);

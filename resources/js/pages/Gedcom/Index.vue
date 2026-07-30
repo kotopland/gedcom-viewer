@@ -99,16 +99,6 @@ const changeRootPerson = (id: string) => {
                             </p>
                         </div>
                     </div>
-
-                    <button
-                        @click="reimportArchive"
-                        :disabled="isReimporting"
-                        class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-semibold transition-colors border border-slate-700 shadow-xs ml-1"
-                        title="Wipe old media and re-import active ZIP file"
-                    >
-                        <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isReimporting }" />
-                        {{ isReimporting ? 'Re-importing...' : 'Re-import ZIP' }}
-                    </button>
                 </div>
 
                 <!-- Navigation Tabs -->

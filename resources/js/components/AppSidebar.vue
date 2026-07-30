@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { usePage, Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, Users } from '@lucide/vue';
+import { BookOpen, FolderGit2, LayoutGrid, Users, FolderArchive } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -20,24 +20,29 @@ import type { NavItem } from '@/types';
 import type { User } from '@/types/auth';
 
 const page = usePage();
+const currentUser = computed(() => page.props.auth?.user as User | undefined);
 
 const mainNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [
-        {
+    const items: NavItem[] = [];
+
+    if (currentUser.value?.is_superuser) {
+        items.push({
             title: 'Dashboard',
             href: dashboard(),
             icon: LayoutGrid,
-        },
-    ];
-
-    const user = page.props.auth?.user as User | undefined;
-    if (user?.is_superuser) {
+        });
         items.push({
             title: 'User Management',
             href: '/admin/users',
             icon: Users,
         });
     }
+
+    items.push({
+        title: 'Family Tree Archive',
+        href: '/gedcom',
+        icon: FolderArchive,
+    });
 
     return items;
 });
@@ -62,7 +67,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="currentUser?.is_superuser ? dashboard() : '/gedcom'">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

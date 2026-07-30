@@ -21,7 +21,29 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\Laravel\Fortify\Contracts\LoginResponse::class, function () {
+            return new class implements \Laravel\Fortify\Contracts\LoginResponse {
+                public function toResponse($request)
+                {
+                    $user = $request->user();
+                    $target = ($user && $user->isSuperuser()) ? '/dashboard' : '/gedcom';
+
+                    return redirect()->intended($target);
+                }
+            };
+        });
+
+        $this->app->singleton(\Laravel\Fortify\Contracts\TwoFactorLoginResponse::class, function () {
+            return new class implements \Laravel\Fortify\Contracts\TwoFactorLoginResponse {
+                public function toResponse($request)
+                {
+                    $user = $request->user();
+                    $target = ($user && $user->isSuperuser()) ? '/dashboard' : '/gedcom';
+
+                    return redirect()->intended($target);
+                }
+            };
+        });
     }
 
     /**
