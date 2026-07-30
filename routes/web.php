@@ -31,6 +31,7 @@ Route::middleware(['auth', 'superuser.verified', 'superuser'])->prefix('admin')-
     Route::patch('/users/{user}/verify', [UserController::class, 'verify'])->name('users.verify');
     Route::patch('/users/{user}/unverify', [UserController::class, 'unverify'])->name('users.unverify');
     Route::patch('/users/{user}/toggle-superuser', [UserController::class, 'toggleSuperuser'])->name('users.toggle-superuser');
+    Route::patch('/users/{user}/start-person', [UserController::class, 'updateStartPerson'])->name('users.start-person');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 });
 

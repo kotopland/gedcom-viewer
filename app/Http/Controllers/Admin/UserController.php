@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\GedcomParserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,15 +15,28 @@ class UserController extends Controller
     /**
      * Display a listing of all users.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, GedcomParserService $parser): Response
     {
         $users = User::query()
-            ->select(['id', 'name', 'email', 'is_superuser', 'is_verified', 'created_at', 'updated_at'])
+            ->select(['id', 'name', 'email', 'is_superuser', 'is_verified', 'start_person_id', 'created_at', 'updated_at'])
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $data = $parser->getOrParseData();
+        $individuals = [];
+        foreach ($data['individuals'] as $ind) {
+            $individuals[] = [
+                'id' => $ind['id'],
+                'name' => $ind['name'],
+                'birth_year' => $ind['birth_year'],
+            ];
+        }
+
+        usort($individuals, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
+
         return Inertia::render('Admin/Users', [
             'users' => $users,
+            'individuals' => $individuals,
         ]);
     }
 
@@ -72,6 +86,22 @@ class UserController extends Controller
             : "Superuser privileges removed for {$user->email}.";
 
         return back()->with('status', $statusMessage);
+    }
+
+    /**
+     * Update the start person for the specified user.
+     */
+    public function updateStartPerson(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'start_person_id' => ['nullable', 'string'],
+        ]);
+
+        $user->update([
+            'start_person_id' => $validated['start_person_id'] ?: null,
+        ]);
+
+        return back()->with('status', "Start person for {$user->email} has been updated.");
     }
 
     /**

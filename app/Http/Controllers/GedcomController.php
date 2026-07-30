@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\GedcomParserService;
+use App\Services\LineagePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
@@ -11,9 +12,22 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class GedcomController extends Controller
 {
-    public function index(GedcomParserService $parser): InertiaResponse
+    public function index(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService): InertiaResponse
     {
         $data = $parser->getOrParseData();
+        $user = $request->user();
+
+        $rootPersonId = null;
+        $hasEnvDefault = false;
+
+        // Check if user has an assigned start_person_id
+        if ($user && !$user->isSuperuser() && !empty($user->start_person_id)) {
+            $cleanUserStartId = trim($user->start_person_id, '@');
+            if (isset($data['individuals'][$cleanUserStartId])) {
+                $rootPersonId = $cleanUserStartId;
+                $hasEnvDefault = true;
+            }
+        }
 
         $envPerson = trim((string) (
             env('GEDCOM_START_PERSON') ?:
@@ -26,10 +40,7 @@ class GedcomController extends Controller
             env('GEDCOM_PERSON') ?: ''
         ));
 
-        $rootPersonId = null;
-        $hasEnvDefault = false;
-
-        if ($envPerson !== '') {
+        if ($rootPersonId === null && $envPerson !== '') {
             $cleanEnvId = trim($envPerson, '@');
             if (isset($data['individuals'][$cleanEnvId])) {
                 $rootPersonId = $cleanEnvId;
@@ -89,9 +100,12 @@ class GedcomController extends Controller
     }
 
 
-    public function search(Request $request, GedcomParserService $parser)
+    public function search(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
     {
         $data = $parser->getOrParseData($request->boolean('refresh'));
+
+        $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
+        $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
 
         $q = strtolower(trim($request->input('q', '')));
         $surnameFilter = strtolower(trim($request->input('surname', '')));
@@ -104,6 +118,9 @@ class GedcomController extends Controller
 
         $filtered = [];
         foreach ($data['individuals'] as $ind) {
+            if ($allowedMap !== null && !isset($allowedMap[$ind['id']])) {
+                continue;
+            }
             if ($q !== '') {
                 $nameMatch = str_contains(strtolower($ind['name']), $q);
                 $placeMatch = str_contains(strtolower($ind['birth_place']), $q) || str_contains(strtolower($ind['death_place']), $q);
@@ -182,18 +199,24 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function person(string $id, GedcomParserService $parser)
+    public function person(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService)
     {
         $data = $parser->getOrParseData();
 
-        if (!isset($data['individuals'][$id])) {
+        $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
+        $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
+
+        if (!isset($data['individuals'][$id]) || ($allowedMap !== null && !isset($allowedMap[$id]))) {
             return response()->json(['error' => 'Person not found'], 404);
         }
 
         $ind = $data['individuals'][$id];
 
         // Format compact relation helper
-        $formatMini = function (string $relId) use ($data) {
+        $formatMini = function (string $relId) use ($data, $allowedMap) {
+            if ($allowedMap !== null && !isset($allowedMap[$relId])) {
+                return null;
+            }
             if (!isset($data['individuals'][$relId])) {
                 return ['id' => $relId, 'name' => 'Unknown'];
             }
@@ -208,10 +231,12 @@ class GedcomController extends Controller
             ];
         };
 
-        $parents = array_map($formatMini, $ind['parents']);
-        $spouses = array_map($formatMini, $ind['spouses']);
-        $children = array_map($formatMini, $ind['children']);
-        $siblings = array_map($formatMini, $ind['siblings']);
+        $filterNull = fn (array $arr) => array_values(array_filter(array_map($formatMini, $arr), fn ($item) => $item !== null));
+
+        $parents = $filterNull($ind['parents']);
+        $spouses = $filterNull($ind['spouses']);
+        $children = $filterNull($ind['children']);
+        $siblings = $filterNull($ind['siblings']);
 
         $tagLabels = [
             'BIRT' => 'Birth',
@@ -485,11 +510,14 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function tree(Request $request, string $id, GedcomParserService $parser)
+    public function tree(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService)
     {
         $data = $parser->getOrParseData();
 
-        if (!isset($data['individuals'][$id])) {
+        $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
+        $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
+
+        if (!isset($data['individuals'][$id]) || ($allowedMap !== null && !isset($allowedMap[$id]))) {
             return response()->json(['error' => 'Person not found'], 404);
         }
 
@@ -499,8 +527,8 @@ class GedcomController extends Controller
         $ancestorMaxDepth = $ancestorLevels + 1;
         $descendantMaxDepth = $descendantLevels + 1;
 
-        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, $data, $ancestorMaxDepth) {
-            if ($depth >= $ancestorMaxDepth || !isset($data['individuals'][$personId])) {
+        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, $data, $ancestorMaxDepth, $allowedMap) {
+            if ($depth >= $ancestorMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
             }
 
@@ -526,8 +554,8 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth) {
-            if ($depth >= $descendantMaxDepth || !isset($data['individuals'][$personId])) {
+        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap) {
+            if ($depth >= $descendantMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
             }
 
@@ -558,9 +586,13 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function media(Request $request, GedcomParserService $parser)
+    public function media(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
     {
         $data = $parser->getOrParseData();
+
+        $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
+        $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
+
         $type = strtolower(trim($request->input('type', 'all')));
         $q = strtolower(trim($request->input('q', '')));
         $page = max(1, (int) $request->input('page', 1));
@@ -569,6 +601,9 @@ class GedcomController extends Controller
         // Build person linkage map for each media object
         $objectPeopleMap = [];
         foreach ($data['individuals'] as $ind) {
+            if ($allowedMap !== null && !isset($allowedMap[$ind['id']])) {
+                continue;
+            }
             foreach ($ind['media_ids'] as $mId) {
                 $objectPeopleMap[$mId][] = [
                     'id' => $ind['id'],

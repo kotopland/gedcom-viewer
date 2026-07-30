@@ -1,16 +1,24 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
-import { Shield, ShieldCheck, ShieldAlert, CheckCircle, XCircle, Trash2, UserCheck, UserX } from '@lucide/vue';
+import { Shield, ShieldCheck, ShieldAlert, CheckCircle, Trash2, UserCheck, UserX, UserPlus, UserMinus } from '@lucide/vue';
 import type { User } from '@/types/auth';
+
+type MiniIndividual = {
+    id: string;
+    name: string;
+    birth_year: number | null;
+};
 
 defineOptions({
     layout: AppLayout,
 });
 
-defineProps<{
+const props = defineProps<{
     users: User[];
+    individuals: MiniIndividual[];
 }>();
 
 const currentUser = usePage().props.auth.user as User;
@@ -27,10 +35,24 @@ const toggleSuperuser = (userId: number) => {
     router.patch(`/admin/users/${userId}/toggle-superuser`, {}, { preserveScroll: true });
 };
 
+const updateStartPerson = (userId: number, startPersonId: string | null) => {
+    router.patch(`/admin/users/${userId}/start-person`, {
+        start_person_id: startPersonId,
+    }, { preserveScroll: true });
+};
+
 const deleteUser = (userId: number) => {
     if (confirm('Are you sure you want to delete this user?')) {
         router.delete(`/admin/users/${userId}`, { preserveScroll: true });
     }
+};
+
+const getIndividualName = (id: string | null) => {
+    if (!id) return 'None (Unrestricted)';
+    const cleanId = id.replace(/@/g, '');
+    const found = props.individuals.find(i => i.id === cleanId || i.id === id);
+    if (!found) return id;
+    return `${found.name} (${found.id}${found.birth_year ? `, b. ${found.birth_year}` : ''})`;
 };
 </script>
 
@@ -41,7 +63,7 @@ const deleteUser = (userId: number) => {
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-foreground">User Management</h1>
-                <p class="text-sm text-muted-foreground">Manage user accounts, verification statuses, and superuser privileges.</p>
+                <p class="text-sm text-muted-foreground">Manage user accounts, verification statuses, superuser privileges, and assigned Start Person lineage constraints.</p>
             </div>
         </div>
 
@@ -53,6 +75,7 @@ const deleteUser = (userId: number) => {
                             <th class="py-3 px-4">User</th>
                             <th class="py-3 px-4">Role</th>
                             <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Assigned Start Person</th>
                             <th class="py-3 px-4">Joined</th>
                             <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
@@ -83,9 +106,30 @@ const deleteUser = (userId: number) => {
                                     Pending Verification
                                 </span>
                             </td>
+
+                            <!-- Start Person Assignment Selection -->
+                            <td class="py-3 px-4 min-w-[220px]">
+                                <div v-if="user.is_superuser" class="text-xs text-muted-foreground italic">
+                                    Full Tree Access (Superuser)
+                                </div>
+                                <div v-else class="flex items-center gap-2">
+                                    <select
+                                        :value="user.start_person_id || ''"
+                                        class="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        @change="e => updateStartPerson(user.id, (e.target as HTMLSelectElement).value || null)"
+                                    >
+                                        <option value="">None (Full Tree Access)</option>
+                                        <option v-for="ind in individuals" :key="ind.id" :value="ind.id">
+                                            {{ ind.name }} ({{ ind.id }}{{ ind.birth_year ? `, b. ${ind.birth_year}` : '' }})
+                                        </option>
+                                    </select>
+                                </div>
+                            </td>
+
                             <td class="py-3 px-4 text-xs text-muted-foreground">
                                 {{ new Date(user.created_at).toLocaleDateString() }}
                             </td>
+
                             <td class="py-3 px-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
                                     <!-- Verify / Unverify Button -->
