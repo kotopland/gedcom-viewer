@@ -15,11 +15,28 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Default Superuser
+        User::factory()->create([
+            'name' => 'Super User',
+            'email' => 'admin@example.com',
+            'is_superuser' => true,
+            'is_verified' => true,
+        ]);
 
+        // Default Normal Verified User
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'is_superuser' => false,
+            'is_verified' => true,
+        ]);
+
+        // Default Normal Pending User
+        User::factory()->create([
+            'name' => 'Pending User',
+            'email' => 'pending@example.com',
+            'is_superuser' => false,
+            'is_verified' => false,
         ]);
     }
 }

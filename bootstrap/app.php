@@ -21,6 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            \Spatie\MailPreview\Http\Middleware\AddMailPreviewOverlayToResponse::class,
+        ]);
+
+        $middleware->alias([
+            'superuser.verified' => \App\Http\Middleware\EnsureUserIsVerified::class,
+            'superuser' => \App\Http\Middleware\EnsureSuperuser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
