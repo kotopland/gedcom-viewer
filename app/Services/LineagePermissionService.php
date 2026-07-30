@@ -108,6 +108,53 @@ class LineagePermissionService
             }
         }
 
+        // 5. Descendants of Start Person's own siblings (nieces, nephews, grand-nieces/nephews)
+        $startPersonSiblings = $allIndividuals[$cleanStartId]['siblings'] ?? [];
+        $sibQueue = $startPersonSiblings;
+        $visitedSibDescendants = array_flip($startPersonSiblings);
+
+        while (!empty($sibQueue)) {
+            $currId = array_shift($sibQueue);
+            if (!isset($allIndividuals[$currId])) {
+                continue;
+            }
+
+            $children = $allIndividuals[$currId]['children'] ?? [];
+            foreach ($children as $cId) {
+                if (!isset($visitedSibDescendants[$cId])) {
+                    $visitedSibDescendants[$cId] = true;
+                    $allowed[$cId] = true;
+                    $sibQueue[] = $cId;
+                }
+            }
+        }
+
+        // 6. Spouses: Spouses and co-parents of every person in the allowed set
+        $visibleSet = array_keys($allowed);
+        foreach ($visibleSet as $personId) {
+            if (!isset($allIndividuals[$personId])) {
+                continue;
+            }
+
+            // Direct spouses list
+            $spouses = $allIndividuals[$personId]['spouses'] ?? [];
+            foreach ($spouses as $spId) {
+                $allowed[$spId] = true;
+            }
+
+            // Co-parents via children
+            $children = $allIndividuals[$personId]['children'] ?? [];
+            foreach ($children as $cId) {
+                if (isset($allIndividuals[$cId])) {
+                    foreach ($allIndividuals[$cId]['parents'] ?? [] as $coParentId) {
+                        if ($coParentId !== $personId) {
+                            $allowed[$coParentId] = true;
+                        }
+                    }
+                }
+            }
+        }
+
         return array_keys($allowed);
     }
 }

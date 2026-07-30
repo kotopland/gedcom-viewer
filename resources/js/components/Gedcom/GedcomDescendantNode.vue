@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { User, RefreshCcw } from '@lucide/vue';
+import { User, RefreshCcw, Heart } from '@lucide/vue';
 
 defineProps<{
     person: any;
@@ -14,67 +14,109 @@ const emit = defineEmits<{
 
 <template>
     <div class="flex flex-col items-center gap-4">
-        <!-- Person Card -->
-        <div
-            @click="emit('select-person', person.id)"
-            :class="[
-                'relative border rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 group shrink-0',
-                level === 1
-                    ? 'bg-gradient-to-b from-slate-800 to-slate-850 hover:from-slate-750 hover:to-slate-800 border-2 border-emerald-500/40 p-3 w-48'
-                    : level === 2
-                    ? 'bg-slate-800/90 hover:bg-slate-800 border-slate-700/80 p-2.5 w-40'
-                    : level === 3
-                    ? 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/70 p-2 w-32 text-xs'
-                    : level === 4
-                    ? 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/60 p-1.5 w-28 text-[11px]'
-                    : 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/60 p-1.5 w-24 text-[10px]'
-            ]"
-        >
-            <button
-                @click.stop="emit('change-root', person.id)"
-                class="absolute -top-1.5 -right-1.5 p-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Center tree on this person"
+        <!-- Person & Spouse(s) Pair Row -->
+        <div class="flex items-center gap-2">
+            <!-- Main Person Card -->
+            <div
+                @click="emit('select-person', person.id)"
+                :class="[
+                    'relative border rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 group shrink-0',
+                    level === 1
+                        ? 'bg-gradient-to-b from-slate-800 to-slate-850 hover:from-slate-750 hover:to-slate-800 border-2 border-emerald-500/40 p-3 w-48'
+                        : level === 2
+                        ? 'bg-slate-800/90 hover:bg-slate-800 border-slate-700/80 p-2.5 w-40'
+                        : level === 3
+                        ? 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/70 p-2 w-32 text-xs'
+                        : level === 4
+                        ? 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/60 p-1.5 w-28 text-[11px]'
+                        : 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/60 p-1.5 w-24 text-[10px]'
+                ]"
             >
-                <RefreshCcw class="w-3 h-3" />
-            </button>
-
-            <div class="flex items-center gap-2">
-                <img
-                    v-if="person.primary_media"
-                    :src="person.primary_media.url"
-                    :class="[
-                        'rounded-lg object-cover shrink-0',
-                        level <= 2 ? 'w-8 h-8' : 'w-6 h-6'
-                    ]"
-                />
-                <div
-                    v-else
-                    :class="[
-                        'rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 shrink-0',
-                        level <= 2 ? 'w-8 h-8' : 'w-6 h-6'
-                    ]"
+                <button
+                    @click.stop="emit('change-root', person.id)"
+                    class="absolute -top-1.5 -right-1.5 p-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Center tree on this person"
                 >
-                    <User :class="level <= 2 ? 'w-4 h-4' : 'w-3 h-3'" />
-                </div>
-                <div class="min-w-0 flex-1">
-                    <div
+                    <RefreshCcw class="w-3 h-3" />
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <img
+                        v-if="person.primary_media"
+                        :src="person.primary_media.url"
                         :class="[
-                            'font-bold truncate group-hover:text-emerald-400',
-                            level === 1 ? 'text-xs text-white' : level <= 3 ? 'text-xs text-slate-200' : 'text-[11px] text-slate-200'
+                            'rounded-lg object-cover shrink-0',
+                            level <= 2 ? 'w-8 h-8' : 'w-6 h-6'
+                        ]"
+                    />
+                    <div
+                        v-else
+                        :class="[
+                            'rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 shrink-0',
+                            level <= 2 ? 'w-8 h-8' : 'w-6 h-6'
                         ]"
                     >
-                        {{ person.name }}
+                        <User :class="level <= 2 ? 'w-4 h-4' : 'w-3 h-3'" />
                     </div>
-                    <div
-                        :class="[
-                            'font-medium truncate',
-                            level === 1 ? 'text-[11px] text-emerald-300' : 'text-[10px] text-slate-400'
-                        ]"
-                    >
-                        {{ person.birth_year || '?' }} – {{ person.death_year || '?' }}
+                    <div class="min-w-0 flex-1">
+                        <div
+                            :class="[
+                                'font-bold truncate group-hover:text-emerald-400',
+                                level === 1 ? 'text-xs text-white' : level <= 3 ? 'text-xs text-slate-200' : 'text-[11px] text-slate-200'
+                            ]"
+                        >
+                            {{ person.name }}
+                        </div>
+                        <div
+                            :class="[
+                                'font-medium truncate',
+                                level === 1 ? 'text-[11px] text-emerald-300' : 'text-[10px] text-slate-400'
+                            ]"
+                        >
+                            {{ person.birth_year || '?' }} – {{ person.death_year || '?' }}
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Spouse Cards (if any) -->
+            <template v-if="person.spouses && person.spouses.length > 0">
+                <div v-for="spouse in person.spouses" :key="spouse.id" class="flex items-center gap-1.5">
+                    <Heart class="w-3 h-3 text-rose-400 shrink-0" />
+                    <div
+                        @click="emit('select-person', spouse.id)"
+                        :class="[
+                            'relative border rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 group shrink-0 bg-slate-900/90 border-rose-500/40 p-2 w-36 text-xs'
+                        ]"
+                    >
+                        <button
+                            @click.stop="emit('change-root', spouse.id)"
+                            class="absolute -top-1.5 -right-1.5 p-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Center tree on this spouse"
+                        >
+                            <RefreshCcw class="w-3 h-3" />
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <img
+                                v-if="spouse.primary_media"
+                                :src="spouse.primary_media.url"
+                                class="w-6 h-6 rounded-lg object-cover shrink-0"
+                            />
+                            <div v-else class="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-rose-400 shrink-0">
+                                <User class="w-3 h-3" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-bold truncate text-slate-200 group-hover:text-rose-300">
+                                    {{ spouse.name }}
+                                </div>
+                                <div class="font-medium truncate text-[10px] text-rose-300/80">
+                                    {{ spouse.birth_year || '?' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <!-- Render children recursively below this person -->

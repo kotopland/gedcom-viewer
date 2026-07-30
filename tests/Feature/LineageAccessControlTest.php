@@ -30,6 +30,15 @@ class LineageAccessControlTest extends TestCase
                 'parents' => ['P1', 'P2'],
                 'children' => ['C1'],
                 'siblings' => ['S1'],
+                'spouses' => ['SP_I1'],
+            ],
+            'SP_I1' => [
+                'id' => 'SP_I1',
+                'name' => 'Spouse of Start Person',
+                'parents' => [],
+                'children' => ['C1'],
+                'siblings' => [],
+                'spouses' => ['I1'],
             ],
             'P1' => [
                 'id' => 'P1',
@@ -49,8 +58,24 @@ class LineageAccessControlTest extends TestCase
                 'id' => 'S1',
                 'name' => 'Brother',
                 'parents' => ['P1', 'P2'],
-                'children' => [],
+                'children' => ['N1'],
                 'siblings' => ['I1'],
+                'spouses' => ['SP_S1'],
+            ],
+            'SP_S1' => [
+                'id' => 'SP_S1',
+                'name' => 'Sister-in-law (Spouse of S1)',
+                'parents' => [],
+                'children' => ['N1'],
+                'siblings' => [],
+                'spouses' => ['S1'],
+            ],
+            'N1' => [
+                'id' => 'N1',
+                'name' => 'Nephew (Child of S1)',
+                'parents' => ['S1'],
+                'children' => [],
+                'siblings' => [],
             ],
             'C1' => [
                 'id' => 'C1',
@@ -92,10 +117,13 @@ class LineageAccessControlTest extends TestCase
 
         $this->assertNotNull($allowedIds);
         $this->assertContains('I1', $allowedIds);   // Start Person
+        $this->assertContains('SP_I1', $allowedIds); // Spouse of Start Person
         $this->assertContains('P1', $allowedIds);   // Ancestor (Father)
         $this->assertContains('P2', $allowedIds);   // Ancestor (Mother)
         $this->assertContains('C1', $allowedIds);   // Descendant (Child)
         $this->assertContains('S1', $allowedIds);   // Sibling of Start Person
+        $this->assertContains('SP_S1', $allowedIds); // Spouse of Sibling (Sister-in-law)
+        $this->assertContains('N1', $allowedIds);   // Descendant of Start Person's sibling (Nephew)
         $this->assertContains('S_P1', $allowedIds); // Sibling of Ancestor (Uncle)
         $this->assertContains('S_C1', $allowedIds); // Sibling of Descendant
         $this->assertNotContains('U1', $allowedIds); // Unrelated Person must be hidden

@@ -292,7 +292,37 @@ class GedcomParserService
                     }
                 }
             }
+        }
+        unset($ind);
 
+        // Additional pass: Ensure bidirectional spouse linking for all family records & co-parents
+        foreach ($famMap as $f) {
+            $hId = $f['husband_id'];
+            $wId = $f['wife_id'];
+            if ($hId && $wId) {
+                if (isset($indivMap[$hId])) {
+                    $indivMap[$hId]['spouses'][] = $wId;
+                }
+                if (isset($indivMap[$wId])) {
+                    $indivMap[$wId]['spouses'][] = $hId;
+                }
+            }
+        }
+
+        foreach ($indivMap as $cId => $cInd) {
+            $cParents = array_values(array_unique($cInd['parents'] ?? []));
+            if (count($cParents) > 1) {
+                foreach ($cParents as $p1) {
+                    foreach ($cParents as $p2) {
+                        if ($p1 !== $p2 && isset($indivMap[$p1])) {
+                            $indivMap[$p1]['spouses'][] = $p2;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($indivMap as $id => &$ind) {
             $ind['spouses'] = array_values(array_unique($ind['spouses']));
             $ind['children'] = array_values(array_unique($ind['children']));
             $ind['parents'] = array_values(array_unique($ind['parents']));

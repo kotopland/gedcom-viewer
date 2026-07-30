@@ -2,7 +2,7 @@
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
     ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink,
-    SlidersHorizontal, ChevronRight, ChevronLeft
+    SlidersHorizontal, ChevronRight, ChevronLeft, Heart
 } from '@lucide/vue';
 import GedcomAncestorNode from './GedcomAncestorNode.vue';
 import GedcomDescendantNode from './GedcomDescendantNode.vue';
@@ -316,35 +316,95 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <!-- Center Root Person Node -->
-                <div v-if="treeData.ancestors || treeData.descendants" class="relative py-2">
-                    <div class="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
-                    <div
-                        @click="emit('select-person', (treeData.ancestors || treeData.descendants).id)"
-                        class="relative bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 border-2 border-indigo-400 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105 group"
-                    >
-                        <div class="flex items-center gap-4">
-                            <img
-                                v-if="(treeData.ancestors || treeData.descendants).primary_media"
-                                :src="(treeData.ancestors || treeData.descendants).primary_media.url"
-                                class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-indigo-400 shadow-md"
-                            />
-                            <div v-else class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 shrink-0">
-                                <User class="w-8 h-8" />
-                            </div>
+                <!-- Center Root Person & Spouse(s) Pair Node -->
+                <div v-if="treeData.ancestors || treeData.descendants" class="flex flex-col items-center gap-2">
+                    <div class="flex items-center justify-center gap-3 sm:gap-6 flex-wrap">
+                        <!-- Tree Focus Person Card -->
+                        <div class="relative group">
+                            <div class="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
+                            <div
+                                @click="emit('select-person', (treeData.ancestors || treeData.descendants).id)"
+                                class="relative bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 border-2 border-indigo-400 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
+                            >
+                                <div class="flex items-center gap-4">
+                                    <img
+                                        v-if="(treeData.ancestors || treeData.descendants).primary_media"
+                                        :src="(treeData.ancestors || treeData.descendants).primary_media.url"
+                                        class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-indigo-400 shadow-md"
+                                    />
+                                    <div v-else class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 shrink-0">
+                                        <User class="w-8 h-8" />
+                                    </div>
 
-                            <div class="min-w-0 flex-1">
-                                <span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
-                                    Tree Focus
-                                </span>
-                                <h3 class="text-sm font-extrabold text-white truncate mt-1 group-hover:text-indigo-300">
-                                    {{ (treeData.ancestors || treeData.descendants).name }}
-                                </h3>
-                                <p class="text-xs text-indigo-200 font-medium mt-0.5">
-                                    {{ (treeData.ancestors || treeData.descendants).birth_year || '?' }} – {{ (treeData.ancestors || treeData.descendants).death_year || 'Present' }}
-                                </p>
+                                    <div class="min-w-0 flex-1">
+                                        <span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
+                                            Tree Focus
+                                        </span>
+                                        <h3 class="text-sm font-extrabold text-white truncate mt-1 group-hover:text-indigo-300">
+                                            {{ (treeData.ancestors || treeData.descendants).name }}
+                                        </h3>
+                                        <p class="text-xs text-indigo-200 font-medium mt-0.5">
+                                            {{ (treeData.ancestors || treeData.descendants).birth_year || '?' }} – {{ (treeData.ancestors || treeData.descendants).death_year || 'Present' }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Spouse Card(s) -->
+                        <template v-if="(treeData.ancestors || treeData.descendants).spouses && (treeData.ancestors || treeData.descendants).spouses.length > 0">
+                            <div
+                                v-for="spouse in (treeData.ancestors || treeData.descendants).spouses"
+                                :key="spouse.id"
+                                class="flex items-center gap-3 sm:gap-6"
+                            >
+                                <!-- Marriage connector heart badge -->
+                                <div class="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-md" title="Spouse">
+                                    <Heart class="w-4 h-4 fill-rose-500/30" />
+                                </div>
+
+                                <!-- Spouse Person Card -->
+                                <div class="relative group">
+                                    <div class="absolute inset-0 bg-rose-500/10 blur-xl rounded-full"></div>
+                                    <div
+                                        @click="emit('select-person', spouse.id)"
+                                        class="relative bg-gradient-to-r from-slate-900 via-rose-950/40 to-slate-900 border-2 border-rose-400/60 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
+                                    >
+                                        <div class="flex items-center gap-4">
+                                            <img
+                                                v-if="spouse.primary_media"
+                                                :src="spouse.primary_media.url"
+                                                class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-rose-400/60 shadow-md"
+                                            />
+                                            <div v-else class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-rose-400 shrink-0">
+                                                <User class="w-8 h-8" />
+                                            </div>
+
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[10px] font-bold uppercase tracking-wider">
+                                                        Spouse
+                                                    </span>
+                                                    <button
+                                                        @click.stop="emit('change-root', spouse.id)"
+                                                        class="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+                                                        title="Set as Tree Focus"
+                                                    >
+                                                        Focus
+                                                    </button>
+                                                </div>
+                                                <h3 class="text-sm font-extrabold text-white truncate mt-1 group-hover:text-rose-300">
+                                                    {{ spouse.name }}
+                                                </h3>
+                                                <p class="text-xs text-rose-200/80 font-medium mt-0.5">
+                                                    {{ spouse.birth_year || '?' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 

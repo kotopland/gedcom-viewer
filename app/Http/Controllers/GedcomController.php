@@ -527,7 +527,23 @@ class GedcomController extends Controller
         $ancestorMaxDepth = $ancestorLevels + 1;
         $descendantMaxDepth = $descendantLevels + 1;
 
-        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, $data, $ancestorMaxDepth, $allowedMap) {
+        $formatMiniSpouses = function (array $spouseIds) use ($data, $allowedMap) {
+            $result = [];
+            foreach ($spouseIds as $sId) {
+                if ($allowedMap !== null && !isset($allowedMap[$sId])) continue;
+                if (!isset($data['individuals'][$sId])) continue;
+                $s = $data['individuals'][$sId];
+                $result[] = [
+                    'id' => $s['id'],
+                    'name' => $s['name'],
+                    'birth_year' => $s['birth_year'],
+                    'primary_media' => $s['primary_media'],
+                ];
+            }
+            return $result;
+        };
+
+        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, $data, $ancestorMaxDepth, $allowedMap, $formatMiniSpouses) {
             if ($depth >= $ancestorMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
             }
@@ -541,6 +557,7 @@ class GedcomController extends Controller
                 'death_year' => $ind['death_year'],
                 'birth_place' => $ind['birth_place'],
                 'primary_media' => $ind['primary_media'],
+                'spouses' => $formatMiniSpouses($ind['spouses'] ?? []),
                 'parents' => [],
             ];
 
@@ -554,7 +571,7 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap) {
+        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap, $formatMiniSpouses) {
             if ($depth >= $descendantMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
             }
@@ -567,6 +584,7 @@ class GedcomController extends Controller
                 'birth_year' => $ind['birth_year'],
                 'death_year' => $ind['death_year'],
                 'primary_media' => $ind['primary_media'],
+                'spouses' => $formatMiniSpouses($ind['spouses'] ?? []),
                 'children' => [],
             ];
 
