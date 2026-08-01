@@ -256,8 +256,8 @@ onUnmounted(() => {
         :class="[
             'transition-all duration-300 flex flex-col',
             isFullscreen
-                ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-950 border-none p-0 shadow-none'
-                : 'relative bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl min-h-[550px] sm:min-h-[750px] h-[82vh]'
+                ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-100 dark:bg-slate-950 border-none p-0 shadow-none'
+                : 'relative bg-slate-200/70 dark:bg-slate-900 rounded-3xl border border-slate-300/80 dark:border-slate-800 overflow-hidden shadow-2xl min-h-[550px] sm:min-h-[750px] h-[82vh]'
         ]"
     >
         <!-- Floating Tree Controls Bar -->
@@ -270,16 +270,16 @@ onUnmounted(() => {
             <!-- Minimized / Collapsed Controls Pill -->
             <div
                 v-if="isControlsCollapsed"
-                class="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-xl"
+                class="flex items-center gap-1.5 sm:gap-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl"
             >
                 <button
                     @click="isControlsCollapsed = false"
-                    class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                    class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
                     title="Expand Tree Controls & Settings"
                 >
-                    <SlidersHorizontal class="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                    <SlidersHorizontal class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
                     <span>Controls</span>
-                    <span class="text-[10px] text-slate-400 font-medium px-1 bg-slate-700/60 rounded-md">
+                    <span class="text-[10px] text-slate-600 dark:text-slate-400 font-medium px-1 bg-slate-200/80 dark:bg-slate-700/60 rounded-md">
                         {{ Math.round(zoomLevel * 100) }}%
                     </span>
                     <ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
@@ -287,7 +287,7 @@ onUnmounted(() => {
 
                 <button
                     @click="zoomIn"
-                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                     title="Zoom In"
                 >
                     <ZoomIn class="w-3.5 h-3.5" />
@@ -295,7 +295,7 @@ onUnmounted(() => {
 
                 <button
                     @click="zoomOut"
-                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                     title="Zoom Out"
                 >
                     <ZoomOut class="w-3.5 h-3.5" />
@@ -315,7 +315,7 @@ onUnmounted(() => {
             <!-- Expanded Controls Bar -->
             <div
                 v-else
-                class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 bg-slate-900/95 backdrop-blur-md p-3 sm:p-2.5 rounded-2xl border border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-w-[calc(100vw-2.5rem)] overflow-x-auto"
+                class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 sm:p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-w-[calc(100vw-2.5rem)] overflow-x-auto"
             >
                 <div class="flex items-center justify-between gap-2">
                     <!-- Full Screen Toggle Button -->
@@ -330,29 +330,29 @@ onUnmounted(() => {
                     </button>
 
                     <!-- Zoom controls -->
-                    <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl">
+                    <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
                         <button
                             @click="zoomIn"
-                            class="p-1.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+                            class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                             title="Zoom In"
                         >
                             <ZoomIn class="w-3.5 h-3.5" />
                         </button>
                         <button
                             @click="zoomOut"
-                            class="p-1.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+                            class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                             title="Zoom Out"
                         >
                             <ZoomOut class="w-3.5 h-3.5" />
                         </button>
                         <button
                             @click="resetZoom"
-                            class="p-1.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+                            class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                             title="Reset / Fit Zoom"
                         >
                             <Maximize2 class="w-3.5 h-3.5" />
                         </button>
-                        <span class="text-[11px] font-bold text-slate-300 px-1">
+                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 px-1">
                             {{ Math.round(zoomLevel * 100) }}%
                         </span>
                     </div>
@@ -360,25 +360,25 @@ onUnmounted(() => {
                     <!-- Minimize Button -->
                     <button
                         @click="isControlsCollapsed = true"
-                        class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer ml-auto"
+                        class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ml-auto"
                         title="Minimize Controls"
                     >
                         <ChevronLeft class="w-4 h-4" />
                     </button>
                 </div>
 
-                <div class="hidden sm:block h-4 w-px bg-slate-800"></div>
+                <div class="hidden sm:block h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
 
-                <div class="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+                <div class="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-800">
                     <!-- Ancestor levels dropdown -->
                     <div class="flex items-center gap-1.5">
-                        <label class="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1">
-                            <Layers class="w-3.5 h-3.5 text-indigo-400" />
+                        <label class="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                            <Layers class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                             Ancestors:
                         </label>
                         <select
                             v-model.number="ancestorLevels"
-                            class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2 py-1 focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
+                            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold rounded-xl px-2 py-1 focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
                         >
                             <option :value="0">0 (Hide)</option>
                             <option :value="1">1 (Parents)</option>
@@ -391,13 +391,13 @@ onUnmounted(() => {
 
                     <!-- Descendant levels dropdown -->
                     <div class="flex items-center gap-1.5">
-                        <label class="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1">
-                            <Layers class="w-3.5 h-3.5 text-emerald-400" />
+                        <label class="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                            <Layers class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             Descendants:
                         </label>
                         <select
                             v-model.number="descendantLevels"
-                            class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2 py-1 focus:outline-hidden focus:border-emerald-500 transition-colors cursor-pointer"
+                            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold rounded-xl px-2 py-1 focus:outline-hidden focus:border-emerald-500 transition-colors cursor-pointer"
                         >
                             <option :value="0">0 (Hide)</option>
                             <option :value="1">1 (Children)</option>
@@ -428,10 +428,10 @@ onUnmounted(() => {
         >
             <div
                 v-if="loading"
-                class="m-auto flex flex-col items-center justify-center py-20 text-slate-400"
+                class="m-auto flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400"
             >
-                <div class="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                <p class="mt-4 text-xs font-semibold text-slate-300">Rendering visual tree graph...</p>
+                <div class="w-10 h-10 border-3 border-indigo-600 dark:border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">Rendering visual tree graph...</p>
             </div>
 
             <div
@@ -441,7 +441,7 @@ onUnmounted(() => {
             >
                 <!-- Ancestors Section (Top) -->
                 <div v-if="ancestorLevels > 0 && treeData.ancestors && treeData.ancestors.parents && treeData.ancestors.parents.length > 0" class="flex flex-col items-center gap-6">
-                    <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-950/80 px-3.5 py-1 rounded-full border border-indigo-800/50 shadow-md">
+                    <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/80 px-3.5 py-1 rounded-full border border-indigo-300 dark:border-indigo-800/50 shadow-md">
                         {{ ancestorBadgeLabel }}
                     </span>
 
@@ -466,26 +466,26 @@ onUnmounted(() => {
                             <div class="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
                             <div
                                 @click="handlePersonSelect((treeData.ancestors || treeData.descendants).id)"
-                                class="relative bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 border-2 border-indigo-400 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
+                                class="relative bg-white dark:bg-gradient-to-r dark:from-indigo-900 dark:via-indigo-950 dark:to-slate-900 border-2 border-indigo-500 dark:border-indigo-400 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
                             >
                                 <div class="flex items-center gap-4">
                                     <img
                                         v-if="(treeData.ancestors || treeData.descendants).primary_media"
                                         :src="(treeData.ancestors || treeData.descendants).primary_media.url"
-                                        class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-indigo-400 shadow-md"
+                                        class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-indigo-500 dark:border-indigo-400 shadow-md"
                                     />
-                                    <div v-else class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 shrink-0">
+                                    <div v-else class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                                         <User class="w-8 h-8" />
                                     </div>
 
                                     <div class="min-w-0 flex-1">
-                                        <span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
+                                        <span class="px-2 py-0.5 rounded-md bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
                                             Tree Focus
                                         </span>
-                                        <h3 class="text-sm font-extrabold text-white truncate mt-1 group-hover:text-indigo-300">
+                                        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white truncate mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
                                             {{ (treeData.ancestors || treeData.descendants).name }}
                                         </h3>
-                                        <p class="text-xs text-indigo-200 font-medium mt-0.5">
+                                        <p class="text-xs text-indigo-600 dark:text-indigo-200 font-medium mt-0.5">
                                             {{ (treeData.ancestors || treeData.descendants).birth_year || '?' }} – {{ (treeData.ancestors || treeData.descendants).death_year || 'Present' }}
                                         </p>
                                     </div>
@@ -501,7 +501,7 @@ onUnmounted(() => {
                                 class="flex items-center gap-3 sm:gap-6"
                             >
                                 <!-- Marriage connector heart badge -->
-                                <div class="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-md" title="Spouse">
+                                <div class="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 border border-rose-300 dark:border-rose-500/40 flex items-center justify-center text-rose-500 dark:text-rose-400 shadow-md" title="Spouse">
                                     <Heart class="w-4 h-4 fill-rose-500/30" />
                                 </div>
 
@@ -510,7 +510,7 @@ onUnmounted(() => {
                                     <div class="absolute inset-0 bg-rose-500/10 blur-xl rounded-full"></div>
                                     <div
                                         @click="handlePersonSelect(spouse.id)"
-                                        class="relative bg-gradient-to-r from-slate-900 via-rose-950/40 to-slate-900 border-2 border-rose-400/60 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
+                                        class="relative bg-white dark:bg-gradient-to-r dark:from-slate-900 dark:via-rose-950/40 dark:to-slate-900 border-2 border-rose-400/80 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
                                     >
                                         <div class="flex items-center gap-4">
                                             <img
@@ -518,27 +518,27 @@ onUnmounted(() => {
                                                 :src="spouse.primary_media.url"
                                                 class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-rose-400/60 shadow-md"
                                             />
-                                            <div v-else class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-rose-400 shrink-0">
+                                            <div v-else class="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-slate-800 border border-rose-200 dark:border-slate-700 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
                                                 <User class="w-8 h-8" />
                                             </div>
 
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex items-center justify-between gap-1">
-                                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[10px] font-bold uppercase tracking-wider">
+                                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[10px] font-bold uppercase tracking-wider">
                                                         Spouse
                                                     </span>
                                                     <button
                                                         @click.stop="handleChangeRoot(spouse.id)"
-                                                        class="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+                                                        class="text-[10px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white underline cursor-pointer"
                                                         title="Set as Tree Focus"
                                                     >
                                                         Focus
                                                     </button>
                                                 </div>
-                                                <h3 class="text-sm font-extrabold text-white truncate mt-1 group-hover:text-rose-300">
+                                                <h3 class="text-sm font-extrabold text-slate-900 dark:text-white truncate mt-1 group-hover:text-rose-600 dark:group-hover:text-rose-300">
                                                     {{ spouse.name }}
                                                 </h3>
-                                                <p class="text-xs text-rose-200/80 font-medium mt-0.5">
+                                                <p class="text-xs text-rose-600 dark:text-rose-200/80 font-medium mt-0.5">
                                                     {{ spouse.birth_year || '?' }}
                                                 </p>
                                             </div>
@@ -552,7 +552,7 @@ onUnmounted(() => {
 
                 <!-- Descendants Section (Bottom) -->
                 <div v-if="descendantLevels > 0 && treeData.descendants && treeData.descendants.children && treeData.descendants.children.length > 0" class="flex flex-col items-center gap-6">
-                    <span class="text-[11px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950/80 px-3.5 py-1 rounded-full border border-emerald-800/50 shadow-md">
+                    <span class="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 px-3.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800/50 shadow-md">
                         {{ descendantBadgeLabel }}
                     </span>
 

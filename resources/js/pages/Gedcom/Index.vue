@@ -2,13 +2,14 @@
 import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
-    Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Shield
+    Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon
 } from '@lucide/vue';
 
 import GedcomDirectory from '@/components/Gedcom/GedcomDirectory.vue';
 import GedcomTreeView from '@/components/Gedcom/GedcomTreeView.vue';
 import GedcomMediaGallery from '@/components/Gedcom/GedcomMediaGallery.vue';
 import GedcomPersonModal from '@/components/Gedcom/GedcomPersonModal.vue';
+import { useAppearance } from '@/composables/useAppearance';
 import { logout } from '@/routes';
 import type { User } from '@/types/auth';
 
@@ -31,6 +32,11 @@ const props = defineProps<{
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user as User | undefined);
+const { resolvedAppearance, updateAppearance } = useAppearance();
+
+const toggleTheme = () => {
+    updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
+};
 
 const activeTab = ref<'directory' | 'tree' | 'media'>(props.defaultTab || 'directory');
 const selectedPersonId = ref<string | null>(null);
@@ -74,15 +80,15 @@ const changeRootPerson = (id: string) => {
 <template>
     <Head title="Family Tree Archive" />
 
-    <div class="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+    <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500 selection:text-white transition-colors duration-200">
         <!-- Main Top Bar -->
-        <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+        <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
             <div class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
                 <!-- Left Section: Back, Logo, Re-import -->
                 <div class="flex items-center gap-3">
                     <a
                         href="/dashboard"
-                        class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                        class="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
                         title="Back to Dashboard"
                     >
                         <ArrowLeft class="w-5 h-5" />
@@ -92,10 +98,10 @@ const changeRootPerson = (id: string) => {
                             <FolderArchive class="w-5 h-5" />
                         </div>
                         <div class="hidden sm:block">
-                            <h1 class="text-sm font-extrabold tracking-tight text-white leading-none">
+                            <h1 class="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">
                                 Family Tree Archive
                             </h1>
-                            <p class="text-[11px] font-medium text-indigo-400 mt-0.5">
+                            <p class="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">
                                 GEDCOM Genealogy Viewer
                             </p>
                         </div>
@@ -103,27 +109,27 @@ const changeRootPerson = (id: string) => {
                 </div>
 
                 <!-- Navigation Tabs -->
-                <nav class="flex items-center gap-1 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-bold">
+                <nav class="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950/80 p-1.5 rounded-2xl border border-slate-300/80 dark:border-slate-800 text-xs font-bold">
                     <button
                         @click="activeTab = 'directory'"
-                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
-                        :class="activeTab === 'directory' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                        :class="activeTab === 'directory' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                     >
                         <Users class="w-4 h-4" />
                         <span class="hidden sm:inline">People</span> Directory
                     </button>
                     <button
                         @click="activeTab = 'tree'"
-                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
-                        :class="activeTab === 'tree' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                        :class="activeTab === 'tree' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                     >
                         <GitBranch class="w-4 h-4" />
                         Family Tree
                     </button>
                     <button
                         @click="activeTab = 'media'"
-                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
-                        :class="activeTab === 'media' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                        :class="activeTab === 'media' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                     >
                         <ImageIcon class="w-4 h-4" />
                         Media Explorer
@@ -132,21 +138,31 @@ const changeRootPerson = (id: string) => {
 
                 <!-- Right Section: User Badge & Logout Button -->
                 <div class="flex items-center gap-3">
+                    <!-- Light / Dark Theme Switcher Button -->
+                    <button
+                        @click="toggleTheme"
+                        class="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer border border-slate-300/80 dark:border-slate-700/60"
+                        :title="resolvedAppearance === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+                    >
+                        <Sun v-if="resolvedAppearance === 'dark'" class="w-4 h-4 text-amber-400" />
+                        <Moon v-else class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    </button>
+
                     <Link
                         v-if="currentUser?.is_superuser"
                         href="/admin/users"
-                        class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-semibold border border-purple-500/30 transition-colors"
+                        class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs font-semibold border border-purple-500/30 transition-colors"
                     >
                         <ShieldCheck class="w-3.5 h-3.5" />
                         User Management
                     </Link>
 
-                    <div v-if="currentUser" class="flex items-center gap-2.5 pl-2 border-l border-slate-800">
+                    <div v-if="currentUser" class="flex items-center gap-2.5 pl-2 border-l border-slate-300 dark:border-slate-800">
                         <div class="hidden lg:flex flex-col text-right">
-                            <span class="text-xs font-semibold text-slate-200 flex items-center justify-end gap-1">
+                            <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-end gap-1">
                                 {{ currentUser.name }}
                             </span>
-                            <span class="text-[10px] text-slate-400 leading-none">{{ currentUser.email }}</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 leading-none">{{ currentUser.email }}</span>
                         </div>
 
                         <!-- Logout Button -->
@@ -154,7 +170,7 @@ const changeRootPerson = (id: string) => {
                             :href="logout()"
                             method="post"
                             as="button"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-600/20 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/30 transition-colors text-xs font-semibold cursor-pointer"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-rose-500/10 text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-300 border border-slate-300 dark:border-slate-700 hover:border-rose-500/30 transition-colors text-xs font-semibold cursor-pointer"
                             title="Log out"
                         >
                             <LogOut class="w-4 h-4" />
