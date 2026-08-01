@@ -63,6 +63,7 @@ const selectPerson = (id: string) => {
 const openInTree = (id: string) => {
     currentRootPersonId.value = id;
     activeTab.value = 'tree';
+    selectedPersonId.value = null;
 };
 
 const changeRootPerson = (id: string) => {
