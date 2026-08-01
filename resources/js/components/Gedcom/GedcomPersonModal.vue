@@ -183,72 +183,72 @@ const getEventBadgeStyle = (tag: string) => {
     <div
         v-if="personId"
         @click="emit('close')"
-        class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end transition-opacity cursor-pointer"
+        class="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex justify-end transition-opacity cursor-pointer"
     >
         <div
             @click.stop
-            class="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl min-h-screen flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300 cursor-default"
+            class="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl h-full max-h-screen flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300 cursor-default overflow-hidden"
         >
             <!-- Header section -->
-            <div class="relative bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-6 pb-8 border-b border-slate-800">
+            <div class="relative shrink-0 z-20 bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-4 sm:p-6 pb-4 border-b border-slate-800">
                 <button
                     @click="emit('close')"
-                    class="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
+                    class="absolute top-3 right-3 sm:top-4 sm:right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-slate-200 hover:text-white transition-colors cursor-pointer z-30 flex items-center justify-center"
                     title="Close (Esc)"
                 >
                     <X class="w-5 h-5" />
                 </button>
 
-                <div class="flex items-start gap-5 mt-2">
+                <div class="flex items-start gap-4 sm:gap-5 mt-1 sm:mt-2">
                     <div class="relative shrink-0">
                         <img
                             v-if="personData?.person?.primary_media"
                             :src="personData.person.primary_media.url"
                             :alt="personData.person.name"
-                            class="w-24 h-24 rounded-2xl object-cover border-2 border-white/20 shadow-md bg-slate-800"
+                            class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white/20 shadow-md bg-slate-800"
                         />
                         <div
                             v-else
-                            class="w-24 h-24 rounded-2xl bg-slate-800 border-2 border-white/10 flex items-center justify-center text-slate-400"
+                            class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-800 border-2 border-white/10 flex items-center justify-center text-slate-400"
                         >
-                            <User class="w-12 h-12" />
+                            <User class="w-10 h-10 sm:w-12 sm:h-12" />
                         </div>
                         <span
-                            class="absolute -bottom-2 -right-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border shadow-xs"
+                            class="absolute -bottom-2 -right-1 px-2 py-0.5 sm:px-2.5 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider border shadow-xs"
                             :class="getGenderColor(personData?.person?.sex)"
                         >
                             {{ personData?.person?.sex === 'M' ? 'Male' : (personData?.person?.sex === 'F' ? 'Female' : 'Unknown') }}
                         </span>
                     </div>
 
-                    <div class="flex-1 min-w-0 pr-6">
-                        <h2 class="text-2xl font-bold tracking-tight text-white truncate">
+                    <div class="flex-1 min-w-0 pr-8">
+                        <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
                             {{ personData?.person?.name || 'Loading...' }}
                         </h2>
                         
-                        <p class="text-slate-300 font-medium text-sm mt-1 flex items-center gap-2">
-                            <Calendar class="w-4 h-4 text-indigo-400 shrink-0" />
+                        <p class="text-slate-300 font-medium text-xs sm:text-sm mt-1 flex items-center gap-2">
+                            <Calendar class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
                             <span>
                                 {{ personData?.person?.birth_year || '?' }} – {{ personData?.person?.death_year || 'Present/Unknown' }}
                             </span>
                         </p>
 
-                        <p v-if="personData?.person?.birth_place" class="text-slate-400 text-xs mt-1.5 flex items-center gap-1.5 truncate">
+                        <p v-if="personData?.person?.birth_place" class="text-slate-400 text-xs mt-1 flex items-center gap-1.5 truncate">
                             <MapPin class="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                             <span class="truncate">{{ personData.person.birth_place }}</span>
                         </p>
 
-                        <div class="flex items-center gap-2 mt-4">
+                        <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-4">
                             <button
                                 @click="emit('open-in-tree', personId)"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors shadow-xs"
+                                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
                             >
                                 <Users class="w-3.5 h-3.5" />
                                 View in Tree
                             </button>
                             <button
                                 @click="activeTab = 'contribute'; contributionSuccess = false; contributionError = null"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-xs"
+                                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
                             >
                                 <Send class="w-3.5 h-3.5" />
                                 Add Note / Media
@@ -258,10 +258,10 @@ const getEventBadgeStyle = (tag: string) => {
                 </div>
 
                 <!-- Tabs navigation -->
-                <div class="flex items-center gap-1 mt-6 border-b border-white/10 text-xs font-medium">
+                <div class="flex items-center gap-1 mt-4 sm:mt-6 border-b border-white/10 text-xs font-medium overflow-x-auto whitespace-nowrap scrollbar-none">
                     <button
                         @click="activeTab = 'overview'"
-                        class="px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold"
+                        class="px-3 sm:px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold shrink-0 cursor-pointer"
                         :class="activeTab === 'overview' ? 'border-indigo-400 text-indigo-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'"
                     >
                         <User class="w-3.5 h-3.5" />
@@ -269,7 +269,7 @@ const getEventBadgeStyle = (tag: string) => {
                     </button>
                     <button
                         @click="activeTab = 'family'"
-                        class="px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold"
+                        class="px-3 sm:px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold shrink-0 cursor-pointer"
                         :class="activeTab === 'family' ? 'border-indigo-400 text-indigo-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'"
                     >
                         <Heart class="w-3.5 h-3.5" />
@@ -277,7 +277,7 @@ const getEventBadgeStyle = (tag: string) => {
                     </button>
                     <button
                         @click="activeTab = 'media'"
-                        class="px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold"
+                        class="px-3 sm:px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold shrink-0 cursor-pointer"
                         :class="activeTab === 'media' ? 'border-indigo-400 text-indigo-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'"
                     >
                         <ImageIcon class="w-3.5 h-3.5" />
@@ -285,7 +285,7 @@ const getEventBadgeStyle = (tag: string) => {
                     </button>
                     <button
                         @click="activeTab = 'contribute'; contributionSuccess = false; contributionError = null"
-                        class="px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold"
+                        class="px-3 sm:px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold shrink-0 cursor-pointer"
                         :class="activeTab === 'contribute' ? 'border-emerald-400 text-emerald-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'"
                     >
                         <Send class="w-3.5 h-3.5" />
@@ -296,7 +296,7 @@ const getEventBadgeStyle = (tag: string) => {
             </div>
 
             <!-- Content Area -->
-            <div class="flex-1 p-6 overflow-y-auto">
+            <div class="flex-1 p-4 sm:p-6 overflow-y-auto min-h-0">
                 <div v-if="loading" class="flex flex-col items-center justify-center py-16 text-slate-400">
                     <div class="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                     <p class="mt-3 text-sm">Loading profile details...</p>
