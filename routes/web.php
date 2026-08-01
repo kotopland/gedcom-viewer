@@ -46,6 +46,16 @@ Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function (
 
 require __DIR__.'/settings.php';
 
+
+
+
+
+
+
+
+
+
+
 if (class_exists(\Spatie\MailPreview\MailPreviewServiceProvider::class)) {
     Route::mailPreview();
 }

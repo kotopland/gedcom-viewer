@@ -53,83 +53,53 @@ class LineagePermissionService
         $allowed = [];
         $allowed[$cleanStartId] = true;
 
-        // 1. Direct Ancestors (parents, grandparents, etc.)
-        $queue = [$cleanStartId];
-        $visitedAncestors = [$cleanStartId => true];
+        // 1. Direct Ancestors (parents, grandparents, etc.) of Start Person
+        $this->collectAncestors($cleanStartId, $allIndividuals, $allowed);
 
-        while (!empty($queue)) {
-            $currId = array_shift($queue);
-            if (!isset($allIndividuals[$currId])) {
-                continue;
-            }
-
-            $parents = $allIndividuals[$currId]['parents'] ?? [];
-            foreach ($parents as $pId) {
-                if (!isset($visitedAncestors[$pId])) {
-                    $visitedAncestors[$pId] = true;
-                    $allowed[$pId] = true;
-                    $queue[] = $pId;
-                }
-            }
-        }
-
-        // 2. Direct Descendants (children, grandchildren, etc.)
-        $queue = [$cleanStartId];
-        $visitedDescendants = [$cleanStartId => true];
-
-        while (!empty($queue)) {
-            $currId = array_shift($queue);
-            if (!isset($allIndividuals[$currId])) {
-                continue;
-            }
-
-            $children = $allIndividuals[$currId]['children'] ?? [];
-            foreach ($children as $cId) {
-                if (!isset($visitedDescendants[$cId])) {
-                    $visitedDescendants[$cId] = true;
-                    $allowed[$cId] = true;
-                    $queue[] = $cId;
-                }
-            }
-        }
+        // 2. Direct Descendants (children, grandchildren, etc.) of Start Person
+        $this->collectDescendants($cleanStartId, $allIndividuals, $allowed);
 
         // 3. Direct Lineage = {startPersonId} ∪ Ancestors ∪ Descendants
         $directLineage = array_keys($allowed);
 
-        // 4. Collateral Lineage: All siblings of every person in Direct Lineage
+        // 4. Siblings & Sibling Descendants of everyone in Direct Lineage
         foreach ($directLineage as $personId) {
-            if (!isset($allIndividuals[$personId])) {
-                continue;
-            }
-
-            $siblings = $allIndividuals[$personId]['siblings'] ?? [];
-            foreach ($siblings as $sibId) {
-                $allowed[$sibId] = true;
-            }
+            $this->collectSiblingsAndDescendants($personId, $allIndividuals, $allowed);
         }
 
-        // 5. Descendants of Start Person's own siblings (nieces, nephews, grand-nieces/nephews)
-        $startPersonSiblings = $allIndividuals[$cleanStartId]['siblings'] ?? [];
-        $sibQueue = $startPersonSiblings;
-        $visitedSibDescendants = array_flip($startPersonSiblings);
+        // 5. Spouse's Lineage: Spouses of Start Person, their ancestors, descendants, siblings, and sibling descendants
+        $startPersonSpouseIds = $allIndividuals[$cleanStartId]['spouses'] ?? [];
+        $startPersonChildren = $allIndividuals[$cleanStartId]['children'] ?? [];
 
-        while (!empty($sibQueue)) {
-            $currId = array_shift($sibQueue);
-            if (!isset($allIndividuals[$currId])) {
-                continue;
-            }
-
-            $children = $allIndividuals[$currId]['children'] ?? [];
-            foreach ($children as $cId) {
-                if (!isset($visitedSibDescendants[$cId])) {
-                    $visitedSibDescendants[$cId] = true;
-                    $allowed[$cId] = true;
-                    $sibQueue[] = $cId;
+        foreach ($startPersonChildren as $cId) {
+            if (isset($allIndividuals[$cId])) {
+                foreach ($allIndividuals[$cId]['parents'] ?? [] as $coParentId) {
+                    if ($coParentId !== $cleanStartId) {
+                        $startPersonSpouseIds[] = $coParentId;
+                    }
                 }
             }
         }
+        $startPersonSpouseIds = array_unique($startPersonSpouseIds);
 
-        // 6. Spouses: Spouses and co-parents of every person in the allowed set
+        foreach ($startPersonSpouseIds as $spouseId) {
+            if (!isset($allIndividuals[$spouseId])) {
+                continue;
+            }
+
+            $allowed[$spouseId] = true;
+
+            // Spouse's Ancestors
+            $this->collectAncestors($spouseId, $allIndividuals, $allowed);
+
+            // Spouse's Descendants
+            $this->collectDescendants($spouseId, $allIndividuals, $allowed);
+
+            // Spouse's Siblings & Sibling Descendants
+            $this->collectSiblingsAndDescendants($spouseId, $allIndividuals, $allowed);
+        }
+
+        // 6. Spouses & Co-parents of EVERY person in the allowed set
         $visibleSet = array_keys($allowed);
         foreach ($visibleSet as $personId) {
             if (!isset($allIndividuals[$personId])) {
@@ -157,4 +127,72 @@ class LineagePermissionService
 
         return array_keys($allowed);
     }
+
+    /**
+     * Traverse up the tree to collect all ancestors.
+     */
+    private function collectAncestors(string $startId, array $allIndividuals, array &$allowed): void
+    {
+        $queue = [$startId];
+        $visited = [$startId => true];
+
+        while (!empty($queue)) {
+            $currId = array_shift($queue);
+            if (!isset($allIndividuals[$currId])) {
+                continue;
+            }
+
+            $parents = $allIndividuals[$currId]['parents'] ?? [];
+            foreach ($parents as $pId) {
+                if (!isset($visited[$pId])) {
+                    $visited[$pId] = true;
+                    $allowed[$pId] = true;
+                    $queue[] = $pId;
+                }
+            }
+        }
+    }
+
+    /**
+     * Traverse down the tree to collect all descendants.
+     */
+    private function collectDescendants(string $startId, array $allIndividuals, array &$allowed): void
+    {
+        $queue = [$startId];
+        $visited = [$startId => true];
+
+        while (!empty($queue)) {
+            $currId = array_shift($queue);
+            if (!isset($allIndividuals[$currId])) {
+                continue;
+            }
+
+            $children = $allIndividuals[$currId]['children'] ?? [];
+            foreach ($children as $cId) {
+                if (!isset($visited[$cId])) {
+                    $visited[$cId] = true;
+                    $allowed[$cId] = true;
+                    $queue[] = $cId;
+                }
+            }
+        }
+    }
+
+    /**
+     * Collect all siblings of a person, their spouses, and all of their descendants.
+     */
+    private function collectSiblingsAndDescendants(string $personId, array $allIndividuals, array &$allowed): void
+    {
+        if (!isset($allIndividuals[$personId])) {
+            return;
+        }
+
+        $siblings = $allIndividuals[$personId]['siblings'] ?? [];
+        foreach ($siblings as $sibId) {
+            $allowed[$sibId] = true;
+            $this->collectDescendants($sibId, $allIndividuals, $allowed);
+        }
+    }
 }
+
+
