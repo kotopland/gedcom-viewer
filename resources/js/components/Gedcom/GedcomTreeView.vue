@@ -133,20 +133,36 @@ const handleChangeRoot = (id: string) => {
     emit('change-root', id);
 };
 
-// Auto-adjust zoom scale whenever generation depth changes or viewport is mobile
-watch([ancestorLevels, descendantLevels], ([aL, dL]) => {
-    const maxL = Math.max(aL, dL);
-    if (isMobile.value) {
-        if (maxL <= 2) zoomLevel.value = 0.75;
-        else if (maxL === 3) zoomLevel.value = 0.60;
-        else zoomLevel.value = 0.45;
+const calculateOptimalZoom = () => {
+    const maxL = Math.max(ancestorLevels.value, descendantLevels.value);
+    const screenW = window.innerWidth;
+    
+    if (screenW < 640) {
+        if (maxL <= 2) return 0.65;
+        if (maxL === 3) return 0.50;
+        return 0.40;
+    } else if (screenW < 1024) {
+        if (maxL <= 2) return 0.75;
+        if (maxL === 3) return 0.65;
+        return 0.50;
     } else {
-        if (maxL <= 2) zoomLevel.value = 1.0;
-        else if (maxL === 3) zoomLevel.value = 0.85;
-        else if (maxL === 4) zoomLevel.value = 0.65;
-        else zoomLevel.value = 0.50;
+        if (maxL <= 2) return 0.85;
+        if (maxL === 3) return 0.70;
+        if (maxL === 4) return 0.60;
+        return 0.50;
     }
+};
+
+// Auto-adjust zoom scale whenever generation depth changes
+watch([ancestorLevels, descendantLevels], () => {
+    zoomLevel.value = calculateOptimalZoom();
+    awaitNextTickCenter();
 });
+
+const awaitNextTickCenter = async () => {
+    await nextTick();
+    setTimeout(centerScroll, 60);
+};
 
 const fetchTreeData = async (id: string) => {
     loading.value = true;
@@ -154,8 +170,7 @@ const fetchTreeData = async (id: string) => {
         const res = await fetch(`/api/gedcom/tree/${id}?ancestors=${ancestorLevels.value}&descendants=${descendantLevels.value}`);
         if (res.ok) {
             treeData.value = await res.json();
-            await nextTick();
-            setTimeout(centerScroll, 60);
+            awaitNextTickCenter();
         }
     } catch (e) {
         console.error('Failed to fetch tree data:', e);
@@ -193,25 +208,16 @@ const descendantBadgeLabel = computed(() => {
 });
 
 const zoomIn = () => {
-    zoomLevel.value = Math.min(1.8, zoomLevel.value + 0.15);
+    zoomLevel.value = Math.min(1.8, Math.round((zoomLevel.value + 0.15) * 100) / 100);
 };
 
 const zoomOut = () => {
-    zoomLevel.value = Math.max(0.3, zoomLevel.value - 0.15);
+    zoomLevel.value = Math.max(0.3, Math.round((zoomLevel.value - 0.15) * 100) / 100);
 };
 
 const resetZoom = () => {
-    const maxL = Math.max(ancestorLevels.value, descendantLevels.value);
-    if (isMobile.value) {
-        if (maxL <= 2) zoomLevel.value = 0.75;
-        else zoomLevel.value = 0.60;
-    } else {
-        if (maxL <= 2) zoomLevel.value = 1.0;
-        else if (maxL === 3) zoomLevel.value = 0.85;
-        else if (maxL === 4) zoomLevel.value = 0.65;
-        else zoomLevel.value = 0.50;
-    }
-    setTimeout(centerScroll, 50);
+    zoomLevel.value = calculateOptimalZoom();
+    awaitNextTickCenter();
 };
 
 const toggleFullscreen = () => {
@@ -233,11 +239,9 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 onMounted(() => {
     checkMobile();
+    zoomLevel.value = calculateOptimalZoom();
     window.addEventListener('resize', checkMobile);
     window.addEventListener('keydown', handleKeyDown);
-    if (isMobile.value) {
-        zoomLevel.value = 0.75;
-    }
 });
 
 onUnmounted(() => {

@@ -183,20 +183,22 @@ const getEventBadgeStyle = (tag: string) => {
     <div
         v-if="personId"
         @click="emit('close')"
-        class="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex justify-end transition-opacity cursor-pointer"
+        class="fixed inset-0 z-50 overflow-hidden bg-black/65 backdrop-blur-xs flex justify-end transition-opacity cursor-pointer p-0 sm:p-0"
     >
         <div
             @click.stop
-            class="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl h-full max-h-screen flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300 cursor-default overflow-hidden"
+            class="relative w-full max-w-[100vw] sm:max-w-2xl bg-white dark:bg-slate-900 shadow-2xl h-full max-h-[100dvh] flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300 cursor-default overflow-hidden"
         >
             <!-- Header section -->
-            <div class="relative shrink-0 z-20 bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-4 sm:p-6 pb-4 border-b border-slate-800">
+            <div class="relative shrink-0 z-20 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-6 pb-4 border-b border-slate-800">
+                <!-- Prominent Close Pill Button -->
                 <button
                     @click="emit('close')"
-                    class="absolute top-3 right-3 sm:top-4 sm:right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-slate-200 hover:text-white transition-colors cursor-pointer z-30 flex items-center justify-center"
-                    title="Close (Esc)"
+                    class="absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-extrabold shadow-xl border border-indigo-400/40 transition-all cursor-pointer z-30"
+                    title="Close Drawer (Esc)"
                 >
-                    <X class="w-5 h-5" />
+                    <X class="w-4 h-4" />
+                    <span>Close</span>
                 </button>
 
                 <div class="flex items-start gap-4 sm:gap-5 mt-1 sm:mt-2">
