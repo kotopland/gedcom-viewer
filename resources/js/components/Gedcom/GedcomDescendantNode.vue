@@ -22,14 +22,14 @@ const emit = defineEmits<{
                 :class="[
                     'relative border rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 group shrink-0',
                     level === 1
-                        ? 'bg-gradient-to-b from-slate-800 to-slate-850 hover:from-slate-750 hover:to-slate-800 border-2 border-emerald-500/40 p-3 w-48'
+                        ? 'bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-750 border-2 border-emerald-500/70 dark:border-emerald-500/40 p-3 w-48'
                         : level === 2
-                        ? 'bg-slate-800/90 hover:bg-slate-800 border-slate-700/80 p-2.5 w-40'
+                        ? 'bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/80 p-2.5 w-40'
                         : level === 3
-                        ? 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/70 p-2 w-32 text-xs'
+                        ? 'bg-white/90 dark:bg-slate-850/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/70 p-2 w-32 text-xs'
                         : level === 4
-                        ? 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/60 p-1.5 w-28 text-[11px]'
-                        : 'bg-slate-850/90 hover:bg-slate-800 border-slate-700/60 p-1.5 w-24 text-[10px]'
+                        ? 'bg-white/90 dark:bg-slate-850/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/60 p-1.5 w-28 text-[11px]'
+                        : 'bg-white/90 dark:bg-slate-850/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/60 p-1.5 w-24 text-[10px]'
                 ]"
             >
                 <button
@@ -52,7 +52,7 @@ const emit = defineEmits<{
                     <div
                         v-else
                         :class="[
-                            'rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 shrink-0',
+                            'rounded-lg bg-emerald-50 dark:bg-slate-700 flex items-center justify-center text-emerald-600 dark:text-slate-400 shrink-0',
                             level <= 2 ? 'w-8 h-8' : 'w-6 h-6'
                         ]"
                     >
@@ -61,8 +61,8 @@ const emit = defineEmits<{
                     <div class="min-w-0 flex-1">
                         <div
                             :class="[
-                                'font-bold truncate group-hover:text-emerald-400',
-                                level === 1 ? 'text-xs text-white' : level <= 3 ? 'text-xs text-slate-200' : 'text-[11px] text-slate-200'
+                                'font-bold truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
+                                level === 1 ? 'text-xs text-slate-900 dark:text-white' : level <= 3 ? 'text-xs text-slate-800 dark:text-slate-200' : 'text-[11px] text-slate-800 dark:text-slate-200'
                             ]"
                         >
                             {{ person.name }}
@@ -70,7 +70,7 @@ const emit = defineEmits<{
                         <div
                             :class="[
                                 'font-medium truncate',
-                                level === 1 ? 'text-[11px] text-emerald-300' : 'text-[10px] text-slate-400'
+                                level === 1 ? 'text-[11px] text-emerald-600 dark:text-emerald-300' : 'text-[10px] text-slate-500 dark:text-slate-400'
                             ]"
                         >
                             {{ person.birth_year || '?' }} – {{ person.death_year || '?' }}
@@ -82,11 +82,11 @@ const emit = defineEmits<{
             <!-- Spouse Cards (if any) -->
             <template v-if="person.spouses && person.spouses.length > 0">
                 <div v-for="spouse in person.spouses" :key="spouse.id" class="flex items-center gap-1.5">
-                    <Heart class="w-3 h-3 text-rose-400 shrink-0" />
+                    <Heart class="w-3 h-3 text-rose-500 dark:text-rose-400 shrink-0" />
                     <div
                         @click="emit('select-person', spouse.id)"
                         :class="[
-                            'relative border rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 group shrink-0 bg-slate-900/90 border-rose-500/40 p-2 w-36 text-xs'
+                            'relative border rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 group shrink-0 bg-white dark:bg-slate-900/90 border-rose-300 dark:border-rose-500/40 p-2 w-36 text-xs'
                         ]"
                     >
                         <button
@@ -102,11 +102,11 @@ const emit = defineEmits<{
                                 :src="spouse.primary_media.url"
                                 class="w-6 h-6 rounded-lg object-cover shrink-0"
                             />
-                            <div v-else class="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-rose-400 shrink-0">
+                            <div v-else class="w-6 h-6 rounded-lg bg-rose-50 dark:bg-slate-800 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
                                 <User class="w-3 h-3" />
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="font-bold truncate text-slate-200 group-hover:text-rose-300">
+                                <div class="font-bold truncate text-slate-900 dark:text-slate-200 group-hover:text-rose-600 dark:group-hover:text-rose-300">
                                     {{ spouse.name }}
                                 </div>
                                 <div class="font-medium truncate text-[10px] text-rose-300/80">
