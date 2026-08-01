@@ -4,7 +4,7 @@ import {
     X, User, Calendar, MapPin, Heart, Users, FileText, Image as ImageIcon,
     FileCode, Music, Volume2, Download, ExternalLink, ChevronRight,
     Baby, Sparkles, Briefcase, Home, GraduationCap, Globe, ClipboardList, Cross, Activity,
-    Send, PlusCircle, Upload, FileUp, CheckCircle2, AlertCircle, Trash2
+    Send, PlusCircle, Upload, FileUp, CheckCircle2, AlertCircle, Trash2, Printer
 } from '@lucide/vue';
 
 
@@ -254,6 +254,14 @@ const getEventBadgeStyle = (tag: string) => {
                             >
                                 <Send class="w-3.5 h-3.5" />
                                 Add Note / Media
+                            </button>
+                            <button
+                                @click="window.print()"
+                                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                                title="Print this individual profile"
+                            >
+                                <Printer class="w-3.5 h-3.5" />
+                                Print
                             </button>
                         </div>
                     </div>

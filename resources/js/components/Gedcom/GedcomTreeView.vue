@@ -2,7 +2,7 @@
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
     ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink,
-    SlidersHorizontal, ChevronRight, ChevronLeft, Heart, MoveHand, Sparkles
+    SlidersHorizontal, ChevronRight, ChevronLeft, Heart, MoveHand, Sparkles, PieChart
 } from '@lucide/vue';
 import GedcomAncestorNode from './GedcomAncestorNode.vue';
 import GedcomDescendantNode from './GedcomDescendantNode.vue';
