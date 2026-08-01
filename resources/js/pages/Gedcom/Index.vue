@@ -3,11 +3,13 @@ import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon,
-    BarChart2, FileText, X, ChevronRight, Sparkles, Layers
+    BarChart2, FileText, X, ChevronRight, Sparkles, Layers, PieChart
 } from '@lucide/vue';
 
 import GedcomDirectory from '@/components/Gedcom/GedcomDirectory.vue';
 import GedcomTreeView from '@/components/Gedcom/GedcomTreeView.vue';
+import GedcomFanView from '@/components/Gedcom/GedcomFanView.vue';
+import GedcomTextView from '@/components/Gedcom/GedcomTextView.vue';
 import GedcomMediaGallery from '@/components/Gedcom/GedcomMediaGallery.vue';
 import GedcomPersonModal from '@/components/Gedcom/GedcomPersonModal.vue';
 import { useAppearance } from '@/composables/useAppearance';
@@ -28,7 +30,7 @@ const props = defineProps<{
         top_surnames: Record<string, number>;
     };
     rootPersonId: string | null;
-    defaultTab?: 'directory' | 'tree' | 'media';
+    defaultTab?: 'directory' | 'tree' | 'fan' | 'media' | 'text';
 }>();
 
 const page = usePage();
@@ -39,7 +41,7 @@ const toggleTheme = () => {
     updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
 };
 
-const activeTab = ref<'directory' | 'tree' | 'media'>(props.defaultTab || 'tree');
+const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text'>(props.defaultTab || 'tree');
 const selectedPersonId = ref<string | null>(null);
 const currentRootPersonId = ref<string | null>(props.rootPersonId);
 const isReimporting = ref(false);
@@ -78,7 +80,7 @@ const changeRootPerson = (id: string) => {
     currentRootPersonId.value = id;
 };
 
-const switchTab = (tab: 'tree' | 'directory' | 'media') => {
+const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
     activeTab.value = tab;
     showReportsModal.value = false;
 };
@@ -115,7 +117,7 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                     </div>
                 </div>
 
-                <!-- Navigation Tabs (Tree Entrance First) -->
+                <!-- Navigation Tabs (Tree & Fan Chart Entrance First) -->
                 <nav class="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950/80 p-1.5 rounded-2xl border border-slate-300/80 dark:border-slate-800 text-xs font-bold">
                     <button
                         @click="activeTab = 'tree'"
@@ -124,6 +126,14 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                     >
                         <GitBranch class="w-4 h-4" />
                         Family Tree
+                    </button>
+                    <button
+                        @click="activeTab = 'fan'"
+                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                        :class="activeTab === 'fan' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
+                    >
+                        <PieChart class="w-4 h-4" />
+                        Fan Chart
                     </button>
                     <button
                         @click="activeTab = 'directory'"
@@ -198,7 +208,7 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
             </div>
         </header>
 
-        <main :class="activeTab === 'tree' ? 'max-w-[96rem] mx-auto px-2 sm:px-4 lg:px-6 py-6 space-y-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8'">
+        <main :class="(activeTab === 'tree' || activeTab === 'fan') ? 'max-w-[96rem] mx-auto px-2 sm:px-4 lg:px-6 py-6 space-y-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8'">
             <!-- Active View Container -->
             <div>
                 <!-- Family Tree View (Default Entrance) -->
@@ -207,6 +217,22 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                     :root-person-id="currentRootPersonId"
                     @select-person="selectPerson"
                     @change-root="changeRootPerson"
+                />
+
+                <!-- Ancestry Fan Chart View -->
+                <GedcomFanView
+                    v-if="activeTab === 'fan'"
+                    :root-person-id="currentRootPersonId"
+                    @select-person="selectPerson"
+                    @change-root="changeRootPerson"
+                />
+
+                <!-- Printable Text Report View -->
+                <GedcomTextView
+                    v-if="activeTab === 'text'"
+                    :root-person-id="currentRootPersonId"
+                    @select-person="selectPerson"
+                    @open-in-tree="openInTree"
                 />
 
                 <!-- Directory View -->
@@ -239,7 +265,7 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
             class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200"
             @click.self="showReportsModal = false"
         >
-            <div class="relative w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <!-- Header -->
                 <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
                     <div class="flex items-center gap-3">
@@ -271,7 +297,7 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
                             Archive Views
                         </h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                             <!-- Family Tree -->
                             <div
                                 @click="switchTab('tree')"
@@ -289,7 +315,51 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                                         Family Tree
                                     </h4>
                                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Interactive multi-generational visual lineage chart.
+                                        Interactive visual lineage graph.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Ancestry Fan Chart -->
+                            <div
+                                @click="switchTab('fan')"
+                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                                :class="activeTab === 'fan' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                        <PieChart class="w-5 h-5" />
+                                    </div>
+                                    <span v-if="activeTab === 'fan'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                        Fan Chart
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Concentric arc radial ancestry chart.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Printable Text Report -->
+                            <div
+                                @click="switchTab('text')"
+                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                                :class="activeTab === 'text' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                        <FileText class="w-5 h-5" />
+                                    </div>
+                                    <span v-if="activeTab === 'text'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                        Print / Text Report
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Formatted outline ready for print & PDF.
                                     </p>
                                 </div>
                             </div>
@@ -311,7 +381,7 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                                         People Directory
                                     </h4>
                                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Searchable index of all individuals & surnames.
+                                        Searchable index of all individuals.
                                     </p>
                                 </div>
                             </div>
@@ -333,7 +403,7 @@ const switchTab = (tab: 'tree' | 'directory' | 'media') => {
                                         Media Explorer
                                     </h4>
                                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Photos, archival documents, & audio recordings.
+                                        Photos, documents, & audio files.
                                     </p>
                                 </div>
                             </div>
