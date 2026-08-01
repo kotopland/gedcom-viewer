@@ -85,7 +85,7 @@ class GedcomController extends Controller
         return Inertia::render('Gedcom/Index', [
             'stats' => $data['stats'],
             'rootPersonId' => $rootPersonId,
-            'defaultTab' => $hasEnvDefault ? 'tree' : 'directory',
+            'defaultTab' => 'tree',
         ]);
     }
 
