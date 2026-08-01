@@ -13,6 +13,7 @@ class LineageAccessControlTest extends TestCase
 
     public function test_lineage_permission_service_computes_direct_lineage_and_siblings(): void
     {
+
         $service = new LineagePermissionService();
 
         // Sample GEDCOM individuals graph:

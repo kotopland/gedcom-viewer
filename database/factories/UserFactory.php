@@ -57,4 +57,27 @@ class UserFactory extends Factory
             'two_factor_confirmed_at' => now(),
         ]);
     }
+
+    /**
+     * Indicate that the user is verified.
+     */
+    public function verified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_verified' => true,
+        ]);
+    }
+
+    /**
+     * Indicate that the user is a superuser and verified.
+     */
+    public function superuser(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_superuser' => true,
+            'is_verified' => true,
+        ]);
+    }
 }
+
+

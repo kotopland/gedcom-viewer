@@ -701,4 +701,105 @@ class GedcomController extends Controller
             'Cache-Control' => 'public, max-age=31536000',
         ]);
     }
+
+    public function submitContribution(Request $request, string $id, GedcomParserService $parser)
+    {
+        $data = $parser->getOrParseData();
+
+        if (!isset($data['individuals'][$id])) {
+            return response()->json(['error' => 'Person not found'], 404);
+        }
+
+        $ind = $data['individuals'][$id];
+        $user = $request->user();
+
+        $request->validate([
+            'note' => 'nullable|string|max:3000',
+            'media' => 'nullable|file|max:20480|mimes:jpg,jpeg,png,gif,webp,pdf,m4a,mp3,wav',
+        ]);
+
+        $note = trim((string) $request->input('note', ''));
+        $hasFile = $request->hasFile('media');
+
+        if (empty($note) && !$hasFile) {
+            return response()->json([
+                'error' => 'Please provide a note or select a file to upload.',
+            ], 422);
+        }
+
+        $mediaUrl = null;
+        $originalFilename = null;
+
+        if ($hasFile) {
+            $file = $request->file('media');
+            $originalFilename = $file->getClientOriginalName();
+            $filename = uniqid('contrib_') . '_' . preg_replace('/[^a-zA-Z0-9_.-]/', '_', $originalFilename);
+
+            $targetDir = storage_path('app/public/contributions');
+            File::ensureDirectoryExists($targetDir);
+
+            $link = public_path('storage');
+            if (!File::exists($link)) {
+                @symlink(storage_path('app/public'), $link);
+            }
+
+            $file->move($targetDir, $filename);
+            $mediaUrl = url('/storage/contributions/' . $filename);
+        }
+
+        // Send email to superusers
+        $superusers = \App\Models\User::where('is_superuser', true)->get();
+        $recipients = $superusers->pluck('email')->filter()->toArray();
+
+        if (empty($recipients)) {
+            $recipients = [config('mail.from.address') ?: 'admin@topland-family.test'];
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($recipients)->send(
+                new \App\Mail\PersonContributionSubmittedMail(
+                    $user,
+                    $ind,
+                    $note ?: null,
+                    $mediaUrl,
+                    $originalFilename
+                )
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send contribution email: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'Thank you! Your note/media file has been submitted successfully to the administrator.',
+        ]);
+    }
+
+    public function serveContributionMedia(string $filename): BinaryFileResponse
+    {
+        $safeFilename = basename($filename);
+        $path = storage_path('app/public/contributions/' . $safeFilename);
+
+        if (!File::exists($path)) {
+            abort(404, 'Contribution media file not found');
+        }
+
+        $ext = strtolower(pathinfo($safeFilename, PATHINFO_EXTENSION));
+        $contentType = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+            'm4a' => 'audio/x-m4a',
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            default => File::mimeType($path) ?: 'application/octet-stream',
+        };
+
+        return response()->file($path, [
+            'Content-Type' => $contentType,
+            'Cache-Control' => 'public, max-age=31536000',
+        ]);
+    }
 }
+

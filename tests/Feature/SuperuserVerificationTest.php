@@ -73,9 +73,12 @@ class SuperuserVerificationTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->get('/admin/users');
+        $response->assertRedirect(route('gedcom.index'));
 
-        $response->assertStatus(403);
+        $jsonResponse = $this->actingAs($user)->getJson('/admin/users');
+        $jsonResponse->assertStatus(403);
     }
+
 
     public function test_superuser_can_verify_a_pending_user(): void
     {

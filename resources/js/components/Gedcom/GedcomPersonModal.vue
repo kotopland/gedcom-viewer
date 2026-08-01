@@ -3,7 +3,8 @@ import { ref, watch, onMounted, onUnmounted } from 'vue';
 import {
     X, User, Calendar, MapPin, Heart, Users, FileText, Image as ImageIcon,
     FileCode, Music, Volume2, Download, ExternalLink, ChevronRight,
-    Baby, Sparkles, Briefcase, Home, GraduationCap, Globe, ClipboardList, Cross, Activity
+    Baby, Sparkles, Briefcase, Home, GraduationCap, Globe, ClipboardList, Cross, Activity,
+    Send, PlusCircle, Upload, FileUp, CheckCircle2, AlertCircle, Trash2
 } from '@lucide/vue';
 
 
@@ -19,8 +20,80 @@ const emit = defineEmits<{
 
 const loading = ref(false);
 const personData = ref<any>(null);
-const activeTab = ref<'overview' | 'family' | 'media' | 'notes'>('overview');
+const activeTab = ref<'overview' | 'family' | 'media' | 'notes' | 'contribute'>('overview');
 const activeMediaPreview = ref<any>(null);
+
+const contributionNote = ref('');
+const selectedFile = ref<File | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const submittingContribution = ref(false);
+const contributionSuccess = ref(false);
+const contributionError = ref<string | null>(null);
+
+const handleFileSelect = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        selectedFile.value = target.files[0];
+    }
+};
+
+const removeSelectedFile = () => {
+    selectedFile.value = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
+
+const submitContribution = async () => {
+    if (!props.personId) return;
+    if (!contributionNote.value.trim() && !selectedFile.value) {
+        contributionError.value = 'Please write a note or select a file to upload.';
+        return;
+    }
+
+    submittingContribution.value = true;
+    contributionError.value = null;
+    contributionSuccess.value = false;
+
+    try {
+        const formData = new FormData();
+        if (contributionNote.value.trim()) {
+            formData.append('note', contributionNote.value.trim());
+        }
+        if (selectedFile.value) {
+            formData.append('media', selectedFile.value);
+        }
+
+        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+
+        const res = await fetch(`/api/gedcom/person/${props.personId}/contribution`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            contributionSuccess.value = true;
+            contributionNote.value = '';
+            selectedFile.value = null;
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+        } else {
+            contributionError.value = data.error || data.message || 'Failed to send contribution.';
+        }
+    } catch (e: any) {
+        console.error('Failed to submit contribution:', e);
+        contributionError.value = 'An unexpected error occurred while sending your contribution.';
+    } finally {
+        submittingContribution.value = false;
+    }
+};
+
 
 const fetchPersonDetails = async (id: string) => {
     loading.value = true;
@@ -173,6 +246,13 @@ const getEventBadgeStyle = (tag: string) => {
                                 <Users class="w-3.5 h-3.5" />
                                 View in Tree
                             </button>
+                            <button
+                                @click="activeTab = 'contribute'; contributionSuccess = false; contributionError = null"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-xs"
+                            >
+                                <Send class="w-3.5 h-3.5" />
+                                Add Note / Media
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -203,7 +283,16 @@ const getEventBadgeStyle = (tag: string) => {
                         <ImageIcon class="w-3.5 h-3.5" />
                         Media ({{ personData?.person?.media_items?.length || 0 }})
                     </button>
+                    <button
+                        @click="activeTab = 'contribute'; contributionSuccess = false; contributionError = null"
+                        class="px-4 py-2.5 rounded-t-lg transition-colors flex items-center gap-1.5 border-b-2 font-semibold"
+                        :class="activeTab === 'contribute' ? 'border-emerald-400 text-emerald-300 bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'"
+                    >
+                        <Send class="w-3.5 h-3.5" />
+                        Contribute
+                    </button>
                 </div>
+
             </div>
 
             <!-- Content Area -->
@@ -467,8 +556,109 @@ const getEventBadgeStyle = (tag: string) => {
                             <p class="text-sm">No media files attached to this person</p>
                         </div>
                     </div>
+
+                    <!-- Contribute Tab -->
+                    <div v-if="activeTab === 'contribute'" class="space-y-6">
+                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-200 dark:border-slate-800">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                                    <Send class="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+                                        Send Note or Upload Media
+                                    </h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                                        Submit corrections, stories, or photos for {{ personData?.person?.name }}. This is stored and emailed to the administrator.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div v-if="contributionSuccess" class="my-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+                                <CheckCircle2 class="w-5 h-5 shrink-0 mt-0.5" />
+                                <div>
+                                    <strong class="font-bold text-sm block">Contribution Sent Successfully!</strong>
+                                    Your note/media file has been stored safely and emailed directly to the administrator for review.
+                                </div>
+                            </div>
+
+                            <div v-if="contributionError" class="my-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                                <AlertCircle class="w-4 h-4 shrink-0" />
+                                {{ contributionError }}
+                            </div>
+
+                            <div class="space-y-4 mt-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                        Note / Details (Optional if uploading a file)
+                                    </label>
+                                    <textarea
+                                        v-model="contributionNote"
+                                        rows="4"
+                                        placeholder="Add facts, birth/death place corrections, notes, or memory descriptions..."
+                                        class="w-full rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs p-3 focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400"
+                                    ></textarea>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                        Upload Media File (Optional)
+                                    </label>
+
+                                    <div v-if="!selectedFile" class="relative border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-xl p-5 text-center bg-white/50 dark:bg-slate-900/50 transition-colors cursor-pointer group">
+                                        <input
+                                            ref="fileInputRef"
+                                            type="file"
+                                            @change="handleFileSelect"
+                                            accept="image/*,.pdf,audio/*"
+                                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        <FileUp class="w-7 h-7 mx-auto text-slate-400 group-hover:text-emerald-500 transition-colors mb-1.5" />
+                                        <p class="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                            Click or drag file here to upload
+                                        </p>
+                                        <p class="text-[11px] text-slate-400 mt-1">
+                                            Photos (JPG, PNG, WebP), PDFs, or Audio (MP3, M4A). Max 20MB.
+                                        </p>
+                                    </div>
+
+                                    <div v-else class="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                                        <div class="flex items-center gap-2.5 truncate">
+                                            <Upload class="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span class="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
+                                                {{ selectedFile.name }}
+                                            </span>
+                                            <span class="text-[10px] text-slate-400 shrink-0">
+                                                ({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)
+                                            </span>
+                                        </div>
+                                        <button
+                                            @click="removeSelectedFile"
+                                            class="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                                            title="Remove file"
+                                        >
+                                            <Trash2 class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="pt-2 flex justify-end">
+                                    <button
+                                        @click="submitContribution"
+                                        :disabled="submittingContribution || (!contributionNote.trim() && !selectedFile)"
+                                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors shadow-xs"
+                                    >
+                                        <div v-if="submittingContribution" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        <Send v-else class="w-3.5 h-3.5" />
+                                        {{ submittingContribution ? 'Sending Contribution...' : 'Submit to Administrator' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+
 
             <!-- Media Preview Lightbox Modal -->
             <div v-if="activeMediaPreview" class="fixed inset-0 z-60 bg-black/90 flex flex-col items-center justify-center p-6 animate-in fade-in">

@@ -19,14 +19,17 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
 
     Route::get('/gedcom', [GedcomController::class, 'index'])->name('gedcom.index');
     Route::get('/storage/gedcom/media/{filename}', [GedcomController::class, 'serveMedia'])->where('filename', '.*')->name('gedcom.storage.media');
+    Route::get('/storage/contributions/{filename}', [GedcomController::class, 'serveContributionMedia'])->where('filename', '.*')->name('gedcom.storage.contributions');
     Route::get('/gedcom/media-file/{filename}', [GedcomController::class, 'serveMedia'])->where('filename', '.*')->name('gedcom.media.file');
 
     Route::prefix('api/gedcom')->group(function () {
         Route::get('/search', [GedcomController::class, 'search'])->name('gedcom.api.search');
         Route::get('/person/{id}', [GedcomController::class, 'person'])->name('gedcom.api.person');
+        Route::post('/person/{id}/contribution', [GedcomController::class, 'submitContribution'])->name('gedcom.api.person.contribution');
         Route::get('/tree/{id}', [GedcomController::class, 'tree'])->name('gedcom.api.tree');
         Route::get('/media', [GedcomController::class, 'media'])->name('gedcom.api.media');
     });
+
 });
 
 // Admin / Superuser-only routes
@@ -45,6 +48,12 @@ Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function (
 });
 
 require __DIR__.'/settings.php';
+
+
+
+
+
+
 
 
 

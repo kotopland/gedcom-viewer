@@ -29,8 +29,22 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
+        $response->assertRedirect(route('gedcom.index', absolute: false));
+    }
+
+    public function test_superusers_redirect_to_dashboard_upon_login()
+    {
+        $user = User::factory()->superuser()->create();
+
+        $response = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
     }
+
 
     public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge()
     {
