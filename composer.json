@@ -17,6 +17,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "spatie/laravel-mail-preview": "^6.2",
+        "symfony/http-client": "^7.2 || ^8.0",
         "symfony/mailgun-mailer": "^8.0"
     },
     "require-dev": {
