@@ -2,7 +2,7 @@
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
     ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink,
-    SlidersHorizontal, ChevronRight, ChevronLeft, Heart
+    SlidersHorizontal, ChevronRight, ChevronLeft, Heart, MoveHand, Sparkles
 } from '@lucide/vue';
 import GedcomAncestorNode from './GedcomAncestorNode.vue';
 import GedcomDescendantNode from './GedcomDescendantNode.vue';
@@ -23,28 +23,128 @@ const ancestorLevels = ref(2);
 const descendantLevels = ref(2);
 const isFullscreen = ref(false);
 const isControlsCollapsed = ref(true);
+const isMobile = ref(false);
 const canvasContainerRef = ref<HTMLElement | null>(null);
+
+// Drag & Pan state
+const isDragging = ref(false);
+const isPointerDown = ref(false);
+let startX = 0;
+let startY = 0;
+let startScrollLeft = 0;
+let startScrollTop = 0;
+let dragMoved = false;
+
+// Pinch zoom state
+let initialPinchDistance: number | null = null;
+let initialPinchZoom = 1;
+
+const checkMobile = () => {
+    isMobile.value = window.innerWidth < 640;
+};
 
 const centerScroll = () => {
     if (canvasContainerRef.value) {
-        const { scrollWidth, clientWidth } = canvasContainerRef.value;
+        const { scrollWidth, clientWidth, scrollHeight, clientHeight } = canvasContainerRef.value;
         if (scrollWidth > clientWidth) {
             canvasContainerRef.value.scrollLeft = (scrollWidth - clientWidth) / 2;
+        }
+        if (scrollHeight > clientHeight) {
+            canvasContainerRef.value.scrollTop = (scrollHeight - clientHeight) / 2;
         }
     }
 };
 
-// Auto-adjust zoom scale whenever generation depth changes to fit entire tree on screen
+// Pointer Events for Mouse and Touch Drag Panning
+const onPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, select, input, a')) return;
+
+    isPointerDown.value = true;
+    dragMoved = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    if (canvasContainerRef.value) {
+        startScrollLeft = canvasContainerRef.value.scrollLeft;
+        startScrollTop = canvasContainerRef.value.scrollTop;
+    }
+};
+
+const onPointerMove = (e: PointerEvent) => {
+    if (!isPointerDown.value || !canvasContainerRef.value) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!dragMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        dragMoved = true;
+        isDragging.value = true;
+    }
+
+    if (dragMoved) {
+        canvasContainerRef.value.scrollLeft = startScrollLeft - dx;
+        canvasContainerRef.value.scrollTop = startScrollTop - dy;
+    }
+};
+
+const onPointerUp = () => {
+    isPointerDown.value = false;
+    setTimeout(() => {
+        isDragging.value = false;
+        dragMoved = false;
+    }, 50);
+};
+
+// 2-Finger Touch Pinch-to-Zoom
+const onTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        initialPinchZoom = zoomLevel.value;
+    }
+};
+
+const onTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 2 && initialPinchDistance) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const scale = currentDistance / initialPinchDistance;
+        const newZoom = Math.min(1.8, Math.max(0.3, initialPinchZoom * scale));
+        zoomLevel.value = Math.round(newZoom * 100) / 100;
+    }
+};
+
+const onTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) {
+        initialPinchDistance = null;
+    }
+};
+
+const handlePersonSelect = (id: string) => {
+    if (dragMoved || isDragging.value) return;
+    emit('select-person', id);
+};
+
+const handleChangeRoot = (id: string) => {
+    if (dragMoved || isDragging.value) return;
+    emit('change-root', id);
+};
+
+// Auto-adjust zoom scale whenever generation depth changes or viewport is mobile
 watch([ancestorLevels, descendantLevels], ([aL, dL]) => {
     const maxL = Math.max(aL, dL);
-    if (maxL <= 2) {
-        zoomLevel.value = 1.0;
-    } else if (maxL === 3) {
-        zoomLevel.value = 0.85;
-    } else if (maxL === 4) {
-        zoomLevel.value = 0.65;
-    } else if (maxL >= 5) {
-        zoomLevel.value = 0.50;
+    if (isMobile.value) {
+        if (maxL <= 2) zoomLevel.value = 0.75;
+        else if (maxL === 3) zoomLevel.value = 0.60;
+        else zoomLevel.value = 0.45;
+    } else {
+        if (maxL <= 2) zoomLevel.value = 1.0;
+        else if (maxL === 3) zoomLevel.value = 0.85;
+        else if (maxL === 4) zoomLevel.value = 0.65;
+        else zoomLevel.value = 0.50;
     }
 });
 
@@ -102,10 +202,16 @@ const zoomOut = () => {
 
 const resetZoom = () => {
     const maxL = Math.max(ancestorLevels.value, descendantLevels.value);
-    if (maxL <= 2) zoomLevel.value = 1.0;
-    else if (maxL === 3) zoomLevel.value = 0.85;
-    else if (maxL === 4) zoomLevel.value = 0.65;
-    else zoomLevel.value = 0.50;
+    if (isMobile.value) {
+        if (maxL <= 2) zoomLevel.value = 0.75;
+        else zoomLevel.value = 0.60;
+    } else {
+        if (maxL <= 2) zoomLevel.value = 1.0;
+        else if (maxL === 3) zoomLevel.value = 0.85;
+        else if (maxL === 4) zoomLevel.value = 0.65;
+        else zoomLevel.value = 0.50;
+    }
+    setTimeout(centerScroll, 50);
 };
 
 const toggleFullscreen = () => {
@@ -126,10 +232,16 @@ const handleKeyDown = (e: KeyboardEvent) => {
 };
 
 onMounted(() => {
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
     window.addEventListener('keydown', handleKeyDown);
+    if (isMobile.value) {
+        zoomLevel.value = 0.75;
+    }
 });
 
 onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile);
     window.removeEventListener('keydown', handleKeyDown);
     document.body.style.overflow = '';
 });
@@ -141,24 +253,24 @@ onUnmounted(() => {
             'transition-all duration-300 flex flex-col',
             isFullscreen
                 ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-950 border-none p-0 shadow-none'
-                : 'relative bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl min-h-[750px] h-[82vh]'
+                : 'relative bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl min-h-[550px] sm:min-h-[750px] h-[82vh]'
         ]"
     >
         <!-- Floating Tree Controls Bar -->
         <div
             :class="[
-                'absolute z-20 transition-all duration-300',
-                isFullscreen ? 'top-6 left-6' : 'top-4 left-4'
+                'absolute z-20 transition-all duration-300 max-w-[calc(100vw-2rem)]',
+                isFullscreen ? 'top-4 left-4 sm:top-6 sm:left-6' : 'top-3 left-3 sm:top-4 sm:left-4'
             ]"
         >
             <!-- Minimized / Collapsed Controls Pill -->
             <div
                 v-if="isControlsCollapsed"
-                class="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-xl"
+                class="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-xl"
             >
                 <button
                     @click="isControlsCollapsed = false"
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                    class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
                     title="Expand Tree Controls & Settings"
                 >
                     <SlidersHorizontal class="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
@@ -167,6 +279,22 @@ onUnmounted(() => {
                         {{ Math.round(zoomLevel * 100) }}%
                     </span>
                     <ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
+                <button
+                    @click="zoomIn"
+                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    title="Zoom In"
+                >
+                    <ZoomIn class="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                    @click="zoomOut"
+                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    title="Zoom Out"
+                >
+                    <ZoomOut class="w-3.5 h-3.5" />
                 </button>
 
                 <button
@@ -183,106 +311,116 @@ onUnmounted(() => {
             <!-- Expanded Controls Bar -->
             <div
                 v-else
-                class="flex flex-wrap items-center gap-3 bg-slate-900/95 backdrop-blur-md p-2.5 rounded-2xl border border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+                class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 bg-slate-900/95 backdrop-blur-md p-3 sm:p-2.5 rounded-2xl border border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-w-[calc(100vw-2.5rem)] overflow-x-auto"
             >
-                <!-- Full Screen Toggle Button -->
-                <button
-                    @click="toggleFullscreen"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
-                    :title="isFullscreen ? 'Exit Full Screen (Esc)' : 'Expand to Full Screen'"
-                >
-                    <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
-                    <Expand v-else class="w-3.5 h-3.5" />
-                    <span>{{ isFullscreen ? 'Exit Full Screen' : 'Full Screen' }}</span>
-                </button>
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Full Screen Toggle Button -->
+                    <button
+                        @click="toggleFullscreen"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
+                        :title="isFullscreen ? 'Exit Full Screen (Esc)' : 'Expand to Full Screen'"
+                    >
+                        <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
+                        <Expand v-else class="w-3.5 h-3.5" />
+                        <span>{{ isFullscreen ? 'Exit' : 'Full Screen' }}</span>
+                    </button>
 
-                <div class="h-4 w-px bg-slate-800"></div>
+                    <!-- Zoom controls -->
+                    <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl">
+                        <button
+                            @click="zoomIn"
+                            class="p-1.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+                            title="Zoom In"
+                        >
+                            <ZoomIn class="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            @click="zoomOut"
+                            class="p-1.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+                            title="Zoom Out"
+                        >
+                            <ZoomOut class="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            @click="resetZoom"
+                            class="p-1.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-pointer"
+                            title="Reset / Fit Zoom"
+                        >
+                            <Maximize2 class="w-3.5 h-3.5" />
+                        </button>
+                        <span class="text-[11px] font-bold text-slate-300 px-1">
+                            {{ Math.round(zoomLevel * 100) }}%
+                        </span>
+                    </div>
 
-                <!-- Zoom controls -->
-                <div class="flex items-center gap-1">
+                    <!-- Minimize Button -->
                     <button
-                        @click="zoomIn"
-                        class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-                        title="Zoom In"
+                        @click="isControlsCollapsed = true"
+                        class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer ml-auto"
+                        title="Minimize Controls"
                     >
-                        <ZoomIn class="w-4 h-4" />
+                        <ChevronLeft class="w-4 h-4" />
                     </button>
-                    <button
-                        @click="zoomOut"
-                        class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-                        title="Zoom Out"
-                    >
-                        <ZoomOut class="w-4 h-4" />
-                    </button>
-                    <button
-                        @click="resetZoom"
-                        class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-                        title="Reset Zoom"
-                    >
-                        <Maximize2 class="w-4 h-4" />
-                    </button>
-                    <span class="text-xs font-semibold text-slate-400 px-1">
-                        {{ Math.round(zoomLevel * 100) }}%
-                    </span>
                 </div>
 
-                <div class="h-4 w-px bg-slate-800"></div>
+                <div class="hidden sm:block h-4 w-px bg-slate-800"></div>
 
-                <!-- Ancestor levels dropdown -->
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-medium text-slate-400 flex items-center gap-1">
-                        <Layers class="w-3.5 h-3.5 text-indigo-400" />
-                        Ancestors:
-                    </label>
-                    <select
-                        v-model.number="ancestorLevels"
-                        class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
-                    >
-                        <option :value="0">0 (Hide)</option>
-                        <option :value="1">1 (Parents)</option>
-                        <option :value="2">2 (Grandparents)</option>
-                        <option :value="3">3 (Gt-Grandparents)</option>
-                        <option :value="4">4 Generations</option>
-                        <option :value="5">5 Generations</option>
-                    </select>
+                <div class="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+                    <!-- Ancestor levels dropdown -->
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1">
+                            <Layers class="w-3.5 h-3.5 text-indigo-400" />
+                            Ancestors:
+                        </label>
+                        <select
+                            v-model.number="ancestorLevels"
+                            class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2 py-1 focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
+                        >
+                            <option :value="0">0 (Hide)</option>
+                            <option :value="1">1 (Parents)</option>
+                            <option :value="2">2 (Grandparents)</option>
+                            <option :value="3">3 (Gt-Grandparents)</option>
+                            <option :value="4">4 Gen</option>
+                            <option :value="5">5 Gen</option>
+                        </select>
+                    </div>
+
+                    <!-- Descendant levels dropdown -->
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1">
+                            <Layers class="w-3.5 h-3.5 text-emerald-400" />
+                            Descendants:
+                        </label>
+                        <select
+                            v-model.number="descendantLevels"
+                            class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2 py-1 focus:outline-hidden focus:border-emerald-500 transition-colors cursor-pointer"
+                        >
+                            <option :value="0">0 (Hide)</option>
+                            <option :value="1">1 (Children)</option>
+                            <option :value="2">2 (Grandchildren)</option>
+                            <option :value="3">3 (Gt-Grandchildren)</option>
+                            <option :value="4">4 Gen</option>
+                            <option :value="5">5 Gen</option>
+                        </select>
+                    </div>
                 </div>
-
-                <!-- Descendant levels dropdown -->
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-medium text-slate-400 flex items-center gap-1">
-                        <Layers class="w-3.5 h-3.5 text-emerald-400" />
-                        Descendants:
-                    </label>
-                    <select
-                        v-model.number="descendantLevels"
-                        class="bg-slate-800 border border-slate-700 text-white text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:outline-hidden focus:border-emerald-500 transition-colors cursor-pointer"
-                    >
-                        <option :value="0">0 (Hide)</option>
-                        <option :value="1">1 (Children)</option>
-                        <option :value="2">2 (Grandchildren)</option>
-                        <option :value="3">3 (Gt-Grandchildren)</option>
-                        <option :value="4">4 Generations</option>
-                        <option :value="5">5 Generations</option>
-                    </select>
-                </div>
-
-                <div class="h-4 w-px bg-slate-800"></div>
-
-                <!-- Minimize Button -->
-                <button
-                    @click="isControlsCollapsed = true"
-                    class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                    title="Minimize Controls"
-                >
-                    <ChevronLeft class="w-4 h-4" />
-                </button>
             </div>
         </div>
 
         <!-- Tree Canvas -->
         <div
             ref="canvasContainerRef"
-            class="flex-1 overflow-auto flex cursor-grab active:cursor-grabbing select-none"
+            @pointerdown="onPointerDown"
+            @pointermove="onPointerMove"
+            @pointerup="onPointerUp"
+            @pointercancel="onPointerUp"
+            @touchstart="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend="onTouchEnd"
+            :class="[
+                'flex-1 overflow-auto flex select-none touch-none',
+                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            ]"
         >
             <div
                 v-if="loading"
@@ -310,8 +448,8 @@ onUnmounted(() => {
                             :person="parent"
                             :level="1"
                             :parent-index="idx"
-                            @select-person="emit('select-person', $event)"
-                            @change-root="emit('change-root', $event)"
+                            @select-person="handlePersonSelect($event)"
+                            @change-root="handleChangeRoot($event)"
                         />
                     </div>
                 </div>
@@ -323,7 +461,7 @@ onUnmounted(() => {
                         <div class="relative group">
                             <div class="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
                             <div
-                                @click="emit('select-person', (treeData.ancestors || treeData.descendants).id)"
+                                @click="handlePersonSelect((treeData.ancestors || treeData.descendants).id)"
                                 class="relative bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 border-2 border-indigo-400 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
                             >
                                 <div class="flex items-center gap-4">
@@ -367,7 +505,7 @@ onUnmounted(() => {
                                 <div class="relative group">
                                     <div class="absolute inset-0 bg-rose-500/10 blur-xl rounded-full"></div>
                                     <div
-                                        @click="emit('select-person', spouse.id)"
+                                        @click="handlePersonSelect(spouse.id)"
                                         class="relative bg-gradient-to-r from-slate-900 via-rose-950/40 to-slate-900 border-2 border-rose-400/60 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
                                     >
                                         <div class="flex items-center gap-4">
@@ -386,7 +524,7 @@ onUnmounted(() => {
                                                         Spouse
                                                     </span>
                                                     <button
-                                                        @click.stop="emit('change-root', spouse.id)"
+                                                        @click.stop="handleChangeRoot(spouse.id)"
                                                         class="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
                                                         title="Set as Tree Focus"
                                                     >
@@ -420,8 +558,8 @@ onUnmounted(() => {
                             :key="child.id"
                             :person="child"
                             :level="1"
-                            @select-person="emit('select-person', $event)"
-                            @change-root="emit('change-root', $event)"
+                            @select-person="handlePersonSelect($event)"
+                            @change-root="handleChangeRoot($event)"
                         />
                     </div>
                 </div>
