@@ -1076,5 +1076,136 @@ class GedcomController extends Controller
             ],
         ]);
     }
+
+    public function lineage(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService)
+    {
+        $data = $parser->getOrParseData();
+
+        // 1. Strict permission enforcement
+        $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
+        $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
+
+        if (!isset($data['individuals'][$id]) || ($allowedMap !== null && !isset($allowedMap[$id]))) {
+            return response()->json(['error' => 'Person not found or access denied'], 404);
+        }
+
+        $rootPerson = $data['individuals'][$id];
+
+        // Helper for Ahnentafel relationship titles
+        $getRelationshipTitle = function (int $n) {
+            if ($n === 1) return 'Primary Individual';
+            if ($n === 2) return 'Father';
+            if ($n === 3) return 'Mother';
+            if ($n === 4) return 'Paternal Grandfather';
+            if ($n === 5) return 'Paternal Grandmother';
+            if ($n === 6) return 'Maternal Grandfather';
+            if ($n === 7) return 'Maternal Grandmother';
+
+            $gen = (int) floor(log($n, 2));
+            $isMale = ($n % 2 === 0);
+            $genderTitle = $isMale ? 'Grandfather' : 'Grandmother';
+
+            $gtPrefix = match ($gen) {
+                3 => 'Great-',
+                4 => '2nd Great-',
+                5 => '3rd Great-',
+                default => ($gen - 2) . 'th Great-',
+            };
+
+            $paternal = (($n >> ($gen - 1)) & 1) === 0;
+            $branch = $paternal ? 'Paternal' : 'Maternal';
+
+            return "{$branch} {$gtPrefix}{$genderTitle}";
+        };
+
+        $getGenTitle = function (int $gen) {
+            return match ($gen) {
+                0 => 'Primary Individual',
+                1 => 'Parents',
+                2 => 'Grandparents',
+                3 => 'Great-Grandparents',
+                4 => '2nd Great-Grandparents',
+                5 => '3rd Great-Grandparents',
+                default => ($gen - 2) . 'th Great-Grandparents',
+            };
+        };
+
+        // Recursive traversal to collect ALL ancestors with Ahnentafel numbers
+        $ancestorsByGen = [];
+        $allAncestorsList = [];
+        $maxGen = 0;
+
+        $traverseAncestors = function (string $currId, int $ahnentafelNum, int $gen) use (&$traverseAncestors, &$ancestorsByGen, &$allAncestorsList, &$maxGen, $data, $allowedMap, $getRelationshipTitle, $getGenTitle) {
+            if ($allowedMap !== null && !isset($allowedMap[$currId])) {
+                return;
+            }
+            if (!isset($data['individuals'][$currId])) {
+                return;
+            }
+
+            $ind = $data['individuals'][$currId];
+            if ($gen > $maxGen) {
+                $maxGen = $gen;
+            }
+
+            $record = [
+                'id' => $ind['id'],
+                'ahnentafel_number' => $ahnentafelNum,
+                'generation' => $gen,
+                'generation_title' => $getGenTitle($gen),
+                'relationship_title' => $getRelationshipTitle($ahnentafelNum),
+                'name' => $ind['name'],
+                'sex' => $ind['sex'],
+                'birth_date' => $ind['birth_date'] ?? null,
+                'birth_year' => $ind['birth_year'] ?? null,
+                'birth_place' => $ind['birth_place'] ?? null,
+                'death_date' => $ind['death_date'] ?? null,
+                'death_year' => $ind['death_year'] ?? null,
+                'death_place' => $ind['death_place'] ?? null,
+                'primary_media' => $ind['primary_media'] ?? null,
+                'parents' => $ind['parents'] ?? [],
+            ];
+
+            $allAncestorsList[] = $record;
+            if (!isset($ancestorsByGen[$gen])) {
+                $ancestorsByGen[$gen] = [
+                    'generation' => $gen,
+                    'generation_title' => $getGenTitle($gen),
+                    'ancestors' => [],
+                ];
+            }
+            $ancestorsByGen[$gen]['ancestors'][] = $record;
+
+            $parents = $ind['parents'] ?? [];
+            if (!empty($parents)) {
+                $fatherId = $parents[0] ?? null;
+                $motherId = $parents[1] ?? null;
+
+                if ($fatherId) {
+                    $traverseAncestors($fatherId, $ahnentafelNum * 2, $gen + 1);
+                }
+                if ($motherId) {
+                    $traverseAncestors($motherId, $ahnentafelNum * 2 + 1, $gen + 1);
+                }
+            }
+        };
+
+        $traverseAncestors($id, 1, 0);
+
+        ksort($ancestorsByGen);
+
+        return response()->json([
+            'root_person' => [
+                'id' => $rootPerson['id'],
+                'name' => $rootPerson['name'],
+                'birth_year' => $rootPerson['birth_year'] ?? null,
+                'primary_media' => $rootPerson['primary_media'] ?? null,
+            ],
+            'total_ancestors_count' => count($allAncestorsList) - 1,
+            'max_generations_depth' => $maxGen,
+            'generations' => array_values($ancestorsByGen),
+            'all_ancestors' => $allAncestorsList,
+        ]);
+    }
 }
 
