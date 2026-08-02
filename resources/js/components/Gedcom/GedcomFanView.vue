@@ -233,8 +233,30 @@ const fanContainerRef = ref<HTMLElement | null>(null);
 const toggleFullscreen = () => {
     isFullscreen.value = !isFullscreen.value;
 };
-const zoomIn = () => { zoomLevel.value = Math.min(Math.round((zoomLevel.value + 0.25) * 100) / 100, 6.0); };
-const zoomOut = () => { zoomLevel.value = Math.max(Math.round((zoomLevel.value - 0.25) * 100) / 100, 0.3); };
+const applyZoomFromCenter = (newZoom: number) => {
+    if (!fanContainerRef.value) return;
+    const rect = fanContainerRef.value.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const contentX = (centerX - panX.value) / zoomLevel.value;
+    const contentY = (centerY - panY.value) / zoomLevel.value;
+
+    panX.value = Math.round(centerX - contentX * newZoom);
+    panY.value = Math.round(centerY - contentY * newZoom);
+    zoomLevel.value = newZoom;
+};
+
+const zoomIn = () => {
+    const newZoom = Math.min(6.0, Math.round((zoomLevel.value + 0.25) * 100) / 100);
+    applyZoomFromCenter(newZoom);
+};
+
+const zoomOut = () => {
+    const newZoom = Math.max(0.3, Math.round((zoomLevel.value - 0.25) * 100) / 100);
+    applyZoomFromCenter(newZoom);
+};
+
 const resetZoom = () => {
     zoomLevel.value = 1;
     panX.value = 0;
@@ -325,8 +347,20 @@ const onTouchEnd = (e: TouchEvent) => {
 };
 
 const onWheel = (e: WheelEvent) => {
-    const delta = e.deltaY > 0 ? -0.15 : 0.15;
-    zoomLevel.value = Math.min(6.0, Math.max(0.3, Math.round((zoomLevel.value + delta) * 100) / 100));
+    if (!fanContainerRef.value) return;
+    const rect = fanContainerRef.value.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+
+    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+    const newZoom = Math.min(6.0, Math.max(0.3, Math.round(zoomLevel.value * zoomFactor * 100) / 100));
+
+    const contentX = (cursorX - panX.value) / zoomLevel.value;
+    const contentY = (cursorY - panY.value) / zoomLevel.value;
+
+    panX.value = Math.round(cursorX - contentX * newZoom);
+    panY.value = Math.round(cursorY - contentY * newZoom);
+    zoomLevel.value = newZoom;
 };
 </script>
 
@@ -461,7 +495,11 @@ const onWheel = (e: WheelEvent) => {
                 <div
                     v-else-if="rootPerson"
                     class="w-full max-w-[950px] transition-transform duration-75 ease-out flex flex-col items-center"
-                    :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})` }"
+                    :style="{
+                        transform: `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
+                        transformOrigin: '0 0',
+                        willChange: 'transform'
+                    }"
                 >
                     <!-- Responsive SVG Chart (Fits 100% Mobile Viewport Width by default) -->
                     <svg
