@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
-    Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon,
+    Users, Image as ImageIcon, GitBranch, FolderArchive, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon,
     BarChart2, FileText, X, ChevronRight, Sparkles, Layers, PieChart, Menu, TrendingUp, Network
 } from '@lucide/vue';
 
@@ -96,20 +96,13 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
         <!-- Main Top Bar -->
         <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
             <div class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-                <!-- Left Section: Back, Logo -->
+                <!-- Left Section: Logo & Title -->
                 <div class="flex items-center gap-3">
-                    <a
-                        href="/dashboard"
-                        class="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
-                        title="Back to Dashboard"
-                    >
-                        <ArrowLeft class="w-5 h-5" />
-                    </a>
                     <div class="flex items-center gap-2.5">
                         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center text-white shadow-md">
                             <FolderArchive class="w-5 h-5" />
                         </div>
-                        <div class="hidden sm:block">
+                        <div>
                             <h1 class="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">
                                 Family Tree Archive
                             </h1>
@@ -148,7 +141,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                     </button>
                 </nav>
 
-                <!-- Right Section: Views & Reports, Theme Switcher, Mobile Burger Button, User & Logout -->
+                <!-- Right Section: Views & Reports, Theme Switcher, Mobile Burger Button, Desktop User & Logout -->
                 <div class="flex items-center gap-2 sm:gap-3">
                     <!-- Views & Reports Button (Desktop) -->
                     <button
@@ -189,7 +182,8 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                         User Management
                     </Link>
 
-                    <div v-if="currentUser" class="flex items-center gap-2.5 pl-2 border-l border-slate-300 dark:border-slate-800">
+                    <!-- Desktop User Info & Logout (Hidden on mobile < md) -->
+                    <div v-if="currentUser" class="hidden md:flex items-center gap-2.5 pl-2 border-l border-slate-300 dark:border-slate-800">
                         <div class="hidden lg:flex flex-col text-right">
                             <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-end gap-1">
                                 {{ currentUser.name }}
@@ -197,7 +191,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                             <span class="text-[10px] text-slate-500 dark:text-slate-400 leading-none">{{ currentUser.email }}</span>
                         </div>
 
-                        <!-- Logout Button -->
+                        <!-- Desktop Logout Button -->
                         <Link
                             :href="logout()"
                             method="post"
@@ -316,6 +310,38 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                         </div>
                         <ChevronRight class="w-4 h-4 opacity-50" />
                     </button>
+                </div>
+
+                <!-- Mobile User Section & Logout Button -->
+                <div v-if="currentUser" class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                    <div class="px-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                        {{ currentUser.name }}
+                        <span class="block text-[10px] text-slate-400 font-normal">{{ currentUser.email }}</span>
+                    </div>
+
+                    <Link
+                        v-if="currentUser?.is_superuser"
+                        href="/admin/users"
+                        class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30"
+                    >
+                        <div class="flex items-center gap-3">
+                            <ShieldCheck class="w-4 h-4" />
+                            <span>User Management</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </Link>
+
+                    <Link
+                        :href="logout()"
+                        method="post"
+                        as="button"
+                        class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 cursor-pointer"
+                    >
+                        <div class="flex items-center gap-3">
+                            <LogOut class="w-4 h-4" />
+                            <span>Log out</span>
+                        </div>
+                    </Link>
                 </div>
             </div>
         </header>
