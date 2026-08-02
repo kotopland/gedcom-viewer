@@ -5,6 +5,7 @@ defineProps<{
     person: any;
     level: number;
     parentIndex?: number;
+    isSpouseSide?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -21,13 +22,13 @@ const emit = defineEmits<{
                 v-if="parentIndex === 0"
                 class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/90 px-2.5 py-0.5 rounded-full border border-blue-300 dark:border-blue-700/60 shadow-xs"
             >
-                ♂ Father's Side
+                ♂ {{ isSpouseSide ? "Spouse's Father" : "Father's Side" }}
             </span>
             <span
                 v-else-if="parentIndex === 1"
                 class="inline-flex items-center gap-1 text-[10px] font-bold text-pink-700 dark:text-pink-300 bg-pink-100 dark:bg-pink-950/90 px-2.5 py-0.5 rounded-full border border-pink-300 dark:border-pink-700/60 shadow-xs"
             >
-                ♀ Mother's Side
+                ♀ {{ isSpouseSide ? "Spouse's Mother" : "Mother's Side" }}
             </span>
         </div>
 
@@ -39,6 +40,7 @@ const emit = defineEmits<{
                 :person="parent"
                 :level="level + 1"
                 :parent-index="idx"
+                :is-spouse-side="isSpouseSide"
                 @select-person="emit('select-person', $event)"
                 @change-root="emit('change-root', $event)"
             />
