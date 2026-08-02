@@ -31,12 +31,13 @@ const mode = ref<'magic' | 'password'>('magic');
 
 const magicForm = useForm({
     email: '',
+    remember: true,
 });
 
 const sendMagicLink = () => {
     magicForm.post('/login/magic-link', {
         onSuccess: () => {
-            magicForm.reset();
+            magicForm.reset('email');
         },
     });
 };
@@ -96,13 +97,20 @@ const sendMagicLink = () => {
                 <InputError :message="magicForm.errors.email" />
             </div>
 
+            <div class="flex items-center justify-between py-1">
+                <Label for="magic-remember" class="flex items-center space-x-2.5 text-xs font-semibold cursor-pointer text-slate-700 dark:text-slate-300">
+                    <Checkbox id="magic-remember" v-model:checked="magicForm.remember" />
+                    <span>Remember me</span>
+                </Label>
+            </div>
+
             <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 Enter your email address and we'll send you a secure, passwordless magic login link to access the family tree archive.
             </p>
 
             <Button
                 type="submit"
-                class="w-full"
+                class="w-full font-bold cursor-pointer"
                 :disabled="magicForm.processing"
             >
                 <Spinner v-if="magicForm.processing" />
