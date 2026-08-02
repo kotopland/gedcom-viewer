@@ -34,10 +34,10 @@ const emit = defineEmits<{
             >
                 <button
                     @click.stop="emit('change-root', person.id)"
-                    class="absolute -top-1.5 -right-1.5 p-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    class="absolute -top-1.5 -right-1.5 p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
                     title="Center tree on this person"
                 >
-                    <RefreshCcw class="w-3 h-3" />
+                    <RefreshCcw class="w-3.5 h-3.5" />
                 </button>
 
                 <div class="flex items-center gap-2">

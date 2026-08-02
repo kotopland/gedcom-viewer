@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
-    ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink,
+    ZoomIn, ZoomOut, Maximize2, User, RefreshCcw, Layers, Expand, Shrink, Target, RotateCcw,
     SlidersHorizontal, ChevronRight, ChevronLeft, Heart, MoveHand, Sparkles, PieChart
 } from '@lucide/vue';
 import GedcomAncestorNode from './GedcomAncestorNode.vue';
@@ -368,6 +368,23 @@ onUnmounted(() => {
                 </div>
 
                 <div class="hidden sm:block h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
+
+                <!-- Tree Focus Indicator Pill -->
+                <div v-if="treeData?.primary" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 text-xs">
+                    <Target class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span class="font-bold text-slate-900 dark:text-white truncate max-w-[120px] sm:max-w-[180px]" :title="treeData.primary.name">
+                        {{ treeData.primary.name }}
+                    </span>
+                    <button
+                        v-if="props.rootPersonId && treeData.primary.id !== props.rootPersonId"
+                        @click="emit('change-root', props.rootPersonId)"
+                        class="ml-1 px-1.5 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-extrabold hover:bg-indigo-500 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Reset focus to my root person"
+                    >
+                        <RotateCcw class="w-3 h-3" />
+                        <span>Reset</span>
+                    </button>
+                </div>
 
                 <div class="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-800">
                     <!-- Ancestor levels dropdown -->
