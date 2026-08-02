@@ -633,7 +633,7 @@ const onWheel = (e: WheelEvent) => {
             <!-- Side Ancestors Gallery List (Photo + Name + Birth/Married/Death Year) -->
             <div
                 v-if="showAncestorList && fanSectors.length > 0"
-                class="w-full lg:w-80 bg-slate-50/90 dark:bg-slate-850/90 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 p-4 overflow-y-auto flex flex-col gap-3 max-h-80 lg:max-h-none shrink-0"
+                class="w-full lg:w-80 bg-slate-50/90 dark:bg-slate-900/90 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 p-4 overflow-y-auto flex flex-col gap-3 max-h-80 lg:max-h-none shrink-0"
             >
                 <div class="flex items-center justify-between">
                     <h3 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">

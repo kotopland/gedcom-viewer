@@ -26,10 +26,10 @@ const emit = defineEmits<{
                         : level === 2
                         ? 'bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/80 p-2.5 w-40'
                         : level === 3
-                        ? 'bg-white/90 dark:bg-slate-850/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/70 p-2 w-32 text-xs'
+                        ? 'bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/70 p-2 w-32 text-xs'
                         : level === 4
-                        ? 'bg-white/90 dark:bg-slate-850/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/60 p-1.5 w-28 text-[11px]'
-                        : 'bg-white/90 dark:bg-slate-850/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/60 p-1.5 w-24 text-[10px]'
+                        ? 'bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/60 p-1.5 w-28 text-[11px]'
+                        : 'bg-white/90 dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/60 p-1.5 w-24 text-[10px]'
                 ]"
             >
                 <button
