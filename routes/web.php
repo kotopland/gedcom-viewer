@@ -24,6 +24,7 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
 
     Route::prefix('api/gedcom')->group(function () {
         Route::get('/search', [GedcomController::class, 'search'])->name('gedcom.api.search');
+        Route::get('/stats', [GedcomController::class, 'stats'])->name('gedcom.api.stats');
         Route::get('/person/{id}', [GedcomController::class, 'person'])->name('gedcom.api.person');
         Route::post('/person/{id}/contribution', [GedcomController::class, 'submitContribution'])->name('gedcom.api.person.contribution');
         Route::get('/tree/{id}', [GedcomController::class, 'tree'])->name('gedcom.api.tree');

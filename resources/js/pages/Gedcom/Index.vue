@@ -3,13 +3,14 @@ import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon,
-    BarChart2, FileText, X, ChevronRight, Sparkles, Layers, PieChart
+    BarChart2, FileText, X, ChevronRight, Sparkles, Layers, PieChart, Menu, TrendingUp
 } from '@lucide/vue';
 
 import GedcomDirectory from '@/components/Gedcom/GedcomDirectory.vue';
 import GedcomTreeView from '@/components/Gedcom/GedcomTreeView.vue';
 import GedcomFanView from '@/components/Gedcom/GedcomFanView.vue';
 import GedcomTextView from '@/components/Gedcom/GedcomTextView.vue';
+import GedcomStatsView from '@/components/Gedcom/GedcomStatsView.vue';
 import GedcomMediaGallery from '@/components/Gedcom/GedcomMediaGallery.vue';
 import GedcomPersonModal from '@/components/Gedcom/GedcomPersonModal.vue';
 import { useAppearance } from '@/composables/useAppearance';
@@ -30,7 +31,7 @@ const props = defineProps<{
         top_surnames: Record<string, number>;
     };
     rootPersonId: string | null;
-    defaultTab?: 'directory' | 'tree' | 'fan' | 'media' | 'text';
+    defaultTab?: 'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats';
 }>();
 
 const page = usePage();
@@ -41,11 +42,12 @@ const toggleTheme = () => {
     updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
 };
 
-const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text'>(props.defaultTab || 'tree');
+const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats'>(props.defaultTab || 'tree');
 const selectedPersonId = ref<string | null>(null);
 const currentRootPersonId = ref<string | null>(props.rootPersonId);
 const isReimporting = ref(false);
 const showReportsModal = ref(false);
+const isMobileMenuOpen = ref(false);
 
 const reimportArchive = async () => {
     if (!confirm('Re-importing will wipe current extracted media and re-parse the active ZIP archive in storage/app/private. Continue?')) {
@@ -80,7 +82,7 @@ const changeRootPerson = (id: string) => {
     currentRootPersonId.value = id;
 };
 
-const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
+const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats') => {
     activeTab.value = tab;
     showReportsModal.value = false;
 };
@@ -117,8 +119,8 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     </div>
                 </div>
 
-                <!-- Navigation Tabs (Tree Entrance First) -->
-                <nav class="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950/80 p-1.5 rounded-2xl border border-slate-300/80 dark:border-slate-800 text-xs font-bold">
+                <!-- Desktop Navigation Tabs (Hidden on mobile < md) -->
+                <nav class="hidden md:flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950/80 p-1.5 rounded-2xl border border-slate-300/80 dark:border-slate-800 text-xs font-bold">
                     <button
                         @click="activeTab = 'tree'"
                         class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
@@ -133,7 +135,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                         :class="activeTab === 'directory' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                     >
                         <Users class="w-4 h-4" />
-                        <span class="hidden sm:inline">People</span> Directory
+                        <span>People Directory</span>
                     </button>
                     <button
                         @click="activeTab = 'media'"
@@ -145,16 +147,16 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     </button>
                 </nav>
 
-                <!-- Right Section: Views & Reports Button, Theme Switcher, User & Logout -->
+                <!-- Right Section: Views & Reports, Theme Switcher, Mobile Burger Button, User & Logout -->
                 <div class="flex items-center gap-2 sm:gap-3">
-                    <!-- Views & Reports Button -->
+                    <!-- Views & Reports Button (Desktop) -->
                     <button
                         @click="showReportsModal = true"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 transition-all text-xs font-bold shadow-xs cursor-pointer"
+                        class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 transition-all text-xs font-bold shadow-xs cursor-pointer"
                         title="View Archive Reports & Analytics"
                     >
                         <BarChart2 class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        <span class="hidden md:inline">Views & Reports</span>
+                        <span>Views & Reports</span>
                     </button>
 
                     <!-- Light / Dark Theme Switcher Button -->
@@ -165,6 +167,16 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     >
                         <Sun v-if="resolvedAppearance === 'dark'" class="w-4 h-4 text-amber-400" />
                         <Moon v-else class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    </button>
+
+                    <!-- Mobile Burger Menu Toggle Button (< md) -->
+                    <button
+                        @click="isMobileMenuOpen = !isMobileMenuOpen"
+                        class="md:hidden p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer border border-slate-300 dark:border-slate-700"
+                        aria-label="Toggle Mobile Menu"
+                    >
+                        <X v-if="isMobileMenuOpen" class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <Menu v-else class="w-5 h-5 text-slate-700 dark:text-slate-300" />
                     </button>
 
                     <Link
@@ -198,12 +210,108 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     </div>
                 </div>
             </div>
+
+            <!-- Mobile Burger Menu Slide-Down Drawer -->
+            <div
+                v-if="isMobileMenuOpen"
+                class="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 py-4 space-y-3 shadow-2xl animate-in slide-in-from-top-2 duration-200"
+            >
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2">
+                    Navigation & Views
+                </div>
+
+                <div class="grid grid-cols-1 gap-1.5">
+                    <button
+                        @click="activeTab = 'tree'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'tree' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <GitBranch class="w-4 h-4 text-indigo-400" />
+                            <span>Family Tree</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
+                        @click="activeTab = 'stats'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <BarChart2 class="w-4 h-4 text-amber-400" />
+                            <span>Statistics & Demographics</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
+                        @click="activeTab = 'fan'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'fan' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <PieChart class="w-4 h-4 text-sky-400" />
+                            <span>Ancestry Fan Chart</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
+                        @click="activeTab = 'text'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'text' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <FileText class="w-4 h-4 text-emerald-400" />
+                            <span>Print / Text Report</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
+                        @click="activeTab = 'directory'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'directory' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <Users class="w-4 h-4 text-purple-400" />
+                            <span>People Directory</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
+                        @click="activeTab = 'media'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'media' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <ImageIcon class="w-4 h-4 text-rose-400" />
+                            <span>Media Explorer</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
+                        @click="showReportsModal = true; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 cursor-pointer"
+                    >
+                        <div class="flex items-center gap-3">
+                            <BarChart2 class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            <span>Views & Reports Dashboard</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+                </div>
+            </div>
         </header>
 
-        <main :class="(activeTab === 'tree' || activeTab === 'fan') ? 'max-w-[96rem] mx-auto px-2 sm:px-4 lg:px-6 py-6 space-y-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8'">
-            <!-- Active View Container -->
-            <div>
-                <!-- Family Tree View (Default Entrance) -->
+        <!-- Main Body Area -->
+        <main class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <!-- Active Tab Content -->
+            <div class="space-y-6">
+                <!-- Interactive Ancestor/Descendant Family Tree View -->
                 <GedcomTreeView
                     v-if="activeTab === 'tree'"
                     :root-person-id="currentRootPersonId"
@@ -211,57 +319,58 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     @change-root="changeRootPerson"
                 />
 
-                <!-- Ancestry Fan Chart View -->
+                <!-- Permission-Scoped Statistics & Demographics Page -->
+                <GedcomStatsView
+                    v-else-if="activeTab === 'stats'"
+                    @select-person="selectPerson"
+                />
+
+                <!-- Radial Ancestry Fan Chart View -->
                 <GedcomFanView
-                    v-if="activeTab === 'fan'"
+                    v-else-if="activeTab === 'fan'"
                     :root-person-id="currentRootPersonId"
                     @select-person="selectPerson"
                     @change-root="changeRootPerson"
                 />
 
-                <!-- Printable Text Report View -->
+                <!-- Printable Text & Outline Report View -->
                 <GedcomTextView
-                    v-if="activeTab === 'text'"
+                    v-else-if="activeTab === 'text'"
                     :root-person-id="currentRootPersonId"
                     @select-person="selectPerson"
-                    @open-in-tree="openInTree"
                 />
 
-                <!-- Directory View -->
+                <!-- People Directory & Search Table -->
                 <GedcomDirectory
-                    v-if="activeTab === 'directory'"
-                    :top-surnames="stats.top_surnames"
+                    v-else-if="activeTab === 'directory'"
                     @select-person="selectPerson"
-                    @open-in-tree="openInTree"
                 />
 
-                <!-- Media Gallery View -->
+                <!-- Media Gallery Explorer -->
                 <GedcomMediaGallery
-                    v-if="activeTab === 'media'"
+                    v-else-if="activeTab === 'media'"
                     @select-person="selectPerson"
                 />
             </div>
         </main>
 
-        <!-- Individual Profile Drawer Modal -->
+        <!-- Individual Detail Modal Drawer -->
         <GedcomPersonModal
             :person-id="selectedPersonId"
             @close="selectedPersonId = null"
-            @select-person="selectPerson"
-            @open-in-tree="openInTree"
+            @open-tree="openInTree"
         />
 
-        <!-- Views & Reports Modal -->
+        <!-- Views & Reports Switcher Modal Drawer -->
         <div
             v-if="showReportsModal"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200"
+            class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
             @click.self="showReportsModal = false"
         >
-            <div class="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <!-- Header -->
-                <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full p-6 space-y-6 overflow-hidden">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
                             <BarChart2 class="w-5 h-5" />
                         </div>
                         <div>
@@ -269,202 +378,133 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                                 Views & Genealogy Reports
                             </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400">
-                                Switch views and review family archive statistics
+                                Switch views or access printable reports & analytics
                             </p>
                         </div>
                     </div>
-
                     <button
                         @click="showReportsModal = false"
-                        class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                     >
                         <X class="w-5 h-5" />
                     </button>
                 </div>
 
-                <!-- Body -->
-                <div class="p-6 overflow-y-auto space-y-6">
-                    <!-- Views Switcher Cards -->
-                    <div>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                            Archive Views
-                        </h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                            <!-- Family Tree -->
-                            <div
-                                @click="switchTab('tree')"
-                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-                                :class="activeTab === 'tree' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                                        <GitBranch class="w-5 h-5" />
-                                    </div>
-                                    <span v-if="activeTab === 'tree'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                        Family Tree
-                                    </h4>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Interactive visual lineage graph.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Ancestry Fan Chart -->
-                            <div
-                                @click="switchTab('fan')"
-                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-                                :class="activeTab === 'fan' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                                        <PieChart class="w-5 h-5" />
-                                    </div>
-                                    <span v-if="activeTab === 'fan'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                        Fan Chart
-                                    </h4>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Concentric arc radial ancestry chart.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Printable Text Report -->
-                            <div
-                                @click="switchTab('text')"
-                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-                                :class="activeTab === 'text' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                                        <FileText class="w-5 h-5" />
-                                    </div>
-                                    <span v-if="activeTab === 'text'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                        Print / Text Report
-                                    </h4>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Formatted outline ready for print & PDF.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- People Directory -->
-                            <div
-                                @click="switchTab('directory')"
-                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-                                :class="activeTab === 'directory' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                                        <Users class="w-5 h-5" />
-                                    </div>
-                                    <span v-if="activeTab === 'directory'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                        People Directory
-                                    </h4>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Searchable index of all individuals.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Media Explorer -->
-                            <div
-                                @click="switchTab('media')"
-                                class="p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-                                :class="activeTab === 'media' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-850'"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                                        <ImageIcon class="w-5 h-5" />
-                                    </div>
-                                    <span v-if="activeTab === 'media'" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">Active</span>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                        Media Explorer
-                                    </h4>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Photos, documents, & audio files.
-                                    </p>
-                                </div>
-                            </div>
+                <!-- View Switcher Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <!-- Family Tree Card -->
+                    <button
+                        @click="switchTab('tree')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'tree' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <GitBranch class="w-5 h-5" />
                         </div>
-                    </div>
-
-                    <!-- Statistics Summary -->
-                    <div>
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                            Archive Statistics & Metrics
-                        </h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                                <div class="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                                    {{ stats.total_individuals }}
-                                </div>
-                                <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
-                                    Total Individuals
-                                </div>
-                            </div>
-
-                            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                                <div class="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                                    {{ stats.total_families }}
-                                </div>
-                                <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
-                                    Total Families
-                                </div>
-                            </div>
-
-                            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                                <div class="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                                    {{ stats.total_media }}
-                                </div>
-                                <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
-                                    Media Files
-                                </div>
-                            </div>
-
-                            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                                <div class="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                                    {{ stats.media_types?.photos || 0 }}
-                                </div>
-                                <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
-                                    Photos & Portraits
-                                </div>
-                            </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                Interactive Family Tree
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Horizontal ancestor and descendant node graph with spouse & children links.
+                            </p>
                         </div>
-                    </div>
+                    </button>
 
-                    <!-- Top Surnames -->
-                    <div v-if="stats.top_surnames && Object.keys(stats.top_surnames).length > 0">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                            Top Family Surnames
-                        </h3>
-                        <div class="flex flex-wrap gap-2">
-                            <span
-                                v-for="(count, surname) in stats.top_surnames"
-                                :key="surname"
-                                @click="switchTab('directory')"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                            >
-                                <span>{{ surname }}</span>
-                                <span class="px-1.5 py-0.2 rounded-md bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold">
-                                    {{ count }}
-                                </span>
-                            </span>
+                    <!-- Statistics & Demographics Card -->
+                    <button
+                        @click="switchTab('stats')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'stats' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <BarChart2 class="w-5 h-5" />
                         </div>
-                    </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                Statistics & Demographics
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Analytics over surnames, countries, oldest person, married age differences & facts.
+                            </p>
+                        </div>
+                    </button>
+
+                    <!-- Ancestry Fan Chart Card -->
+                    <button
+                        @click="switchTab('fan')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'fan' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <PieChart class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                Ancestry Fan Chart
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Radial arc fan chart showing paternal & maternal lineages up to 5 generations.
+                            </p>
+                        </div>
+                    </button>
+
+                    <!-- Printable Text Report Card -->
+                    <button
+                        @click="switchTab('text')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'text' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <FileText class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                Print / Text Report
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Printable document view formatted for high readability, paper printing & PDF export.
+                            </p>
+                        </div>
+                    </button>
+
+                    <!-- People Directory Card -->
+                    <button
+                        @click="switchTab('directory')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'directory' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <Users class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                People Directory
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Searchable table of all individuals with vital dates, gender, and parents.
+                            </p>
+                        </div>
+                    </button>
+
+                    <!-- Media Explorer Card -->
+                    <button
+                        @click="switchTab('media')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'media' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <ImageIcon class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                Media Explorer
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Gallery of historical photos, census documents, and sound files.
+                            </p>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
