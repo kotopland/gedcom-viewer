@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Users, Image as ImageIcon, GitBranch, FolderArchive, ArrowLeft, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon,
-    BarChart2, FileText, X, ChevronRight, Sparkles, Layers, PieChart, Menu, TrendingUp
+    BarChart2, FileText, X, ChevronRight, Sparkles, Layers, PieChart, Menu, TrendingUp, Network
 } from '@lucide/vue';
 
 import GedcomDirectory from '@/components/Gedcom/GedcomDirectory.vue';
@@ -11,6 +11,7 @@ import GedcomTreeView from '@/components/Gedcom/GedcomTreeView.vue';
 import GedcomFanView from '@/components/Gedcom/GedcomFanView.vue';
 import GedcomTextView from '@/components/Gedcom/GedcomTextView.vue';
 import GedcomStatsView from '@/components/Gedcom/GedcomStatsView.vue';
+import GedcomLineageView from '@/components/Gedcom/GedcomLineageView.vue';
 import GedcomMediaGallery from '@/components/Gedcom/GedcomMediaGallery.vue';
 import GedcomPersonModal from '@/components/Gedcom/GedcomPersonModal.vue';
 import { useAppearance } from '@/composables/useAppearance';
@@ -31,7 +32,7 @@ const props = defineProps<{
         top_surnames: Record<string, number>;
     };
     rootPersonId: string | null;
-    defaultTab?: 'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats';
+    defaultTab?: 'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats' | 'lineage';
 }>();
 
 const page = usePage();
@@ -42,7 +43,7 @@ const toggleTheme = () => {
     updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
 };
 
-const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats'>(props.defaultTab || 'tree');
+const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats' | 'lineage'>(props.defaultTab || 'tree');
 const selectedPersonId = ref<string | null>(null);
 const currentRootPersonId = ref<string | null>(props.rootPersonId);
 const isReimporting = ref(false);
@@ -82,7 +83,7 @@ const changeRootPerson = (id: string) => {
     currentRootPersonId.value = id;
 };
 
-const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats') => {
+const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats' | 'lineage') => {
     activeTab.value = tab;
     showReportsModal.value = false;
 };
@@ -234,6 +235,18 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                     </button>
 
                     <button
+                        @click="activeTab = 'lineage'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'lineage' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <Network class="w-4 h-4 text-indigo-400" />
+                            <span>Full Ancestral Lineage</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
+                    <button
                         @click="activeTab = 'stats'; isMobileMenuOpen = false"
                         class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
                         :class="activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
@@ -314,6 +327,14 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                 <!-- Interactive Ancestor/Descendant Family Tree View -->
                 <GedcomTreeView
                     v-if="activeTab === 'tree'"
+                    :root-person-id="currentRootPersonId"
+                    @select-person="selectPerson"
+                    @change-root="changeRootPerson"
+                />
+
+                <!-- Full Ancestral Lineage Report View -->
+                <GedcomLineageView
+                    v-else-if="activeTab === 'lineage'"
                     :root-person-id="currentRootPersonId"
                     @select-person="selectPerson"
                     @change-root="changeRootPerson"
@@ -407,6 +428,25 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                             </h3>
                             <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                                 Horizontal ancestor and descendant node graph with spouse & children links.
+                            </p>
+                        </div>
+                    </button>
+
+                    <!-- Full Ancestral Lineage Card -->
+                    <button
+                        @click="switchTab('lineage')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'lineage' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-indigo-700 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                            <Network class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                Full Ancestral Lineage
+                            </h3>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Complete Ahnentafel list of all direct ancestors across all recorded generations.
                             </p>
                         </div>
                     </button>
