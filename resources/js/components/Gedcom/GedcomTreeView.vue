@@ -207,6 +207,11 @@ const spouseParentsExist = computed(() => {
     return spouses.some((s: any) => s.ancestors && s.ancestors.parents && s.ancestors.parents.length > 0);
 });
 
+const spouseSiblingsExist = computed(() => {
+    const spouses = primaryPerson.value?.spouses || [];
+    return spouses.some((s: any) => s.siblings && s.siblings.length > 0);
+});
+
 const descendantBadgeLabel = computed(() => {
     const l = descendantLevels.value;
     if (l === 0) return 'Descendants Hidden';
@@ -602,14 +607,21 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <!-- Siblings & Spouses of Tree Focus Person -->
-                <div v-if="treeData.siblings && treeData.siblings.length > 0" class="flex flex-col items-center gap-3 pt-2">
-                    <div class="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 px-3.5 py-1 rounded-full border border-purple-300 dark:border-purple-800/50 shadow-md">
-                        <Users class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                        <span>Siblings & Spouses ({{ treeData.siblings.length }})</span>
+                <!-- Siblings & Spouses of Tree Focus Person & Spouse(s) -->
+                <div v-if="(treeData.siblings && treeData.siblings.length > 0) || spouseSiblingsExist" class="flex flex-col items-center gap-3 pt-2">
+                    <div class="flex items-center gap-2">
+                        <div v-if="treeData.siblings && treeData.siblings.length > 0" class="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 px-3.5 py-1 rounded-full border border-purple-300 dark:border-purple-800/50 shadow-md">
+                            <Users class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                            <span>Focus Person Siblings ({{ treeData.siblings.length }})</span>
+                        </div>
+                        <div v-if="spouseSiblingsExist" class="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/80 px-3 py-1 rounded-full border border-rose-300 dark:border-rose-800/50 shadow-md">
+                            <Users class="w-3.5 h-3.5 text-rose-500" />
+                            <span>+ Spouse Siblings</span>
+                        </div>
                     </div>
 
-                    <div class="flex items-center justify-center gap-4 sm:gap-6 flex-wrap max-w-5xl">
+                    <div class="flex items-center justify-center gap-4 sm:gap-6 flex-wrap max-w-6xl">
+                        <!-- Primary Focus Person Siblings -->
                         <div
                             v-for="sibling in treeData.siblings"
                             :key="sibling.id"
@@ -675,6 +687,79 @@ onUnmounted(() => {
                                 </div>
                             </template>
                         </div>
+
+                        <!-- Focus Person Spouse(s) Siblings -->
+                        <template v-if="primaryPerson?.spouses">
+                            <template v-for="spouse in primaryPerson.spouses" :key="spouse.id">
+                                <template v-if="spouse.siblings && spouse.siblings.length > 0">
+                                    <div
+                                        v-for="spSib in spouse.siblings"
+                                        :key="spSib.id"
+                                        class="flex items-center gap-2.5 bg-white dark:bg-slate-900 border-2 border-rose-400/60 dark:border-rose-500/50 rounded-2xl p-3 shadow-xl hover:scale-105 transition-transform"
+                                    >
+                                        <!-- Spouse Sibling Card -->
+                                        <div
+                                            @click="handlePersonSelect(spSib.id)"
+                                            class="flex items-center gap-3 cursor-pointer group"
+                                        >
+                                            <img
+                                                v-if="spSib.primary_media"
+                                                :src="spSib.primary_media.url"
+                                                class="w-11 h-11 rounded-xl object-cover border-2 border-rose-400/60 dark:border-rose-500/50 shadow-sm shrink-0"
+                                            />
+                                            <div v-else class="w-11 h-11 rounded-xl bg-rose-50 dark:bg-slate-800 border border-rose-200 dark:border-slate-700 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
+                                                <User class="w-5 h-5" />
+                                            </div>
+
+                                            <div class="min-w-0 max-w-[140px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="text-[10px] font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider">
+                                                        {{ spSib.sex === 'M' ? "Spouse's Brother" : (spSib.sex === 'F' ? "Spouse's Sister" : "Spouse Sibling") }}
+                                                    </span>
+                                                    <button
+                                                        @click.stop="handleChangeRoot(spSib.id)"
+                                                        class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer ml-1"
+                                                        title="Set as Tree Focus"
+                                                    >
+                                                        Focus
+                                                    </button>
+                                                </div>
+                                                <div class="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-rose-600 dark:group-hover:text-rose-300">
+                                                    {{ spSib.name }}
+                                                </div>
+                                                <div class="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                                    {{ spSib.birth_year || '?' }} – {{ spSib.death_year || 'Present' }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Spouse Sibling's Spouse(s) Badge -->
+                                        <template v-if="spSib.spouses && spSib.spouses.length > 0">
+                                            <div
+                                                v-for="sp in spSib.spouses"
+                                                :key="sp.id"
+                                                @click="handlePersonSelect(sp.id)"
+                                                class="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 rounded-xl p-1.5 cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors"
+                                                :title="`Spouse of ${spSib.name}: ${sp.name}`"
+                                            >
+                                                <Heart class="w-3 h-3 text-rose-500 fill-rose-500/40 shrink-0" />
+                                                <img
+                                                    v-if="sp.primary_media"
+                                                    :src="sp.primary_media.url"
+                                                    class="w-7 h-7 rounded-lg object-cover shrink-0"
+                                                />
+                                                <div v-else class="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-900/80 text-rose-600 dark:text-rose-300 flex items-center justify-center text-xs shrink-0">
+                                                    <User class="w-3.5 h-3.5" />
+                                                </div>
+                                                <div class="text-[10px] font-bold text-rose-900 dark:text-rose-200 truncate max-w-[100px]">
+                                                    {{ sp.name }}
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </template>
+                        </template>
                     </div>
                 </div>
 
