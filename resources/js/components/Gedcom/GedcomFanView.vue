@@ -257,24 +257,50 @@ const onMouseUp = () => {
     isDragging.value = false;
 };
 
-// Touch Panning Handlers for Mobile Devices
+let initialPinchDistance: number | null = null;
+let initialPinchZoom: number = 1;
+
+// Touch Panning & 2-Finger Pinch-to-Zoom Handlers for Mobile Devices
 const onTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 1) {
         isDragging.value = true;
         startX.value = e.touches[0].clientX - panX.value;
         startY.value = e.touches[0].clientY - panY.value;
+    } else if (e.touches.length === 2) {
+        isDragging.value = false;
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        initialPinchZoom = zoomLevel.value;
     }
 };
 
 const onTouchMove = (e: TouchEvent) => {
-    if (isDragging.value && e.touches.length === 1) {
+    if (e.touches.length === 1 && isDragging.value) {
         panX.value = e.touches[0].clientX - startX.value;
         panY.value = e.touches[0].clientY - startY.value;
+    } else if (e.touches.length === 2 && initialPinchDistance) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const scale = currentDistance / initialPinchDistance;
+        const newZoom = Math.min(2.5, Math.max(0.4, initialPinchZoom * scale));
+        zoomLevel.value = Math.round(newZoom * 100) / 100;
     }
 };
 
-const onTouchEnd = () => {
-    isDragging.value = false;
+const onTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) {
+        initialPinchDistance = null;
+    }
+    if (e.touches.length === 0) {
+        isDragging.value = false;
+    }
+};
+
+const onWheel = (e: WheelEvent) => {
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    zoomLevel.value = Math.min(2.5, Math.max(0.4, Math.round((zoomLevel.value + delta) * 100) / 100));
 };
 </script>
 
@@ -398,6 +424,7 @@ const onTouchEnd = () => {
                 @touchstart="onTouchStart"
                 @touchmove="onTouchMove"
                 @touchend="onTouchEnd"
+                @wheel.prevent="onWheel"
             >
                 <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-slate-400">
                     <div class="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
