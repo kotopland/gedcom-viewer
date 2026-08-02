@@ -17,12 +17,34 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
+     * Intercept response to enforce strict no-cache headers for HTML & Inertia responses.
+     */
+    public function handle(Request $request, \Closure $next)
+    {
+        $response = parent::handle($request, $next);
+
+        if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
+            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+        }
+
+        return $response;
+    }
+
+    /**
      * Determines the current asset version.
+     * Computes MD5 hash of manifest.json to force automatic browser reloads on new deployments.
      *
      * @see https://inertiajs.com/asset-versioning
      */
     public function version(Request $request): ?string
     {
+        $manifestPath = public_path('build/manifest.json');
+        if (file_exists($manifestPath)) {
+            return md5_file($manifestPath);
+        }
+
         return parent::version($request);
     }
 
@@ -37,6 +59,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            'assetVersion' => $this->version($request),
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
