@@ -117,7 +117,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     </div>
                 </div>
 
-                <!-- Navigation Tabs (Tree & Fan Chart Entrance First) -->
+                <!-- Navigation Tabs (Tree Entrance First) -->
                 <nav class="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950/80 p-1.5 rounded-2xl border border-slate-300/80 dark:border-slate-800 text-xs font-bold">
                     <button
                         @click="activeTab = 'tree'"
@@ -126,14 +126,6 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media') => {
                     >
                         <GitBranch class="w-4 h-4" />
                         Family Tree
-                    </button>
-                    <button
-                        @click="activeTab = 'fan'"
-                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-                        :class="activeTab === 'fan' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
-                    >
-                        <PieChart class="w-4 h-4" />
-                        Fan Chart
                     </button>
                     <button
                         @click="activeTab = 'directory'"

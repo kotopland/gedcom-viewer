@@ -97,11 +97,19 @@ const emit = defineEmits<{
                     </div>
                     <div
                         :class="[
-                            'font-medium truncate',
-                            level === 1 ? 'text-[11px] text-indigo-600 dark:text-indigo-300' : 'text-[10px] text-slate-500 dark:text-slate-400'
+                            'font-medium text-[10px] leading-tight space-y-0.5 mt-0.5',
+                            level === 1 ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400'
                         ]"
                     >
-                        {{ person.birth_year || '?' }} – {{ person.death_year || '?' }}
+                        <div v-if="person.birth_date || person.birth_year" class="truncate">
+                            <span class="font-bold opacity-75">b.</span> {{ person.birth_date || person.birth_year }}
+                        </div>
+                        <div v-if="person.marriage_date || person.marriage_year" class="truncate text-rose-600 dark:text-rose-400">
+                            <span class="font-bold opacity-75">m.</span> {{ person.marriage_date || person.marriage_year }}
+                        </div>
+                        <div v-if="person.death_date || person.death_year" class="truncate">
+                            <span class="font-bold opacity-75">d.</span> {{ person.death_date || person.death_year }}
+                        </div>
                     </div>
                 </div>
             </div>
