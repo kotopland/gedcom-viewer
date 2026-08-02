@@ -37,11 +37,11 @@ class MagicLinkNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Your Magic Login Link - Topland Family Archive')
+            ->subject('Topland Family Archive')
             ->greeting('Hello ' . $notifiable->name . '!')
-            ->line('Click the button below to log in to the Topland Family Genealogy Archive without entering a password.')
-            ->action('Log In to Family Archive', $this->url)
-            ->line('This magic login link will expire in 15 minutes for your security.')
-            ->line('If you did not request this login link, no further action is required.');
+            ->line('You can access the Family Genealogy Archive by clicking the button below')
+            ->action('Access Family Archive', $this->url)
+            ->line('This login link will expire in 15 minutes for your security.')
+            ->line('If you did not request this, no further action is required.');
     }
 }

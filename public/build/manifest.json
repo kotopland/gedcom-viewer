@@ -387,7 +387,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-BhDOH64G.css",
+    "file": "assets/app-C5Q4xvCA.css",
     "name": "app",
     "names": [
       "app.css"
@@ -396,7 +396,7 @@
     "isEntry": true
   },
   "resources/js/app.ts": {
-    "file": "assets/app-o4kS2RKb.js",
+    "file": "assets/app-XZFGHvuO.js",
     "name": "app",
     "src": "resources/js/app.ts",
     "isEntry": true,
@@ -541,7 +541,7 @@
     ]
   },
   "resources/js/pages/auth/Login.vue": {
-    "file": "assets/Login-KNewRiK1.js",
+    "file": "assets/Login-fauTJQHG.js",
     "name": "Login",
     "src": "resources/js/pages/auth/Login.vue",
     "isDynamicEntry": true,

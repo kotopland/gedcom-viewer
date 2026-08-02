@@ -18,6 +18,7 @@ class MagicLinkController extends Controller
     {
         $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
+            'remember' => ['nullable', 'boolean'],
         ], [
             'email.exists' => 'No account found with this email address.',
         ]);
@@ -30,10 +31,15 @@ class MagicLinkController extends Controller
             ]);
         }
 
+        $remember = $request->boolean('remember', true);
+
         $url = URL::temporarySignedRoute(
             'magic-link.verify',
             now()->addMinutes(15),
-            ['user' => $user->id]
+            [
+                'user' => $user->id,
+                'remember' => $remember ? '1' : '0',
+            ]
         );
 
         $user->notify(new MagicLinkNotification($url));
@@ -52,7 +58,9 @@ class MagicLinkController extends Controller
             ]);
         }
 
-        Auth::login($user, remember: true);
+        $remember = $request->boolean('remember', true);
+
+        Auth::login($user, remember: $remember);
         $request->session()->regenerate();
 
         if ($user->isSuperuser()) {
