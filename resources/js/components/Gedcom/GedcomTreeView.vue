@@ -198,6 +198,15 @@ const ancestorBadgeLabel = computed(() => {
     return `Ancestors (${l} Generations)`;
 });
 
+const primaryPerson = computed(() => {
+    return treeData.value?.primary || treeData.value?.ancestors || treeData.value?.descendants;
+});
+
+const spouseParentsExist = computed(() => {
+    const spouses = primaryPerson.value?.spouses || [];
+    return spouses.some((s: any) => s.ancestors && s.ancestors.parents && s.ancestors.parents.length > 0);
+});
+
 const descendantBadgeLabel = computed(() => {
     const l = descendantLevels.value;
     if (l === 0) return 'Descendants Hidden';
@@ -457,38 +466,64 @@ onUnmounted(() => {
                 :style="{ transform: `scale(${zoomLevel})` }"
             >
                 <!-- Ancestors Section (Top) -->
-                <div v-if="ancestorLevels > 0 && treeData.ancestors && treeData.ancestors.parents && treeData.ancestors.parents.length > 0" class="flex flex-col items-center gap-6">
-                    <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/80 px-3.5 py-1 rounded-full border border-indigo-300 dark:border-indigo-800/50 shadow-md">
-                        {{ ancestorBadgeLabel }}
-                    </span>
+                <div v-if="ancestorLevels > 0 && ((treeData.ancestors && treeData.ancestors.parents && treeData.ancestors.parents.length > 0) || spouseParentsExist)" class="flex flex-col items-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/80 px-3.5 py-1 rounded-full border border-indigo-300 dark:border-indigo-800/50 shadow-md">
+                            {{ ancestorBadgeLabel }}
+                        </span>
+                        <span v-if="spouseParentsExist" class="text-[11px] font-bold uppercase tracking-widest text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/80 px-3 py-1 rounded-full border border-rose-300 dark:border-rose-800/50 shadow-md">
+                            + Spouse Lineage
+                        </span>
+                    </div>
 
-                    <div class="flex items-start gap-4 sm:gap-6">
-                        <GedcomAncestorNode
-                            v-for="(parent, idx) in treeData.ancestors.parents"
-                            :key="parent.id"
-                            :person="parent"
-                            :level="1"
-                            :parent-index="idx"
-                            @select-person="handlePersonSelect($event)"
-                            @change-root="handleChangeRoot($event)"
-                        />
+                    <div class="flex items-start justify-center gap-8 sm:gap-12 flex-wrap">
+                        <!-- Tree Focus Person Ancestors Tree -->
+                        <div v-if="treeData.ancestors && treeData.ancestors.parents && treeData.ancestors.parents.length > 0" class="flex items-start gap-4 sm:gap-6">
+                            <GedcomAncestorNode
+                                v-for="(parent, idx) in treeData.ancestors.parents"
+                                :key="parent.id"
+                                :person="parent"
+                                :level="1"
+                                :parent-index="idx"
+                                @select-person="handlePersonSelect($event)"
+                                @change-root="handleChangeRoot($event)"
+                            />
+                        </div>
+
+                        <!-- Tree Focus Person Spouse(s) Ancestors Tree -->
+                        <template v-if="treeData.primary?.spouses">
+                            <template v-for="spouse in treeData.primary.spouses" :key="spouse.id">
+                                <div v-if="spouse.ancestors && spouse.ancestors.parents && spouse.ancestors.parents.length > 0" class="flex items-start gap-4 sm:gap-6 pl-6 border-l-2 border-dashed border-rose-300/80 dark:border-rose-800/60">
+                                    <GedcomAncestorNode
+                                        v-for="(parent, idx) in spouse.ancestors.parents"
+                                        :key="parent.id"
+                                        :person="parent"
+                                        :level="1"
+                                        :parent-index="idx"
+                                        :is-spouse-side="true"
+                                        @select-person="handlePersonSelect($event)"
+                                        @change-root="handleChangeRoot($event)"
+                                    />
+                                </div>
+                            </template>
+                        </template>
                     </div>
                 </div>
 
                 <!-- Center Root Person & Spouse(s) Pair Node -->
-                <div v-if="treeData.ancestors || treeData.descendants" class="flex flex-col items-center gap-2">
+                <div v-if="primaryPerson" class="flex flex-col items-center gap-2">
                     <div class="flex items-center justify-center gap-3 sm:gap-6 flex-wrap">
                         <!-- Tree Focus Person Card -->
                         <div class="relative group">
                             <div class="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
                             <div
-                                @click="handlePersonSelect((treeData.ancestors || treeData.descendants).id)"
+                                @click="handlePersonSelect(primaryPerson.id)"
                                 class="relative bg-white dark:bg-gradient-to-r dark:from-indigo-900 dark:via-indigo-950 dark:to-slate-900 border-2 border-indigo-500 dark:border-indigo-400 rounded-3xl p-5 w-72 shadow-2xl cursor-pointer transition-all hover:scale-105"
                             >
                                 <div class="flex items-center gap-4">
                                     <img
-                                        v-if="(treeData.ancestors || treeData.descendants).primary_media"
-                                        :src="(treeData.ancestors || treeData.descendants).primary_media.url"
+                                        v-if="primaryPerson.primary_media"
+                                        :src="primaryPerson.primary_media.url"
                                         class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-indigo-500 dark:border-indigo-400 shadow-md"
                                     />
                                     <div v-else class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
@@ -500,10 +535,10 @@ onUnmounted(() => {
                                             Tree Focus
                                         </span>
                                         <h3 class="text-sm font-extrabold text-slate-900 dark:text-white truncate mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
-                                            {{ (treeData.ancestors || treeData.descendants).name }}
+                                            {{ primaryPerson.name }}
                                         </h3>
                                         <p class="text-xs text-indigo-600 dark:text-indigo-200 font-medium mt-0.5">
-                                            {{ (treeData.ancestors || treeData.descendants).birth_year || '?' }} – {{ (treeData.ancestors || treeData.descendants).death_year || 'Present' }}
+                                            {{ primaryPerson.birth_year || '?' }} – {{ primaryPerson.death_year || 'Present' }}
                                         </p>
                                     </div>
                                 </div>
@@ -511,9 +546,9 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Spouse Card(s) -->
-                        <template v-if="(treeData.ancestors || treeData.descendants).spouses && (treeData.ancestors || treeData.descendants).spouses.length > 0">
+                        <template v-if="primaryPerson.spouses && primaryPerson.spouses.length > 0">
                             <div
-                                v-for="spouse in (treeData.ancestors || treeData.descendants).spouses"
+                                v-for="spouse in primaryPerson.spouses"
                                 :key="spouse.id"
                                 class="flex items-center gap-3 sm:gap-6"
                             >
@@ -564,6 +599,82 @@ onUnmounted(() => {
                                 </div>
                             </div>
                         </template>
+                    </div>
+                </div>
+
+                <!-- Siblings & Spouses of Tree Focus Person -->
+                <div v-if="treeData.siblings && treeData.siblings.length > 0" class="flex flex-col items-center gap-3 pt-2">
+                    <div class="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 px-3.5 py-1 rounded-full border border-purple-300 dark:border-purple-800/50 shadow-md">
+                        <Users class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                        <span>Siblings & Spouses ({{ treeData.siblings.length }})</span>
+                    </div>
+
+                    <div class="flex items-center justify-center gap-4 sm:gap-6 flex-wrap max-w-5xl">
+                        <div
+                            v-for="sibling in treeData.siblings"
+                            :key="sibling.id"
+                            class="flex items-center gap-2.5 bg-white dark:bg-slate-900 border-2 border-purple-400/60 dark:border-purple-500/50 rounded-2xl p-3 shadow-xl hover:scale-105 transition-transform"
+                        >
+                            <!-- Sibling Card -->
+                            <div
+                                @click="handlePersonSelect(sibling.id)"
+                                class="flex items-center gap-3 cursor-pointer group"
+                            >
+                                <img
+                                    v-if="sibling.primary_media"
+                                    :src="sibling.primary_media.url"
+                                    class="w-11 h-11 rounded-xl object-cover border-2 border-purple-400/60 dark:border-purple-500/50 shadow-sm shrink-0"
+                                />
+                                <div v-else class="w-11 h-11 rounded-xl bg-purple-50 dark:bg-slate-800 border border-purple-200 dark:border-slate-700 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                                    <User class="w-5 h-5" />
+                                </div>
+
+                                <div class="min-w-0 max-w-[140px]">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
+                                            {{ sibling.sex === 'M' ? 'Brother' : (sibling.sex === 'F' ? 'Sister' : 'Sibling') }}
+                                        </span>
+                                        <button
+                                            @click.stop="handleChangeRoot(sibling.id)"
+                                            class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer ml-1"
+                                            title="Set as Tree Focus"
+                                        >
+                                            Focus
+                                        </button>
+                                    </div>
+                                    <div class="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-300">
+                                        {{ sibling.name }}
+                                    </div>
+                                    <div class="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                        {{ sibling.birth_year || '?' }} – {{ sibling.death_year || 'Present' }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sibling Spouse(s) Badge -->
+                            <template v-if="sibling.spouses && sibling.spouses.length > 0">
+                                <div
+                                    v-for="sp in sibling.spouses"
+                                    :key="sp.id"
+                                    @click="handlePersonSelect(sp.id)"
+                                    class="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/80 rounded-xl p-1.5 cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors"
+                                    :title="`Spouse of ${sibling.name}: ${sp.name}`"
+                                >
+                                    <Heart class="w-3 h-3 text-rose-500 fill-rose-500/40 shrink-0" />
+                                    <img
+                                        v-if="sp.primary_media"
+                                        :src="sp.primary_media.url"
+                                        class="w-7 h-7 rounded-lg object-cover shrink-0"
+                                    />
+                                    <div v-else class="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-900/80 text-rose-600 dark:text-rose-300 flex items-center justify-center text-xs shrink-0">
+                                        <User class="w-3.5 h-3.5" />
+                                    </div>
+                                    <div class="text-[10px] font-bold text-rose-900 dark:text-rose-200 truncate max-w-[100px]">
+                                        {{ sp.name }}
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
 
