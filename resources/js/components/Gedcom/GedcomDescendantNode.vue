@@ -69,11 +69,19 @@ const emit = defineEmits<{
                         </div>
                         <div
                             :class="[
-                                'font-medium truncate',
-                                level === 1 ? 'text-[11px] text-emerald-600 dark:text-emerald-300' : 'text-[10px] text-slate-500 dark:text-slate-400'
+                                'font-medium text-[10px] leading-tight space-y-0.5 mt-0.5',
+                                level === 1 ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'
                             ]"
                         >
-                            {{ person.birth_year || '?' }} – {{ person.death_year || '?' }}
+                            <div v-if="person.birth_date || person.birth_year" class="truncate">
+                                <span class="font-bold opacity-75">b.</span> {{ person.birth_date || person.birth_year }}
+                            </div>
+                            <div v-if="person.marriage_date || person.marriage_year" class="truncate text-rose-600 dark:text-rose-400">
+                                <span class="font-bold opacity-75">m.</span> {{ person.marriage_date || person.marriage_year }}
+                            </div>
+                            <div v-if="person.death_date || person.death_year" class="truncate">
+                                <span class="font-bold opacity-75">d.</span> {{ person.death_date || person.death_year }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -109,8 +117,16 @@ const emit = defineEmits<{
                                 <div class="font-bold truncate text-slate-900 dark:text-slate-200 group-hover:text-rose-600 dark:group-hover:text-rose-300">
                                     {{ spouse.name }}
                                 </div>
-                                <div class="font-medium truncate text-[10px] text-rose-300/80">
-                                    {{ spouse.birth_year || '?' }}
+                                <div class="font-medium text-[10px] leading-tight space-y-0.5 mt-0.5 text-rose-600 dark:text-rose-300">
+                                    <div v-if="spouse.birth_date || spouse.birth_year" class="truncate">
+                                        <span class="font-bold opacity-75">b.</span> {{ spouse.birth_date || spouse.birth_year }}
+                                    </div>
+                                    <div v-if="spouse.marriage_date || spouse.marriage_year" class="truncate">
+                                        <span class="font-bold opacity-75">m.</span> {{ spouse.marriage_date || spouse.marriage_year }}
+                                    </div>
+                                    <div v-if="spouse.death_date || spouse.death_year" class="truncate">
+                                        <span class="font-bold opacity-75">d.</span> {{ spouse.death_date || spouse.death_year }}
+                                    </div>
                                 </div>
                             </div>
                         </div>

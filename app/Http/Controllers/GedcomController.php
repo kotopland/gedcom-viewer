@@ -527,34 +527,69 @@ class GedcomController extends Controller
         $ancestorMaxDepth = $ancestorLevels + 1;
         $descendantMaxDepth = $descendantLevels + 1;
 
-        $formatMiniSpouses = function (array $spouseIds) use ($data, $allowedMap) {
+        $getMarriageInfo = function (string $personId) use ($data) {
+            if (!isset($data['individuals'][$personId])) return ['date' => null, 'year' => null];
+            $ind = $data['individuals'][$personId];
+            foreach ($ind['fams'] ?? [] as $famId) {
+                if (isset($data['families'][$famId])) {
+                    $fam = $data['families'][$famId];
+                    if (!empty($fam['marriage_date'])) {
+                        $year = null;
+                        if (preg_match('/\b(1\d{3}|20\d{2})\b/', $fam['marriage_date'], $m)) {
+                            $year = (int) $m[1];
+                        }
+                        return ['date' => $fam['marriage_date'], 'year' => $year];
+                    }
+                    foreach ($fam['events'] ?? [] as $fev) {
+                        if (($fev['tag'] ?? '') === 'MARR' && !empty($fev['date'])) {
+                            return ['date' => $fev['date'], 'year' => $fev['year'] ?? null];
+                        }
+                    }
+                }
+            }
+            return ['date' => null, 'year' => null];
+        };
+
+        $formatMiniSpouses = function (array $spouseIds) use ($data, $allowedMap, $getMarriageInfo) {
             $result = [];
             foreach ($spouseIds as $sId) {
                 if ($allowedMap !== null && !isset($allowedMap[$sId])) continue;
                 if (!isset($data['individuals'][$sId])) continue;
                 $s = $data['individuals'][$sId];
+                $mInfo = $getMarriageInfo($sId);
                 $result[] = [
                     'id' => $s['id'],
                     'name' => $s['name'],
+                    'birth_date' => $s['birth_date'] ?? null,
                     'birth_year' => $s['birth_year'],
+                    'death_date' => $s['death_date'] ?? null,
+                    'death_year' => $s['death_year'],
+                    'marriage_date' => $mInfo['date'],
+                    'marriage_year' => $mInfo['year'],
                     'primary_media' => $s['primary_media'],
                 ];
             }
             return $result;
         };
 
-        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, $data, $ancestorMaxDepth, $allowedMap, $formatMiniSpouses) {
+        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, $data, $ancestorMaxDepth, $allowedMap, $formatMiniSpouses, $getMarriageInfo) {
             if ($depth >= $ancestorMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
             }
 
             $ind = $data['individuals'][$personId];
+            $mInfo = $getMarriageInfo($personId);
+
             $node = [
                 'id' => $ind['id'],
                 'name' => $ind['name'],
                 'sex' => $ind['sex'],
+                'birth_date' => $ind['birth_date'] ?? null,
                 'birth_year' => $ind['birth_year'],
+                'death_date' => $ind['death_date'] ?? null,
                 'death_year' => $ind['death_year'],
+                'marriage_date' => $mInfo['date'],
+                'marriage_year' => $mInfo['year'],
                 'birth_place' => $ind['birth_place'],
                 'primary_media' => $ind['primary_media'],
                 'spouses' => $formatMiniSpouses($ind['spouses'] ?? []),
@@ -571,18 +606,24 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap, $formatMiniSpouses) {
+        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap, $formatMiniSpouses, $getMarriageInfo) {
             if ($depth >= $descendantMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
             }
 
             $ind = $data['individuals'][$personId];
+            $mInfo = $getMarriageInfo($personId);
+
             $node = [
                 'id' => $ind['id'],
                 'name' => $ind['name'],
                 'sex' => $ind['sex'],
+                'birth_date' => $ind['birth_date'] ?? null,
                 'birth_year' => $ind['birth_year'],
+                'death_date' => $ind['death_date'] ?? null,
                 'death_year' => $ind['death_year'],
+                'marriage_date' => $mInfo['date'],
+                'marriage_year' => $mInfo['year'],
                 'primary_media' => $ind['primary_media'],
                 'spouses' => $formatMiniSpouses($ind['spouses'] ?? []),
                 'children' => [],

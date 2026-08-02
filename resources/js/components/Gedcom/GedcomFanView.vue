@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import {
     PieChart, ZoomIn, ZoomOut, Maximize2, Shrink, Expand,
-    User, SlidersHorizontal, ChevronRight, ChevronLeft, RefreshCcw, Layers
+    User, SlidersHorizontal, ChevronRight, ChevronLeft, RefreshCcw, Layers, Heart, Search
 } from '@lucide/vue';
 
 const props = defineProps<{
@@ -23,6 +23,7 @@ const colorScheme = ref<'lineage' | 'generation' | 'monochrome'>('lineage');
 const zoomLevel = ref<number>(1);
 const isFullscreen = ref<boolean>(false);
 const isControlsCollapsed = ref<boolean>(false);
+const showAncestorList = ref<boolean>(true);
 const hoveredPerson = ref<any>(null);
 
 const fetchAncestors = async (id: string) => {
@@ -64,16 +65,12 @@ const rootPerson = computed(() => {
 });
 
 // Build binary tree array of slots for generations 1 to N
-// Slot index 1 = root, 2 = father, 3 = mother, 4 = paternal grandfather, 5 = paternal grandmother, 6 = maternal grandfather, 7 = maternal grandmother, etc.
 const fanSectors = computed(() => {
     if (!treeData.value?.ancestors) return [];
 
     const sectors: any[] = [];
     const maxGen = generationDepth.value;
 
-    // Helper to recursively collect ancestors into binary heap indexing
-    // index 1: root
-    // index 2i: father of i, 2i+1: mother of i
     const buildBinaryTree = (person: any, index: number, gen: number) => {
         if (!person || gen > maxGen) return;
 
@@ -84,7 +81,6 @@ const fanSectors = computed(() => {
         });
 
         if (person.parents && person.parents.length > 0) {
-            // By convention: parent index 0 = Father, 1 = Mother
             const father = person.parents[0] || null;
             const mother = person.parents[1] || null;
 
@@ -99,18 +95,16 @@ const fanSectors = computed(() => {
 });
 
 // SVG Fan geometry constants
-const SVG_SIZE = 900;
+const SVG_SIZE = 950;
 const CENTER_X = SVG_SIZE / 2;
-const CENTER_Y = SVG_SIZE / 2 + 100; // slightly offset down for semi-circle fan
-const INNER_RADIUS = 75;
-const RING_WIDTH = 75;
+const CENTER_Y = 530;
+const INNER_RADIUS = 90;
+const RING_WIDTH = 95;
 
-// Helper to compute SVG arc path
 const getArcPath = (gen: number, slotInGen: number, totalSlotsInGen: number) => {
     const rIn = INNER_RADIUS + (gen - 1) * RING_WIDTH;
     const rOut = INNER_RADIUS + gen * RING_WIDTH;
 
-    // Fan angle span from -180 deg (left) to 0 deg (right) => 180 degrees total
     const startAngleDeg = -180 + (slotInGen / totalSlotsInGen) * 180;
     const endAngleDeg = -180 + ((slotInGen + 1) / totalSlotsInGen) * 180;
 
@@ -134,30 +128,37 @@ const getArcPath = (gen: number, slotInGen: number, totalSlotsInGen: number) => 
     return `M ${x1In} ${y1In} L ${x1Out} ${y1Out} A ${rOut} ${rOut} 0 ${largeArc} 1 ${x2Out} ${y2Out} L ${x2In} ${y2In} A ${rIn} ${rIn} 0 ${largeArc} 0 ${x1In} ${y1In} Z`;
 };
 
-// Helper for text path or text position in sector center
-const getSectorCenter = (gen: number, slotInGen: number, totalSlotsInGen: number) => {
-    const rMid = INNER_RADIUS + (gen - 0.5) * RING_WIDTH;
+const getSectorImageCenter = (gen: number, slotInGen: number, totalSlotsInGen: number) => {
+    const rImg = INNER_RADIUS + (gen - 0.72) * RING_WIDTH;
     const angleDeg = -180 + ((slotInGen + 0.5) / totalSlotsInGen) * 180;
     const angleRad = (angleDeg * Math.PI) / 180;
 
     return {
-        x: CENTER_X + rMid * Math.cos(angleRad),
-        y: CENTER_Y + rMid * Math.sin(angleRad),
-        angle: angleDeg + 90, // perpendicular angle for text alignment
+        x: CENTER_X + rImg * Math.cos(angleRad),
+        y: CENTER_Y + rImg * Math.sin(angleRad),
+        angle: angleDeg + 90,
     };
 };
 
-// Color assignment based on selected scheme
+const getSectorTextCenter = (gen: number, slotInGen: number, totalSlotsInGen: number) => {
+    const rText = INNER_RADIUS + (gen - 0.28) * RING_WIDTH;
+    const angleDeg = -180 + ((slotInGen + 0.5) / totalSlotsInGen) * 180;
+    const angleRad = (angleDeg * Math.PI) / 180;
+
+    return {
+        x: CENTER_X + rText * Math.cos(angleRad),
+        y: CENTER_Y + rText * Math.sin(angleRad),
+        angle: angleDeg + 90,
+    };
+};
+
 const getSectorFill = (sector: any) => {
     if (colorScheme.value === 'lineage') {
         if (sector.gen === 0) return 'fill-indigo-600 dark:fill-indigo-700';
 
-        // Paternal (father's side) vs Maternal (mother's side)
-        // Check highest bit after root to determine side
         const isPaternal = (sector.index >> (sector.gen - 1)) % 2 === 0;
 
         if (isPaternal) {
-            const opacity = 1 - (sector.gen - 1) * 0.15;
             return sector.gen === 1 ? 'fill-blue-600 dark:fill-blue-600' :
                    sector.gen === 2 ? 'fill-blue-500 dark:fill-blue-700' :
                    sector.gen === 3 ? 'fill-sky-500 dark:fill-sky-700' :
@@ -183,16 +184,34 @@ const getSectorFill = (sector: any) => {
     }
 };
 
-// Helper for sector text
 const getSectorLabel = (sector: any) => {
     const name = sector.person.name || '';
     const parts = name.trim().split(' ');
     if (parts.length === 1) return name;
-    // Surname or first name depending on ring depth
     if (sector.gen >= 4) {
-        return parts[parts.length - 1]; // last name only for small outer slots
+        return parts[parts.length - 1];
     }
     return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
+const getSectorDates = (person: any) => {
+    const b = person.birth_year ? `b.${person.birth_year}` : (person.birth_date ? `b.${person.birth_date}` : '');
+    const m = person.marriage_year ? `m.${person.marriage_year}` : (person.marriage_date ? `m.${person.marriage_date}` : '');
+    const d = person.death_year ? `d.${person.death_year}` : (person.death_date ? `d.${person.death_date}` : '');
+
+    const parts = [b, m, d].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : '—';
+};
+
+const getRelationTitle = (sector: any) => {
+    if (sector.gen === 0) return 'Focus Person';
+    if (sector.gen === 1) return sector.index % 2 === 0 ? 'Father' : 'Mother';
+    if (sector.gen === 2) {
+        return sector.index === 4 ? 'Paternal Grandfather' :
+               sector.index === 5 ? 'Paternal Grandmother' :
+               sector.index === 6 ? 'Maternal Grandfather' : 'Maternal Grandmother';
+    }
+    return `Generation ${sector.gen} Ancestor`;
 };
 
 const handleSectorClick = (personId: string) => {
@@ -217,7 +236,7 @@ const resetZoom = () => { zoomLevel.value = 1; };
             'transition-all duration-300 flex flex-col',
             isFullscreen
                 ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-100 dark:bg-slate-950 border-none p-0 shadow-none'
-                : 'relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl min-h-[550px] sm:min-h-[750px] h-[82vh]'
+                : 'relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl min-h-[600px] sm:min-h-[800px] h-[85vh]'
         ]"
     >
         <!-- Top Floating Controls -->
@@ -306,138 +325,286 @@ const resetZoom = () => { zoomLevel.value = 1; };
                             <option value="monochrome">Monochrome / Clean</option>
                         </select>
                     </div>
+
+                    <button
+                        @click="showAncestorList = !showAncestorList"
+                        class="px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border"
+                        :class="showAncestorList ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'"
+                    >
+                        <Layers class="w-3.5 h-3.5" />
+                        <span>Gallery List</span>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Fan SVG Canvas Container -->
-        <div class="flex-1 overflow-auto flex items-center justify-center p-6 relative">
-            <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-slate-400">
-                <div class="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <p class="mt-4 text-xs font-semibold text-slate-600 dark:text-slate-300">Rendering Ancestry Fan Chart...</p>
-            </div>
+        <!-- Main Fan Area (Canvas + Ancestors Gallery List) -->
+        <div class="flex-1 overflow-hidden flex flex-col lg:flex-row relative">
+            <!-- Fan SVG Canvas Container -->
+            <div class="flex-1 overflow-auto flex items-center justify-center p-6 relative">
+                <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <div class="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="mt-4 text-xs font-semibold text-slate-600 dark:text-slate-300">Rendering Ancestry Fan Chart...</p>
+                </div>
 
-            <div
-                v-else-if="rootPerson"
-                class="transition-transform duration-200 ease-out origin-center flex flex-col items-center"
-                :style="{ transform: `scale(${zoomLevel})` }"
-            >
-                <svg
-                    :width="SVG_SIZE"
-                    :height="SVG_SIZE - 200"
-                    :viewBox="`0 0 ${SVG_SIZE} ${SVG_SIZE - 200}`"
-                    class="overflow-visible select-none"
+                <div
+                    v-else-if="rootPerson"
+                    class="transition-transform duration-200 ease-out origin-center flex flex-col items-center"
+                    :style="{ transform: `scale(${zoomLevel})` }"
                 >
-                    <g>
-                        <!-- Center Focus Circle (Generation 0 - Root Individual) -->
-                        <g
-                            @click="handleSectorClick(rootPerson.id)"
-                            @dblclick="handleSectorDoubleClick(rootPerson.id)"
-                            @mouseenter="hoveredPerson = rootPerson"
-                            @mouseleave="hoveredPerson = null"
-                            class="cursor-pointer group"
-                        >
-                            <circle
-                                :cx="CENTER_X"
-                                :cy="CENTER_Y"
-                                :r="INNER_RADIUS"
-                                class="fill-indigo-600 dark:fill-indigo-700 stroke-2 stroke-white dark:stroke-slate-900 group-hover:fill-indigo-500 transition-colors shadow-xl"
-                            />
-                            <text
-                                :x="CENTER_X"
-                                :y="CENTER_Y - 8"
-                                text-anchor="middle"
-                                class="fill-white font-extrabold text-xs tracking-tight pointer-events-none"
-                            >
-                                {{ rootPerson.name.split(' ')[0] }}
-                            </text>
-                            <text
-                                :x="CENTER_X"
-                                :y="CENTER_Y + 10"
-                                text-anchor="middle"
-                                class="fill-indigo-100 font-bold text-[11px] pointer-events-none"
-                            >
-                                {{ rootPerson.name.split(' ').slice(1).join(' ') }}
-                            </text>
-                            <text
-                                :x="CENTER_X"
-                                :y="CENTER_Y + 24"
-                                text-anchor="middle"
-                                class="fill-indigo-200 text-[10px] pointer-events-none"
-                            >
-                                {{ rootPerson.birth_year || '?' }} – {{ rootPerson.death_year || 'Present' }}
-                            </text>
-                        </g>
+                    <svg
+                        :width="SVG_SIZE"
+                        :height="550"
+                        :viewBox="`0 0 ${SVG_SIZE} 550`"
+                        class="overflow-visible select-none"
+                    >
+                        <defs>
+                            <!-- Center avatar clip path -->
+                            <clipPath id="clip-root-avatar">
+                                <circle :cx="CENTER_X" :cy="CENTER_Y - 24" r="24" />
+                            </clipPath>
 
-                        <!-- Concentric Ancestor Fan Sectors (Generations 1 to N) -->
-                        <g v-for="sector in fanSectors" :key="`${sector.gen}-${sector.index}`">
-                            <template v-if="sector.gen > 0">
-                                <g
-                                    @click="handleSectorClick(sector.person.id)"
-                                    @dblclick="handleSectorDoubleClick(sector.person.id)"
-                                    @mouseenter="hoveredPerson = sector.person"
-                                    @mouseleave="hoveredPerson = null"
-                                    class="cursor-pointer group"
+                            <!-- Dynamic sector avatar clip paths -->
+                            <clipPath
+                                v-for="sector in fanSectors"
+                                :key="'clip-def-' + sector.index"
+                                :id="'clip-fan-' + sector.index"
+                            >
+                                <circle
+                                    :cx="getSectorImageCenter(sector.gen, sector.index - Math.pow(2, sector.gen), Math.pow(2, sector.gen)).x"
+                                    :cy="getSectorImageCenter(sector.gen, sector.index - Math.pow(2, sector.gen), Math.pow(2, sector.gen)).y"
+                                    :r="sector.gen <= 2 ? 14 : 10"
+                                />
+                            </clipPath>
+                        </defs>
+
+                        <g>
+                            <!-- Center Focus Circle (Generation 0 - Root Individual) -->
+                            <g
+                                @click="handleSectorClick(rootPerson.id)"
+                                @dblclick="handleSectorDoubleClick(rootPerson.id)"
+                                @mouseenter="hoveredPerson = rootPerson"
+                                @mouseleave="hoveredPerson = null"
+                                class="cursor-pointer group"
+                            >
+                                <circle
+                                    :cx="CENTER_X"
+                                    :cy="CENTER_Y"
+                                    :r="INNER_RADIUS"
+                                    class="fill-indigo-600 dark:fill-indigo-700 stroke-2 stroke-white dark:stroke-slate-900 group-hover:fill-indigo-500 transition-colors shadow-xl"
+                                />
+
+                                <!-- Center Avatar Image or Placeholder -->
+                                <image
+                                    v-if="rootPerson.primary_media?.url"
+                                    :href="rootPerson.primary_media.url"
+                                    :x="CENTER_X - 24"
+                                    :y="CENTER_Y - 48"
+                                    width="48"
+                                    height="48"
+                                    clip-path="url(#clip-root-avatar)"
+                                    preserveAspectRatio="xMidYMid slice"
+                                />
+                                <circle
+                                    v-else
+                                    :cx="CENTER_X"
+                                    :cy="CENTER_Y - 24"
+                                    r="24"
+                                    class="fill-indigo-500/50 stroke-1 stroke-white/40"
+                                />
+
+                                <text
+                                    :x="CENTER_X"
+                                    :y="CENTER_Y + 10"
+                                    text-anchor="middle"
+                                    class="fill-white font-extrabold text-xs tracking-tight pointer-events-none drop-shadow-xs"
                                 >
-                                    <!-- Fan Arc Path -->
-                                    <path
-                                        :d="getArcPath(
-                                            sector.gen,
-                                            sector.index - Math.pow(2, sector.gen),
-                                            Math.pow(2, sector.gen)
-                                        )"
-                                        :class="[
-                                            getSectorFill(sector),
-                                            'stroke-white dark:stroke-slate-900 stroke-1.5 transition-colors group-hover:brightness-110 shadow-md'
-                                        ]"
-                                    />
+                                    {{ rootPerson.name.split(' ')[0] }}
+                                </text>
+                                <text
+                                    :x="CENTER_X"
+                                    :y="CENTER_Y + 24"
+                                    text-anchor="middle"
+                                    class="fill-indigo-100 font-bold text-[11px] pointer-events-none"
+                                >
+                                    {{ rootPerson.name.split(' ').slice(1).join(' ') }}
+                                </text>
 
-                                    <!-- Arc Label Text -->
+                                <!-- Dates under center name -->
+                                <text
+                                    :x="CENTER_X"
+                                    :y="CENTER_Y + 40"
+                                    text-anchor="middle"
+                                    class="fill-indigo-200 text-[10px] font-semibold pointer-events-none"
+                                >
+                                    {{ getSectorDates(rootPerson) }}
+                                </text>
+                            </g>
+
+                            <!-- Concentric Ancestor Fan Sectors (Generations 1 to N) -->
+                            <g v-for="sector in fanSectors" :key="`${sector.gen}-${sector.index}`">
+                                <template v-if="sector.gen > 0">
                                     <g
-                                        :transform="(() => {
-                                            const c = getSectorCenter(
+                                        @click="handleSectorClick(sector.person.id)"
+                                        @dblclick="handleSectorDoubleClick(sector.person.id)"
+                                        @mouseenter="hoveredPerson = sector.person"
+                                        @mouseleave="hoveredPerson = null"
+                                        class="cursor-pointer group"
+                                    >
+                                        <!-- Fan Arc Path -->
+                                        <path
+                                            :d="getArcPath(
                                                 sector.gen,
                                                 sector.index - Math.pow(2, sector.gen),
                                                 Math.pow(2, sector.gen)
-                                            );
-                                            return `translate(${c.x}, ${c.y}) rotate(${c.angle})`;
-                                        })()"
-                                    >
-                                        <text
-                                            text-anchor="middle"
-                                            dominant-baseline="middle"
-                                            class="fill-white font-bold text-[10px] pointer-events-none drop-shadow-xs"
-                                        >
-                                            {{ getSectorLabel(sector) }}
-                                        </text>
-                                    </g>
-                                </g>
-                            </template>
-                        </g>
-                    </g>
-                </svg>
+                                            )"
+                                            :class="[
+                                                getSectorFill(sector),
+                                                'stroke-white dark:stroke-slate-900 stroke-1.5 transition-colors group-hover:brightness-110 shadow-md'
+                                            ]"
+                                        />
 
-                <!-- Hovered Person Summary Tooltip Bar -->
-                <div
-                    v-if="hoveredPerson"
-                    class="mt-4 bg-slate-900/90 text-white backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3 animate-in fade-in duration-150"
-                >
-                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                        <User class="w-4 h-4" />
+                                        <!-- Sector Avatar Photo Image (Radially Inner Band) -->
+                                        <template v-if="sector.person.primary_media?.url">
+                                            <image
+                                                :href="sector.person.primary_media.url"
+                                                :x="getSectorImageCenter(sector.gen, sector.index - Math.pow(2, sector.gen), Math.pow(2, sector.gen)).x - (sector.gen <= 2 ? 14 : 10)"
+                                                :y="getSectorImageCenter(sector.gen, sector.index - Math.pow(2, sector.gen), Math.pow(2, sector.gen)).y - (sector.gen <= 2 ? 14 : 10)"
+                                                :width="sector.gen <= 2 ? 28 : 20"
+                                                :height="sector.gen <= 2 ? 28 : 20"
+                                                :clip-path="`url(#clip-fan-${sector.index})`"
+                                                preserveAspectRatio="xMidYMid slice"
+                                                class="pointer-events-none"
+                                            />
+                                        </template>
+
+                                        <!-- Arc Label Text & Dates (Radially Outer Band) -->
+                                        <g
+                                            :transform="(() => {
+                                                const c = getSectorTextCenter(
+                                                    sector.gen,
+                                                    sector.index - Math.pow(2, sector.gen),
+                                                    Math.pow(2, sector.gen)
+                                                );
+                                                return `translate(${c.x}, ${c.y}) rotate(${c.angle})`;
+                                            })()"
+                                        >
+                                            <!-- Person Name -->
+                                            <text
+                                                text-anchor="middle"
+                                                y="-2"
+                                                class="fill-white font-extrabold text-[10px] pointer-events-none drop-shadow-xs"
+                                            >
+                                                {{ getSectorLabel(sector) }}
+                                            </text>
+                                            <!-- Birth, Married, Death Dates -->
+                                            <text
+                                                text-anchor="middle"
+                                                y="10"
+                                                class="fill-white/95 font-semibold text-[8.5px] pointer-events-none drop-shadow-xs"
+                                            >
+                                                {{ getSectorDates(sector.person) }}
+                                            </text>
+                                        </g>
+                                    </g>
+                                </template>
+                            </g>
+                        </g>
+                    </svg>
+
+                    <!-- Hovered Person Summary Tooltip Bar -->
+                    <div
+                        v-if="hoveredPerson"
+                        class="-mt-4 sm:-mt-6 bg-slate-900/95 text-white backdrop-blur-md px-5 py-2.5 rounded-2xl border border-slate-700 shadow-2xl flex items-center gap-3 animate-in fade-in duration-150 z-20"
+                    >
+                        <!-- Hovered Person Photo Thumbnail -->
+                        <img
+                            v-if="hoveredPerson.primary_media?.url"
+                            :src="hoveredPerson.primary_media.url"
+                            class="w-10 h-10 rounded-xl object-cover border border-white/20 shrink-0 shadow-md"
+                        />
+                        <div v-else class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                            <User class="w-5 h-5" />
+                        </div>
+
+                        <div class="text-xs">
+                            <div class="font-extrabold text-white text-sm">{{ hoveredPerson.name }}</div>
+                            <div class="text-[11px] text-indigo-200 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-medium">
+                                <span v-if="hoveredPerson.birth_date || hoveredPerson.birth_year"><span class="font-bold opacity-85 text-indigo-300">b.</span> {{ hoveredPerson.birth_date || hoveredPerson.birth_year }}</span>
+                                <span v-if="hoveredPerson.marriage_date || hoveredPerson.marriage_year" class="text-rose-300"><span class="font-bold opacity-85">m.</span> {{ hoveredPerson.marriage_date || hoveredPerson.marriage_year }}</span>
+                                <span v-if="hoveredPerson.death_date || hoveredPerson.death_year"><span class="font-bold opacity-85 text-indigo-300">d.</span> {{ hoveredPerson.death_date || hoveredPerson.death_year }}</span>
+                                <span v-if="hoveredPerson.birth_place" class="text-slate-400">| {{ hoveredPerson.birth_place }}</span>
+                            </div>
+                        </div>
+
+                        <button
+                            @click="emit('change-root', hoveredPerson.id)"
+                            class="ml-3 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                        >
+                            Focus
+                        </button>
                     </div>
-                    <div class="text-xs">
-                        <div class="font-extrabold text-white">{{ hoveredPerson.name }}</div>
-                        <div class="text-[11px] text-indigo-300">
-                            {{ hoveredPerson.birth_year || '?' }} – {{ hoveredPerson.death_year || 'Present' }}
-                            <template v-if="hoveredPerson.birth_place"> | {{ hoveredPerson.birth_place }}</template>
+                </div>
+            </div>
+
+            <!-- Side Ancestors Gallery List (Photo + Name + Birth/Married/Death Year) -->
+            <div
+                v-if="showAncestorList && fanSectors.length > 0"
+                class="w-full lg:w-80 bg-slate-50/90 dark:bg-slate-850/90 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 p-4 overflow-y-auto flex flex-col gap-3 max-h-80 lg:max-h-none shrink-0"
+            >
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <User class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        Fan Chart Ancestors ({{ fanSectors.length }})
+                    </h3>
+                    <button
+                        @click="showAncestorList = false"
+                        class="text-[11px] font-bold text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                    >
+                        Hide
+                    </button>
+                </div>
+
+                <div class="space-y-2 overflow-y-auto pr-1">
+                    <div
+                        v-for="sec in fanSectors"
+                        :key="'list-' + sec.index"
+                        @click="emit('select-person', sec.person.id)"
+                        @dblclick="emit('change-root', sec.person.id)"
+                        class="p-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer shadow-2xs flex items-center gap-3 group"
+                    >
+                        <!-- Person Picture Photo Thumbnail -->
+                        <img
+                            v-if="sec.person.primary_media?.url"
+                            :src="sec.person.primary_media.url"
+                            class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
+                        />
+                        <div v-else class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-750 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                            <User class="w-5 h-5" />
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                    {{ sec.person.name }}
+                                </span>
+                            </div>
+                            <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-1.5">
+                                <span v-if="sec.person.birth_year || sec.person.birth_date" class="text-slate-700 dark:text-slate-300">
+                                    b.{{ sec.person.birth_year || sec.person.birth_date }}
+                                </span>
+                                <span v-if="sec.person.marriage_year || sec.person.marriage_date" class="text-rose-600 dark:text-rose-400">
+                                    m.{{ sec.person.marriage_year || sec.person.marriage_date }}
+                                </span>
+                                <span v-if="sec.person.death_year || sec.person.death_date" class="text-slate-700 dark:text-slate-300">
+                                    d.{{ sec.person.death_year || sec.person.death_date }}
+                                </span>
+                            </div>
+                            <div class="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-tight mt-0.5">
+                                {{ getRelationTitle(sec) }}
+                            </div>
                         </div>
                     </div>
-                    <button
-                        @click="emit('change-root', hoveredPerson.id)"
-                        class="ml-3 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition-colors cursor-pointer"
-                    >
-                        Focus
-                    </button>
                 </div>
             </div>
         </div>
