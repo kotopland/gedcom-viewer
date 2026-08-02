@@ -92,9 +92,9 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
 <template>
     <Head title="Family Tree Archive" />
 
-    <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500 selection:text-white transition-colors duration-200">
+    <div class="min-h-screen min-h-dvh bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500 selection:text-white transition-colors duration-200 flex flex-col">
         <!-- Main Top Bar -->
-        <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
+        <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-200 pt-[env(safe-area-inset-top,0px)]">
             <div class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
                 <!-- Left Section: Logo & Title -->
                 <div class="flex items-center gap-3">
@@ -347,9 +347,9 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
         </header>
 
         <!-- Main Body Area -->
-        <main class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main class="w-full max-w-[96rem] mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex-1 flex flex-col min-h-0">
             <!-- Active Tab Content -->
-            <div class="space-y-6">
+            <div class="space-y-4 sm:space-y-6 flex-1 flex flex-col min-h-0">
                 <!-- Interactive Ancestor/Descendant Family Tree View -->
                 <GedcomTreeView
                     v-if="activeTab === 'tree'"
