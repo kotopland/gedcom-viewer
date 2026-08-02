@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import {
     PieChart, ZoomIn, ZoomOut, Maximize2, Shrink, Expand,
-    User, SlidersHorizontal, ChevronRight, ChevronLeft, RefreshCcw, Layers, Heart, Search
+    User, SlidersHorizontal, ChevronRight, ChevronLeft, RefreshCcw, Layers, Heart, Search, Move
 } from '@lucide/vue';
 
 const props = defineProps<{
@@ -21,6 +21,12 @@ const generationDepth = ref<number>(4);
 const colorScheme = ref<'lineage' | 'generation' | 'monochrome'>('lineage');
 
 const zoomLevel = ref<number>(1);
+const panX = ref<number>(0);
+const panY = ref<number>(0);
+const isDragging = ref<boolean>(false);
+const startX = ref<number>(0);
+const startY = ref<number>(0);
+
 const isFullscreen = ref<boolean>(false);
 const isControlsCollapsed = ref<boolean>(false);
 const showAncestorList = ref<boolean>(true);
@@ -225,9 +231,51 @@ const handleSectorDoubleClick = (personId: string) => {
 const toggleFullscreen = () => {
     isFullscreen.value = !isFullscreen.value;
 };
-const zoomIn = () => { zoomLevel.value = Math.min(zoomLevel.value + 0.15, 2.0); };
-const zoomOut = () => { zoomLevel.value = Math.max(zoomLevel.value - 0.15, 0.5); };
-const resetZoom = () => { zoomLevel.value = 1; };
+const zoomIn = () => { zoomLevel.value = Math.min(zoomLevel.value + 0.15, 2.5); };
+const zoomOut = () => { zoomLevel.value = Math.max(zoomLevel.value - 0.15, 0.4); };
+const resetZoom = () => {
+    zoomLevel.value = 1;
+    panX.value = 0;
+    panY.value = 0;
+};
+
+// Mouse Panning Handlers
+const onMouseDown = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).tagName === 'button' || (e.target as HTMLElement).closest('button')) return;
+    isDragging.value = true;
+    startX.value = e.clientX - panX.value;
+    startY.value = e.clientY - panY.value;
+};
+
+const onMouseMove = (e: MouseEvent) => {
+    if (!isDragging.value) return;
+    panX.value = e.clientX - startX.value;
+    panY.value = e.clientY - startY.value;
+};
+
+const onMouseUp = () => {
+    isDragging.value = false;
+};
+
+// Touch Panning Handlers for Mobile Devices
+const onTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 1) {
+        isDragging.value = true;
+        startX.value = e.touches[0].clientX - panX.value;
+        startY.value = e.touches[0].clientY - panY.value;
+    }
+};
+
+const onTouchMove = (e: TouchEvent) => {
+    if (isDragging.value && e.touches.length === 1) {
+        panX.value = e.touches[0].clientX - startX.value;
+        panY.value = e.touches[0].clientY - startY.value;
+    }
+};
+
+const onTouchEnd = () => {
+    isDragging.value = false;
+};
 </script>
 
 <template>
@@ -236,7 +284,7 @@ const resetZoom = () => { zoomLevel.value = 1; };
             'transition-all duration-300 flex flex-col',
             isFullscreen
                 ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-100 dark:bg-slate-950 border-none p-0 shadow-none'
-                : 'relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl min-h-[600px] sm:min-h-[800px] h-[85vh]'
+                : 'relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl min-h-[550px] sm:min-h-[750px] h-[85vh]'
         ]"
     >
         <!-- Top Floating Controls -->
@@ -278,13 +326,13 @@ const resetZoom = () => { zoomLevel.value = 1; };
 
                     <!-- Zoom Controls -->
                     <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
-                        <button @click="zoomIn" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer">
+                        <button @click="zoomIn" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer" title="Zoom In">
                             <ZoomIn class="w-3.5 h-3.5" />
                         </button>
-                        <button @click="zoomOut" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer">
+                        <button @click="zoomOut" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer" title="Zoom Out">
                             <ZoomOut class="w-3.5 h-3.5" />
                         </button>
-                        <button @click="resetZoom" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer">
+                        <button @click="resetZoom" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer" title="Reset Fit View">
                             <Maximize2 class="w-3.5 h-3.5" />
                         </button>
                     </div>
@@ -338,10 +386,19 @@ const resetZoom = () => { zoomLevel.value = 1; };
             </div>
         </div>
 
-        <!-- Main Fan Area (Canvas + Ancestors Gallery List) -->
+        <!-- Main Fan Area (Responsive Pan & Zoom Canvas + Ancestors Gallery List) -->
         <div class="flex-1 overflow-hidden flex flex-col lg:flex-row relative">
-            <!-- Fan SVG Canvas Container -->
-            <div class="flex-1 overflow-auto flex items-center justify-center p-6 relative">
+            <!-- Touch & Drag Pan SVG Canvas Container -->
+            <div
+                class="flex-1 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-6 relative cursor-grab active:cursor-grabbing touch-none select-none"
+                @mousedown="onMouseDown"
+                @mousemove="onMouseMove"
+                @mouseup="onMouseUp"
+                @mouseleave="onMouseUp"
+                @touchstart="onTouchStart"
+                @touchmove="onTouchMove"
+                @touchend="onTouchEnd"
+            >
                 <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-slate-400">
                     <div class="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                     <p class="mt-4 text-xs font-semibold text-slate-600 dark:text-slate-300">Rendering Ancestry Fan Chart...</p>
@@ -349,14 +406,13 @@ const resetZoom = () => { zoomLevel.value = 1; };
 
                 <div
                     v-else-if="rootPerson"
-                    class="transition-transform duration-200 ease-out origin-center flex flex-col items-center"
-                    :style="{ transform: `scale(${zoomLevel})` }"
+                    class="w-full max-w-[950px] transition-transform duration-75 ease-out flex flex-col items-center"
+                    :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})` }"
                 >
+                    <!-- Responsive SVG Chart (Fits 100% Mobile Viewport Width by default) -->
                     <svg
-                        :width="SVG_SIZE"
-                        :height="550"
-                        :viewBox="`0 0 ${SVG_SIZE} 550`"
-                        class="overflow-visible select-none"
+                        viewBox="0 0 950 550"
+                        class="w-full h-auto max-w-full overflow-visible select-none"
                     >
                         <defs>
                             <!-- Center avatar clip path -->

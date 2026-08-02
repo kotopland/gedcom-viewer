@@ -842,5 +842,239 @@ class GedcomController extends Controller
             'Cache-Control' => 'public, max-age=31536000',
         ]);
     }
+
+    public function stats(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
+    {
+        $data = $parser->getOrParseData();
+
+        // 1. Enforce strict permissions via LineagePermissionService
+        $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
+        $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
+
+        $filteredIndividuals = [];
+        foreach ($data['individuals'] as $id => $ind) {
+            if ($allowedMap === null || isset($allowedMap[$id])) {
+                $filteredIndividuals[$id] = $ind;
+            }
+        }
+
+        $filteredFamilies = [];
+        foreach ($data['families'] as $famId => $fam) {
+            $husbOk = isset($fam['husband_id']) && ($allowedMap === null || isset($allowedMap[$fam['husband_id']]));
+            $wifeOk = isset($fam['wife_id']) && ($allowedMap === null || isset($allowedMap[$fam['wife_id']]));
+            if ($husbOk || $wifeOk) {
+                $filteredFamilies[$famId] = $fam;
+            }
+        }
+
+        // 2. Compute Surnames Statistics
+        $surnameCounts = [];
+        foreach ($filteredIndividuals as $ind) {
+            $surname = trim($ind['surname'] ?? '');
+            if ($surname !== '' && strtolower($surname) !== 'unknown' && $surname !== '---') {
+                $surnameCounts[$surname] = ($surnameCounts[$surname] ?? 0) + 1;
+            }
+        }
+        arsort($surnameCounts);
+        $topSurnames = [];
+        foreach (array_slice($surnameCounts, 0, 15, true) as $s => $cnt) {
+            $topSurnames[] = ['surname' => $s, 'count' => $cnt];
+        }
+
+        // 3. Compute Countries & Places Statistics
+        $placeCounts = [];
+        $countryCounts = [];
+
+        foreach ($filteredIndividuals as $ind) {
+            $places = array_filter([$ind['birth_place'] ?? null, $ind['death_place'] ?? null]);
+            foreach ($ind['events'] ?? [] as $evt) {
+                if (!empty($evt['place'])) {
+                    $places[] = $evt['place'];
+                }
+            }
+
+            foreach ($places as $rawPlace) {
+                $place = trim($rawPlace);
+                if ($place === '') continue;
+
+                $placeCounts[$place] = ($placeCounts[$place] ?? 0) + 1;
+
+                // Extract country/state (last component in comma-separated location)
+                $parts = array_map('trim', explode(',', $place));
+                $countryCandidate = end($parts);
+                if (!empty($countryCandidate) && strlen($countryCandidate) >= 2) {
+                    $normCountry = match(strtolower($countryCandidate)) {
+                        'usa', 'united states', 'united states of america' => 'USA',
+                        'uk', 'united kingdom', 'england', 'scotland', 'wales' => 'United Kingdom',
+                        'no', 'norge', 'norway' => 'Norway',
+                        'se', 'sverige', 'sweden' => 'Sweden',
+                        'dk', 'danmark', 'denmark' => 'Denmark',
+                        'de', 'deutschland', 'germany' => 'Germany',
+                        'fr', 'france' => 'France',
+                        default => ucfirst($countryCandidate),
+                    };
+                    $countryCounts[$normCountry] = ($countryCounts[$normCountry] ?? 0) + 1;
+                }
+            }
+        }
+
+        arsort($placeCounts);
+        arsort($countryCounts);
+
+        $topPlaces = [];
+        foreach (array_slice($placeCounts, 0, 15, true) as $p => $cnt) {
+            $topPlaces[] = ['place' => $p, 'count' => $cnt];
+        }
+
+        $topCountries = [];
+        foreach (array_slice($countryCounts, 0, 15, true) as $c => $cnt) {
+            $topCountries[] = ['country' => $c, 'count' => $cnt];
+        }
+
+        // 4. Oldest Person Statistics
+        $oldestPerson = null;
+        $maxLifespan = -1;
+
+        $maleLifespans = [];
+        $femaleLifespans = [];
+        $allLifespans = [];
+
+        $earliestBirthYear = null;
+        $latestBirthYear = null;
+
+        foreach ($filteredIndividuals as $ind) {
+            $bYear = $ind['birth_year'] ?? null;
+            $dYear = $ind['death_year'] ?? null;
+
+            if ($bYear !== null) {
+                if ($earliestBirthYear === null || $bYear < $earliestBirthYear) {
+                    $earliestBirthYear = $bYear;
+                }
+                if ($latestBirthYear === null || $bYear > $latestBirthYear) {
+                    $latestBirthYear = $bYear;
+                }
+            }
+
+            if ($bYear !== null && $dYear !== null && $dYear >= $bYear && ($dYear - $bYear) <= 115) {
+                $age = $dYear - $bYear;
+                $allLifespans[] = $age;
+                if (($ind['sex'] ?? '') === 'M') {
+                    $maleLifespans[] = $age;
+                } elseif (($ind['sex'] ?? '') === 'F') {
+                    $femaleLifespans[] = $age;
+                }
+
+                if ($age > $maxLifespan) {
+                    $maxLifespan = $age;
+                    $oldestPerson = [
+                        'id' => $ind['id'],
+                        'name' => $ind['name'],
+                        'sex' => $ind['sex'],
+                        'birth_year' => $bYear,
+                        'death_year' => $dYear,
+                        'age' => $age,
+                        'primary_media' => $ind['primary_media'] ?? null,
+                    ];
+                }
+            }
+        }
+
+        // 5. Biggest Difference in Age of Married Couple
+        $biggestAgeDiffCouple = null;
+        $maxAgeDiff = -1;
+
+        $largestFamily = null;
+        $maxChildrenCount = -1;
+
+        foreach ($filteredFamilies as $fam) {
+            $hId = $fam['husband_id'] ?? null;
+            $wId = $fam['wife_id'] ?? null;
+
+            $husband = $hId && isset($filteredIndividuals[$hId]) ? $filteredIndividuals[$hId] : null;
+            $wife = $wId && isset($filteredIndividuals[$wId]) ? $filteredIndividuals[$wId] : null;
+
+            $children = $fam['children'] ?? [];
+            if (count($children) > $maxChildrenCount) {
+                $maxChildrenCount = count($children);
+                $largestFamily = [
+                    'family_id' => $fam['id'],
+                    'husband_name' => $husband['name'] ?? 'Unknown',
+                    'wife_name' => $wife['name'] ?? 'Unknown',
+                    'children_count' => count($children),
+                ];
+            }
+
+            if ($husband && $wife) {
+                $hBirth = $husband['birth_year'] ?? null;
+                $wBirth = $wife['birth_year'] ?? null;
+
+                if ($hBirth !== null && $wBirth !== null) {
+                    $diff = abs($hBirth - $wBirth);
+                    if ($diff > $maxAgeDiff) {
+                        $maxAgeDiff = $diff;
+                        $olderSpouse = $hBirth < $wBirth ? 'husband' : 'wife';
+                        $biggestAgeDiffCouple = [
+                            'family_id' => $fam['id'],
+                            'husband' => [
+                                'id' => $husband['id'],
+                                'name' => $husband['name'],
+                                'birth_year' => $hBirth,
+                                'primary_media' => $husband['primary_media'] ?? null,
+                            ],
+                            'wife' => [
+                                'id' => $wife['id'],
+                                'name' => $wife['name'],
+                                'birth_year' => $wBirth,
+                                'primary_media' => $wife['primary_media'] ?? null,
+                            ],
+                            'age_difference' => $diff,
+                            'older_spouse' => $olderSpouse,
+                            'marriage_date' => $fam['marriage_date'] ?? null,
+                            'marriage_year' => $fam['marriage_year'] ?? null,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // 6. Lifespan Averages
+        $avgLifespan = !empty($allLifespans) ? round(array_sum($allLifespans) / count($allLifespans), 1) : null;
+        $avgMaleLifespan = !empty($maleLifespans) ? round(array_sum($maleLifespans) / count($maleLifespans), 1) : null;
+        $avgFemaleLifespan = !empty($femaleLifespans) ? round(array_sum($femaleLifespans) / count($femaleLifespans), 1) : null;
+
+        $maleCount = 0;
+        $femaleCount = 0;
+        foreach ($filteredIndividuals as $ind) {
+            if (($ind['sex'] ?? '') === 'M') $maleCount++;
+            if (($ind['sex'] ?? '') === 'F') $femaleCount++;
+        }
+
+        return response()->json([
+            'totals' => [
+                'total_individuals' => count($filteredIndividuals),
+                'total_families' => count($filteredFamilies),
+                'males' => $maleCount,
+                'females' => $femaleCount,
+                'living' => count(array_filter($filteredIndividuals, fn($i) => empty($i['death_year']) && empty($i['death_date']))),
+                'deceased' => count(array_filter($filteredIndividuals, fn($i) => !empty($i['death_year']) || !empty($i['death_date']))),
+            ],
+            'top_surnames' => $topSurnames,
+            'top_places' => $topPlaces,
+            'top_countries' => $topCountries,
+            'oldest_person' => $oldestPerson,
+            'biggest_age_difference_couple' => $biggestAgeDiffCouple,
+            'largest_family' => $largestFamily,
+            'lifespan_averages' => [
+                'overall' => $avgLifespan,
+                'male' => $avgMaleLifespan,
+                'female' => $avgFemaleLifespan,
+            ],
+            'generations_span' => [
+                'earliest_birth_year' => $earliestBirthYear,
+                'latest_birth_year' => $latestBirthYear,
+                'total_years_span' => ($earliestBirthYear && $latestBirthYear) ? ($latestBirthYear - $earliestBirthYear) : null,
+            ],
+        ]);
+    }
 }
 
