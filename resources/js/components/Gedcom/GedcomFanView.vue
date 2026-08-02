@@ -228,11 +228,13 @@ const handleSectorDoubleClick = (personId: string) => {
     emit('change-root', personId);
 };
 
+const fanContainerRef = ref<HTMLElement | null>(null);
+
 const toggleFullscreen = () => {
     isFullscreen.value = !isFullscreen.value;
 };
-const zoomIn = () => { zoomLevel.value = Math.min(zoomLevel.value + 0.15, 2.5); };
-const zoomOut = () => { zoomLevel.value = Math.max(zoomLevel.value - 0.15, 0.4); };
+const zoomIn = () => { zoomLevel.value = Math.min(Math.round((zoomLevel.value + 0.25) * 100) / 100, 6.0); };
+const zoomOut = () => { zoomLevel.value = Math.max(Math.round((zoomLevel.value - 0.25) * 100) / 100, 0.3); };
 const resetZoom = () => {
     zoomLevel.value = 1;
     panX.value = 0;
@@ -259,6 +261,10 @@ const onMouseUp = () => {
 
 let initialPinchDistance: number | null = null;
 let initialPinchZoom: number = 1;
+let initialPinchFocalX = 0;
+let initialPinchFocalY = 0;
+let initialPinchPanX = 0;
+let initialPinchPanY = 0;
 
 // Touch Panning & 2-Finger Pinch-to-Zoom Handlers for Mobile Devices
 const onTouchStart = (e: TouchEvent) => {
@@ -266,12 +272,21 @@ const onTouchStart = (e: TouchEvent) => {
         isDragging.value = true;
         startX.value = e.touches[0].clientX - panX.value;
         startY.value = e.touches[0].clientY - panY.value;
-    } else if (e.touches.length === 2) {
+    } else if (e.touches.length === 2 && fanContainerRef.value) {
         isDragging.value = false;
+        const rect = fanContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
+
+        const focalX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const focalY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
         initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
         initialPinchZoom = zoomLevel.value;
+        initialPinchFocalX = focalX;
+        initialPinchFocalY = focalY;
+        initialPinchPanX = panX.value;
+        initialPinchPanY = panY.value;
     }
 };
 
@@ -279,12 +294,23 @@ const onTouchMove = (e: TouchEvent) => {
     if (e.touches.length === 1 && isDragging.value) {
         panX.value = e.touches[0].clientX - startX.value;
         panY.value = e.touches[0].clientY - startY.value;
-    } else if (e.touches.length === 2 && initialPinchDistance) {
+    } else if (e.touches.length === 2 && initialPinchDistance && fanContainerRef.value) {
+        const rect = fanContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
+
         const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        const scale = currentDistance / initialPinchDistance;
-        const newZoom = Math.min(2.5, Math.max(0.4, initialPinchZoom * scale));
+        const currentFocalX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const currentFocalY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
+        const scaleRatio = currentDistance / initialPinchDistance;
+        const newZoom = Math.min(6.0, Math.max(0.3, initialPinchZoom * scaleRatio));
+
+        const contentX = (initialPinchFocalX - initialPinchPanX) / initialPinchZoom;
+        const contentY = (initialPinchFocalY - initialPinchPanY) / initialPinchZoom;
+
+        panX.value = Math.round(currentFocalX - contentX * newZoom);
+        panY.value = Math.round(currentFocalY - contentY * newZoom);
         zoomLevel.value = Math.round(newZoom * 100) / 100;
     }
 };
@@ -299,8 +325,8 @@ const onTouchEnd = (e: TouchEvent) => {
 };
 
 const onWheel = (e: WheelEvent) => {
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    zoomLevel.value = Math.min(2.5, Math.max(0.4, Math.round((zoomLevel.value + delta) * 100) / 100));
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    zoomLevel.value = Math.min(6.0, Math.max(0.3, Math.round((zoomLevel.value + delta) * 100) / 100));
 };
 </script>
 
@@ -416,6 +442,7 @@ const onWheel = (e: WheelEvent) => {
         <div class="flex-1 overflow-hidden flex flex-col lg:flex-row relative">
             <!-- Touch & Drag Pan SVG Canvas Container -->
             <div
+                ref="fanContainerRef"
                 class="flex-1 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-6 relative cursor-grab active:cursor-grabbing touch-none select-none"
                 @mousedown="onMouseDown"
                 @mousemove="onMouseMove"
