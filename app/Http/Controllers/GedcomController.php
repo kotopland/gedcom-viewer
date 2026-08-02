@@ -584,7 +584,52 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $formatMiniSpouses = function (array $spouseIds, bool $includeAncestors = false) use ($data, $allowedMap, $getMarriageInfo, $buildAncestorTree) {
+        $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $getMarriageInfo, &$formatMiniSpouses) {
+            $siblingsList = [];
+            $ind = $data['individuals'][$personId] ?? null;
+            if (! $ind) return [];
+
+            $parentIds = $ind['parents'] ?? [];
+            $siblingIdsSet = [];
+
+            foreach ($parentIds as $pId) {
+                if (isset($data['individuals'][$pId])) {
+                    $parentInd = $data['individuals'][$pId];
+                    foreach ($parentInd['children'] ?? [] as $childId) {
+                        if ($childId !== $personId) {
+                            $siblingIdsSet[$childId] = true;
+                        }
+                    }
+                }
+            }
+
+            foreach (array_keys($siblingIdsSet) as $sibId) {
+                if ($allowedMap !== null && ! isset($allowedMap[$sibId])) {
+                    continue;
+                }
+                if (isset($data['individuals'][$sibId])) {
+                    $sib = $data['individuals'][$sibId];
+                    $mInfo = $getMarriageInfo($sibId);
+                    $siblingsList[] = [
+                        'id' => $sib['id'],
+                        'name' => $sib['name'],
+                        'sex' => $sib['sex'] ?? null,
+                        'birth_date' => $sib['birth_date'] ?? null,
+                        'birth_year' => $sib['birth_year'],
+                        'death_date' => $sib['death_date'] ?? null,
+                        'death_year' => $sib['death_year'],
+                        'marriage_date' => $mInfo['date'],
+                        'marriage_year' => $mInfo['year'],
+                        'primary_media' => $sib['primary_media'],
+                        'spouses' => $formatMiniSpouses($sib['spouses'] ?? []),
+                    ];
+                }
+            }
+
+            return $siblingsList;
+        };
+
+        $formatMiniSpouses = function (array $spouseIds, bool $includeDetails = false) use ($data, $allowedMap, $getMarriageInfo, $buildAncestorTree, &$getSiblingsForPerson) {
             $result = [];
             foreach ($spouseIds as $sId) {
                 if ($allowedMap !== null && !isset($allowedMap[$sId])) continue;
@@ -604,8 +649,9 @@ class GedcomController extends Controller
                     'primary_media' => $s['primary_media'],
                 ];
 
-                if ($includeAncestors) {
+                if ($includeDetails) {
                     $spouseData['ancestors'] = $buildAncestorTree($sId);
+                    $spouseData['siblings'] = $getSiblingsForPerson($sId);
                 }
 
                 $result[] = $spouseData;
@@ -646,46 +692,8 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $siblingsList = [];
         $focusInd = $data['individuals'][$id] ?? null;
-        if ($focusInd) {
-            $parentIds = $focusInd['parents'] ?? [];
-            $siblingIdsSet = [];
-
-            foreach ($parentIds as $pId) {
-                if (isset($data['individuals'][$pId])) {
-                    $parentInd = $data['individuals'][$pId];
-                    foreach ($parentInd['children'] ?? [] as $childId) {
-                        if ($childId !== $id) {
-                            $siblingIdsSet[$childId] = true;
-                        }
-                    }
-                }
-            }
-
-            foreach (array_keys($siblingIdsSet) as $sibId) {
-                if ($allowedMap !== null && !isset($allowedMap[$sibId])) {
-                    continue;
-                }
-                if (isset($data['individuals'][$sibId])) {
-                    $sib = $data['individuals'][$sibId];
-                    $mInfo = $getMarriageInfo($sibId);
-                    $siblingsList[] = [
-                        'id' => $sib['id'],
-                        'name' => $sib['name'],
-                        'sex' => $sib['sex'],
-                        'birth_date' => $sib['birth_date'] ?? null,
-                        'birth_year' => $sib['birth_year'],
-                        'death_date' => $sib['death_date'] ?? null,
-                        'death_year' => $sib['death_year'],
-                        'marriage_date' => $mInfo['date'],
-                        'marriage_year' => $mInfo['year'],
-                        'primary_media' => $sib['primary_media'],
-                        'spouses' => $formatMiniSpouses($sib['spouses'] ?? []),
-                    ];
-                }
-            }
-        }
+        $siblingsList = $focusInd ? $getSiblingsForPerson($id) : [];
 
         return response()->json([
             'primary' => $focusInd ? [
@@ -698,7 +706,7 @@ class GedcomController extends Controller
                 'death_year' => $focusInd['death_year'],
                 'birth_place' => $focusInd['birth_place'] ?? null,
                 'primary_media' => $focusInd['primary_media'] ?? null,
-                'spouses' => $formatMiniSpouses($focusInd['spouses'] ?? [], includeAncestors: true),
+                'spouses' => $formatMiniSpouses($focusInd['spouses'] ?? [], includeDetails: true),
             ] : null,
             'siblings' => $siblingsList,
             'ancestors' => $ancestorLevels > 0 ? $buildAncestorTree($id) : null,
