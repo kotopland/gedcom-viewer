@@ -25,33 +25,44 @@ const isFullscreen = ref(false);
 const isControlsCollapsed = ref(true);
 const isMobile = ref(false);
 const canvasContainerRef = ref<HTMLElement | null>(null);
+const treeContentRef = ref<HTMLElement | null>(null);
 
-// Drag & Pan state
+// 2D Pan & Scale state
+const panX = ref<number>(0);
+const panY = ref<number>(0);
+
 const isDragging = ref(false);
 const isPointerDown = ref(false);
 let startX = 0;
 let startY = 0;
-let startScrollLeft = 0;
-let startScrollTop = 0;
+let startPanX = 0;
+let startPanY = 0;
 let dragMoved = false;
 
-// Pinch zoom state
+// Pinch zoom focal point state
 let initialPinchDistance: number | null = null;
 let initialPinchZoom = 1;
+let initialPinchFocalX = 0;
+let initialPinchFocalY = 0;
+let initialPinchPanX = 0;
+let initialPinchPanY = 0;
 
 const checkMobile = () => {
     isMobile.value = window.innerWidth < 640;
 };
 
-const centerScroll = () => {
-    if (canvasContainerRef.value) {
-        const { scrollWidth, clientWidth, scrollHeight, clientHeight } = canvasContainerRef.value;
-        if (scrollWidth > clientWidth) {
-            canvasContainerRef.value.scrollLeft = (scrollWidth - clientWidth) / 2;
-        }
-        if (scrollHeight > clientHeight) {
-            canvasContainerRef.value.scrollTop = (scrollHeight - clientHeight) / 2;
-        }
+const centerTree = () => {
+    if (canvasContainerRef.value && treeContentRef.value) {
+        const containerW = canvasContainerRef.value.clientWidth;
+        const containerH = canvasContainerRef.value.clientHeight;
+        const contentW = treeContentRef.value.scrollWidth || 1000;
+        const contentH = treeContentRef.value.scrollHeight || 1000;
+
+        const scaledW = contentW * zoomLevel.value;
+        const scaledH = contentH * zoomLevel.value;
+
+        panX.value = Math.round((containerW - scaledW) / 2);
+        panY.value = Math.round((containerH - scaledH) / 4);
     }
 };
 
@@ -65,14 +76,17 @@ const onPointerDown = (e: PointerEvent) => {
     dragMoved = false;
     startX = e.clientX;
     startY = e.clientY;
-    if (canvasContainerRef.value) {
-        startScrollLeft = canvasContainerRef.value.scrollLeft;
-        startScrollTop = canvasContainerRef.value.scrollTop;
-    }
+    startPanX = panX.value;
+    startPanY = panY.value;
+
+    try {
+        (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
+    } catch (_) {}
 };
 
 const onPointerMove = (e: PointerEvent) => {
-    if (!isPointerDown.value || !canvasContainerRef.value) return;
+    if (!isPointerDown.value) return;
+    if (initialPinchDistance !== null) return;
 
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
@@ -83,12 +97,17 @@ const onPointerMove = (e: PointerEvent) => {
     }
 
     if (dragMoved) {
-        canvasContainerRef.value.scrollLeft = startScrollLeft - dx;
-        canvasContainerRef.value.scrollTop = startScrollTop - dy;
+        panX.value = startPanX + dx;
+        panY.value = startPanY + dy;
     }
 };
 
-const onPointerUp = () => {
+const onPointerUp = (e?: PointerEvent) => {
+    if (e && e.currentTarget) {
+        try {
+            (e.currentTarget as HTMLElement)?.releasePointerCapture?.(e.pointerId);
+        } catch (_) {}
+    }
     isPointerDown.value = false;
     setTimeout(() => {
         isDragging.value = false;
@@ -96,23 +115,45 @@ const onPointerUp = () => {
     }, 50);
 };
 
-// 2-Finger Touch Pinch-to-Zoom
+// 2-Finger Touch Pinch-to-Zoom centered on pinch focal point
 const onTouchStart = (e: TouchEvent) => {
-    if (e.touches.length === 2) {
+    if (e.touches.length === 2 && canvasContainerRef.value) {
+        const rect = canvasContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
+
+        const focalX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const focalY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
         initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
         initialPinchZoom = zoomLevel.value;
+        initialPinchFocalX = focalX;
+        initialPinchFocalY = focalY;
+        initialPinchPanX = panX.value;
+        initialPinchPanY = panY.value;
     }
 };
 
 const onTouchMove = (e: TouchEvent) => {
-    if (e.touches.length === 2 && initialPinchDistance) {
+    if (e.touches.length === 2 && initialPinchDistance && canvasContainerRef.value) {
+        e.preventDefault();
+        const rect = canvasContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
+
         const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        const scale = currentDistance / initialPinchDistance;
-        const newZoom = Math.min(1.8, Math.max(0.3, initialPinchZoom * scale));
+        const currentFocalX = (t1.clientX + t2.clientX) / 2 - rect.left;
+        const currentFocalY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
+        const scaleRatio = currentDistance / initialPinchDistance;
+        const newZoom = Math.min(2.5, Math.max(0.3, initialPinchZoom * scaleRatio));
+
+        // Focal point in unscaled content space relative to initial pan
+        const contentX = (initialPinchFocalX - initialPinchPanX) / initialPinchZoom;
+        const contentY = (initialPinchFocalY - initialPinchPanY) / initialPinchZoom;
+
+        panX.value = Math.round(currentFocalX - contentX * newZoom);
+        panY.value = Math.round(currentFocalY - contentY * newZoom);
         zoomLevel.value = Math.round(newZoom * 100) / 100;
     }
 };
@@ -120,6 +161,27 @@ const onTouchMove = (e: TouchEvent) => {
 const onTouchEnd = (e: TouchEvent) => {
     if (e.touches.length < 2) {
         initialPinchDistance = null;
+    }
+};
+
+const onWheel = (e: WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (!canvasContainerRef.value) return;
+
+        const rect = canvasContainerRef.value.getBoundingClientRect();
+        const cursorX = e.clientX - rect.left;
+        const cursorY = e.clientY - rect.top;
+
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+        const newZoom = Math.min(2.5, Math.max(0.3, Math.round(zoomLevel.value * zoomFactor * 100) / 100));
+
+        const contentX = (cursorX - panX.value) / zoomLevel.value;
+        const contentY = (cursorY - panY.value) / zoomLevel.value;
+
+        panX.value = Math.round(cursorX - contentX * newZoom);
+        panY.value = Math.round(cursorY - contentY * newZoom);
+        zoomLevel.value = newZoom;
     }
 };
 
@@ -153,16 +215,16 @@ const calculateOptimalZoom = () => {
     }
 };
 
+const awaitNextTickCenter = async () => {
+    await nextTick();
+    setTimeout(centerTree, 60);
+};
+
 // Auto-adjust zoom scale whenever generation depth changes
 watch([ancestorLevels, descendantLevels], () => {
     zoomLevel.value = calculateOptimalZoom();
     awaitNextTickCenter();
 });
-
-const awaitNextTickCenter = async () => {
-    await nextTick();
-    setTimeout(centerScroll, 60);
-};
 
 const fetchTreeData = async (id: string) => {
     loading.value = true;
@@ -217,16 +279,32 @@ const descendantBadgeLabel = computed(() => {
     if (l === 0) return 'Descendants Hidden';
     if (l === 1) return 'Descendants (Children)';
     if (l === 2) return 'Descendants (Children & Grandchildren)';
-    if (l === 3) return 'Descendants (Children, Grandchildren & Gt-Grandchildren)';
+    if (l === 3) return 'Descendants (Children, Grandchildren & Gt-Grandparents)';
     return `Descendants (${l} Generations)`;
 });
 
+const applyZoomFromCenter = (newZoom: number) => {
+    if (!canvasContainerRef.value) return;
+    const rect = canvasContainerRef.value.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const contentX = (centerX - panX.value) / zoomLevel.value;
+    const contentY = (centerY - panY.value) / zoomLevel.value;
+
+    panX.value = Math.round(centerX - contentX * newZoom);
+    panY.value = Math.round(centerY - contentY * newZoom);
+    zoomLevel.value = newZoom;
+};
+
 const zoomIn = () => {
-    zoomLevel.value = Math.min(1.8, Math.round((zoomLevel.value + 0.15) * 100) / 100);
+    const newZoom = Math.min(2.5, Math.round((zoomLevel.value + 0.15) * 100) / 100);
+    applyZoomFromCenter(newZoom);
 };
 
 const zoomOut = () => {
-    zoomLevel.value = Math.max(0.3, Math.round((zoomLevel.value - 0.15) * 100) / 100);
+    const newZoom = Math.max(0.3, Math.round((zoomLevel.value - 0.15) * 100) / 100);
+    applyZoomFromCenter(newZoom);
 };
 
 const resetZoom = () => {
@@ -241,7 +319,7 @@ const toggleFullscreen = () => {
     } else {
         document.body.style.overflow = '';
     }
-    setTimeout(centerScroll, 100);
+    setTimeout(centerTree, 100);
 };
 
 const handleKeyDown = (e: KeyboardEvent) => {
@@ -452,14 +530,15 @@ onUnmounted(() => {
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"
             @touchend="onTouchEnd"
+            @wheel="onWheel"
             :class="[
-                'flex-1 overflow-auto flex select-none touch-none',
+                'flex-1 overflow-hidden relative select-none touch-none',
                 isDragging ? 'cursor-grabbing' : 'cursor-grab'
             ]"
         >
             <div
                 v-if="loading"
-                class="m-auto flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400"
+                class="m-auto flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 h-full"
             >
                 <div class="w-10 h-10 border-3 border-indigo-600 dark:border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                 <p class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">Rendering visual tree graph...</p>
@@ -467,8 +546,13 @@ onUnmounted(() => {
 
             <div
                 v-else-if="treeData"
-                class="m-auto min-w-max p-16 sm:p-24 transition-transform duration-200 ease-out origin-top flex flex-col items-center gap-14"
-                :style="{ transform: `scale(${zoomLevel})` }"
+                ref="treeContentRef"
+                class="absolute top-0 left-0 min-w-max p-12 sm:p-20 flex flex-col items-center gap-14 shrink-0 transition-transform duration-75 ease-out"
+                :style="{
+                    transform: `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
+                    transformOrigin: '0 0',
+                    willChange: 'transform'
+                }"
             >
                 <!-- Ancestors Section (Top) -->
                 <div v-if="ancestorLevels > 0 && ((treeData.ancestors && treeData.ancestors.parents && treeData.ancestors.parents.length > 0) || spouseParentsExist)" class="flex flex-col items-center gap-6">
