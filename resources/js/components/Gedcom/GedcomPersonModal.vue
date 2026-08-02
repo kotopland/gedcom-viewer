@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import {
     X, User, Calendar, MapPin, Heart, Users, FileText, Image as ImageIcon,
-    FileCode, Music, Volume2, Download, ExternalLink, ChevronRight,
+    FileCode, Music, Volume2, Download, ExternalLink, ChevronRight, Target,
     Baby, Sparkles, Briefcase, Home, GraduationCap, Globe, ClipboardList, Cross, Activity,
     Send, PlusCircle, Upload, FileUp, CheckCircle2, AlertCircle, Trash2, Printer
 } from '@lucide/vue';
@@ -243,10 +243,11 @@ const getEventBadgeStyle = (tag: string) => {
                         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-4">
                             <button
                                 @click="emit('open-in-tree', personId!); emit('close')"
-                                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer"
+                                title="Center family tree on this individual"
                             >
-                                <Users class="w-3.5 h-3.5" />
-                                View in Tree
+                                <Target class="w-4 h-4 text-white" />
+                                <span>Set as Tree Focus</span>
                             </button>
                             <button
                                 @click="activeTab = 'contribute'; contributionSuccess = false; contributionError = null"
