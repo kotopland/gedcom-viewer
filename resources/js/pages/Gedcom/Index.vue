@@ -45,10 +45,33 @@ const toggleTheme = () => {
 
 const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats' | 'lineage'>(props.defaultTab || 'tree');
 const selectedPersonId = ref<string | null>(null);
-const currentRootPersonId = ref<string | null>(props.rootPersonId);
+
+const getInitialFocusId = () => {
+    if (typeof window !== 'undefined') {
+        const stored = sessionStorage.getItem('gedcom_tree_focus_id');
+        if (stored) return stored;
+    }
+    return props.rootPersonId;
+};
+
+const currentRootPersonId = ref<string | null>(getInitialFocusId());
 const isReimporting = ref(false);
 const showReportsModal = ref(false);
 const isMobileMenuOpen = ref(false);
+
+const changeRootPerson = (id: string) => {
+    currentRootPersonId.value = id;
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem('gedcom_tree_focus_id', id);
+    }
+};
+
+const resetRootPerson = () => {
+    currentRootPersonId.value = props.rootPersonId;
+    if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('gedcom_tree_focus_id');
+    }
+};
 
 const reimportArchive = async () => {
     if (!confirm('Re-importing will wipe current extracted media and re-parse the active ZIP archive in storage/app/private. Continue?')) {
@@ -74,13 +97,9 @@ const selectPerson = (id: string) => {
 };
 
 const openInTree = (id: string) => {
-    currentRootPersonId.value = id;
+    changeRootPerson(id);
     activeTab.value = 'tree';
     selectedPersonId.value = null;
-};
-
-const changeRootPerson = (id: string) => {
-    currentRootPersonId.value = id;
 };
 
 const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats' | 'lineage') => {
@@ -406,6 +425,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
             :person-id="selectedPersonId"
             @close="selectedPersonId = null"
             @open-tree="openInTree"
+            @open-in-tree="openInTree"
         />
 
         <!-- Views & Reports Switcher Modal Drawer -->
