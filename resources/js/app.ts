@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
@@ -33,3 +33,19 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+// Force browser hard reload when server asset version changes
+router.on('invalid', () => {
+    window.location.reload();
+});
+
+router.on('navigate', (event: any) => {
+    const newVersion = event.detail.page.version;
+    const cachedVersion = localStorage.getItem('app_asset_version');
+    if (newVersion && cachedVersion && cachedVersion !== newVersion) {
+        localStorage.setItem('app_asset_version', newVersion);
+        window.location.reload();
+    } else if (newVersion) {
+        localStorage.setItem('app_asset_version', newVersion);
+    }
+});
