@@ -271,7 +271,7 @@ onUnmounted(() => {
             'transition-all duration-300 flex flex-col',
             isFullscreen
                 ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-100 dark:bg-slate-950 border-none p-0 shadow-none'
-                : 'relative bg-slate-200/70 dark:bg-slate-900 rounded-3xl border border-slate-300/80 dark:border-slate-800 overflow-hidden shadow-2xl min-h-[550px] sm:min-h-[750px] h-[82vh]'
+                : 'relative bg-slate-200/70 dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-300/80 dark:border-slate-800 overflow-hidden shadow-2xl flex-1 min-h-[480px] sm:min-h-[750px] h-[calc(100dvh-5.5rem-env(safe-area-inset-top,0px))] sm:h-[84vh]'
         ]"
     >
         <!-- Floating Tree Controls Bar -->
