@@ -17,14 +17,26 @@ class EnsureUserIsVerified
     {
         $user = $request->user();
 
-        if (! $user || ! $user->isVerified()) {
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        if ($user->isSuperuser()) {
+            return $next($request);
+        }
+
+        if (! $user->is_verified || empty($user->start_person_id)) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
-                    'message' => 'Your account is pending superuser verification.',
+                    'message' => 'Your account is in the waiting room pending administrator verification and lineage assignment.',
+                    'is_verified' => (bool) $user->is_verified,
+                    'has_start_person' => ! empty($user->start_person_id),
                 ], 403);
             }
 
-            return redirect()->route('verification.pending');
+            if (! $request->routeIs('verification.pending')) {
+                return redirect()->route('verification.pending');
+            }
         }
 
         return $next($request);

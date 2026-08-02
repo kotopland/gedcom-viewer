@@ -1,12 +1,26 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\MagicLinkController;
 use App\Http\Controllers\GedcomController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+Route::post('/login/magic-link', [MagicLinkController::class, 'send'])->name('magic-link.send');
+Route::get('/login/magic-link/verify/{user}', [MagicLinkController::class, 'verify'])
+    ->middleware(['signed'])
+    ->name('magic-link.verify');
 
 Route::middleware(['auth'])->group(function () {
-    Route::inertia('/pending-verification', 'auth/AwaitingVerification')->name('verification.pending');
+    Route::get('/pending-verification', function (Request $request) {
+        $user = $request->user();
+        return Inertia::render('auth/AwaitingVerification', [
+            'isVerified' => (bool) $user->is_verified,
+            'hasStartPerson' => ! empty($user->start_person_id),
+            'startPersonId' => $user->start_person_id,
+        ]);
+    })->name('verification.pending');
 });
 
 Route::middleware(['auth', 'superuser.verified'])->group(function () {
