@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { User, RefreshCcw, Heart } from '@lucide/vue';
+import { User, RefreshCcw, Heart, ChevronDown } from '@lucide/vue';
 
 defineProps<{
     person: any;
@@ -146,5 +146,16 @@ const emit = defineEmits<{
                 @change-root="emit('change-root', $event)"
             />
         </div>
+
+        <!-- Load More button below each bottom descendant node -->
+        <button
+            v-else
+            @click.stop="emit('change-root', person.id)"
+            class="mt-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/90 hover:bg-emerald-100 dark:hover:bg-emerald-900 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-700/70 shadow-sm hover:scale-105 transition-all cursor-pointer flex items-center gap-1 group"
+            title="Set as Tree Focus to load descendants below this person"
+        >
+            <ChevronDown class="w-3 h-3 text-emerald-600 dark:text-emerald-400 group-hover:translate-y-0.5 transition-transform" />
+            <span>Load More</span>
+        </button>
     </div>
 </template>
