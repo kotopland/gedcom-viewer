@@ -387,7 +387,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-ClCG4faK.css",
+    "file": "assets/app-BXgL4l52.css",
     "name": "app",
     "names": [
       "app.css"
@@ -396,7 +396,7 @@
     "isEntry": true
   },
   "resources/js/app.ts": {
-    "file": "assets/app-CcqIwmG5.js",
+    "file": "assets/app-CO8D0Sgu.js",
     "name": "app",
     "src": "resources/js/app.ts",
     "isEntry": true,
@@ -462,7 +462,7 @@
     ]
   },
   "resources/js/pages/Gedcom/Index.vue": {
-    "file": "assets/Index-CkhvUnKi.js",
+    "file": "assets/Index-DmH2JqOD.js",
     "name": "Index",
     "src": "resources/js/pages/Gedcom/Index.vue",
     "isDynamicEntry": true,

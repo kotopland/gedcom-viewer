@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { User, RefreshCcw } from '@lucide/vue';
+import { User, RefreshCcw, ChevronUp } from '@lucide/vue';
 
 defineProps<{
     person: any;
@@ -45,6 +45,17 @@ const emit = defineEmits<{
                 @change-root="emit('change-root', $event)"
             />
         </div>
+
+        <!-- Load More button above each top person -->
+        <button
+            v-else
+            @click.stop="emit('change-root', person.id)"
+            class="mb-1 text-[10px] font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/90 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2.5 py-1 rounded-full border border-indigo-300 dark:border-indigo-700/70 shadow-sm hover:scale-105 transition-all cursor-pointer flex items-center gap-1 group"
+            title="Set as Tree Focus to load ancestors above this person"
+        >
+            <ChevronUp class="w-3 h-3 text-indigo-600 dark:text-indigo-400 group-hover:-translate-y-0.5 transition-transform" />
+            <span>Load More</span>
+        </button>
 
         <!-- Person Card -->
         <div
