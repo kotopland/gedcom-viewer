@@ -424,6 +424,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
         <GedcomPersonModal
             :person-id="selectedPersonId"
             @close="selectedPersonId = null"
+            @select-person="selectPerson"
             @open-tree="openInTree"
             @open-in-tree="openInTree"
         />

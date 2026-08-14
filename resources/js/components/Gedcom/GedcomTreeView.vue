@@ -70,7 +70,7 @@ const centerTree = () => {
 const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     const target = e.target as HTMLElement;
-    if (target.closest('button, select, input, a')) return;
+    if (target.closest('button, select, input, a, [data-clickable]')) return;
 
     isPointerDown.value = true;
     dragMoved = false;
@@ -78,10 +78,6 @@ const onPointerDown = (e: PointerEvent) => {
     startY = e.clientY;
     startPanX = panX.value;
     startPanY = panY.value;
-
-    try {
-        (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
-    } catch (_) {}
 };
 
 const onPointerMove = (e: PointerEvent) => {
@@ -94,6 +90,9 @@ const onPointerMove = (e: PointerEvent) => {
     if (!dragMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
         dragMoved = true;
         isDragging.value = true;
+        try {
+            (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
+        } catch (_) {}
     }
 
     if (dragMoved) {
