@@ -11,7 +11,7 @@ class ExampleTest extends TestCase
 
     public function test_returns_a_successful_response()
     {
-        $user = \App\Models\User::factory()->verified()->create();
+        $user = \App\Models\User::factory()->verified()->create(['start_person_id' => 'I1']);
         $response = $this->actingAs($user)->get(route('home'));
 
         $response->assertRedirect(route('gedcom.index'));

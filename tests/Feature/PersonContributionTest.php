@@ -27,6 +27,7 @@ class PersonContributionTest extends TestCase
 
         $user = User::factory()->verified()->create([
             'name' => 'John Contributor',
+            'start_person_id' => 'I1',
         ]);
 
         $response = $this->actingAs($user)->postJson('/api/gedcom/person/I1/contribution', [
@@ -54,7 +55,9 @@ class PersonContributionTest extends TestCase
             'email' => 'admin@example.com',
         ]);
 
-        $user = User::factory()->verified()->create();
+        $user = User::factory()->verified()->create([
+            'start_person_id' => 'I1',
+        ]);
 
         $file = UploadedFile::fake()->image('old_photo.jpg');
 

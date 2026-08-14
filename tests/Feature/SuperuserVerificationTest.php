@@ -46,6 +46,7 @@ class SuperuserVerificationTest extends TestCase
         $user = User::factory()->create([
             'is_superuser' => false,
             'is_verified' => true,
+            'start_person_id' => 'I1',
         ]);
 
         $response = $this->actingAs($user)->get('/gedcom');
@@ -70,6 +71,7 @@ class SuperuserVerificationTest extends TestCase
         $user = User::factory()->create([
             'is_superuser' => false,
             'is_verified' => true,
+            'start_person_id' => 'I1',
         ]);
 
         $response = $this->actingAs($user)->get('/admin/users');
