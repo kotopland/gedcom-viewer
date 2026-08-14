@@ -44,8 +44,20 @@ const uploadGedcomFile = async () => {
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
             },
         });
+
+        if (res.status === 413) {
+            errorMessage.value = 'The uploaded file exceeds the server max upload limit (413 Content Too Large). Please increase upload_max_filesize / post_max_size in php.ini and client_max_body_size in Nginx.';
+            return;
+        }
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            errorMessage.value = `Server error (${res.status} ${res.statusText}). The file may be exceeding server upload limits.`;
+            return;
+        }
 
         const json = await res.json();
         if (res.ok) {
