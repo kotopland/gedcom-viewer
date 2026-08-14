@@ -21,7 +21,7 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->superuser()->create();
 
         $response = $this->post(route('login.store'), [
             'email' => $user->email,
@@ -29,7 +29,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('gedcom.index', absolute: false));
+        $response->assertRedirect(route('dashboard', absolute: false));
     }
 
     public function test_superusers_redirect_to_dashboard_upon_login()
@@ -55,7 +55,7 @@ class AuthenticationTest extends TestCase
             'confirmPassword' => true,
         ]);
 
-        $user = User::factory()->withTwoFactor()->create();
+        $user = User::factory()->superuser()->withTwoFactor()->create();
 
         $response = $this->post(route('login'), [
             'email' => $user->email,
