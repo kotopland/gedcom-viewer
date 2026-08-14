@@ -1,18 +1,69 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FolderArchive, Users, ShieldCheck, CheckCircle2, AlertCircle } from '@lucide/vue';
-import { dashboard } from '@/routes';
+import { RefreshCw, FolderArchive, Users, ShieldCheck, CheckCircle2, AlertCircle, UploadCloud, FileText } from '@lucide/vue';
 
 defineOptions({
     layout: AppLayout,
 });
 
 const isReimporting = ref(false);
+const isUploading = ref(false);
+const selectedFile = ref<File | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 const statusMessage = ref<string | null>(null);
 const errorMessage = ref<string | null>(null);
+
+const onFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        selectedFile.value = target.files[0];
+    } else {
+        selectedFile.value = null;
+    }
+};
+
+const uploadGedcomFile = async () => {
+    if (!selectedFile.value) {
+        errorMessage.value = 'Please select a .ged or .gedcom file to upload.';
+        return;
+    }
+
+    isUploading.value = true;
+    statusMessage.value = null;
+    errorMessage.value = null;
+
+    try {
+        const formData = new FormData();
+        formData.append('file', selectedFile.value);
+
+        const res = await fetch('/api/gedcom/upload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+            statusMessage.value = json.message || 'GEDCOM file uploaded and parsed successfully.';
+            selectedFile.value = null;
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+        } else {
+            errorMessage.value = json.message || json.error || 'Failed to upload GEDCOM file.';
+        }
+    } catch (e: any) {
+        console.error('GEDCOM upload failed:', e);
+        errorMessage.value = e.message || 'An unexpected error occurred during file upload.';
+    } finally {
+        isUploading.value = false;
+    }
+};
 
 const reimportArchive = async () => {
     if (!confirm('Re-importing will wipe current extracted media and re-parse the active ZIP archive in storage/app/private. Continue?')) {
@@ -84,16 +135,54 @@ const reimportArchive = async () => {
         </div>
 
         <!-- Admin Actions Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Upload Standalone .ged File (Preserve Media Cache) -->
+            <div class="p-6 rounded-2xl bg-card border border-sidebar-border/70 shadow-sm space-y-4 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
+                        <UploadCloud class="w-5 h-5" />
+                    </div>
+                    <div class="space-y-1">
+                        <h2 class="text-base font-bold text-foreground">Upload GEDCOM (.ged)</h2>
+                        <p class="text-xs text-muted-foreground leading-relaxed">
+                            Upload a standalone <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">.ged</code> file to update tree records while <strong>preserving existing extracted media files</strong> in cache.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <label class="block text-xs font-medium text-muted-foreground">Select .ged / .gedcom File</label>
+                        <input
+                            ref="fileInputRef"
+                            type="file"
+                            accept=".ged,.gedcom,.txt"
+                            @change="onFileChange"
+                            class="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/10 file:text-emerald-600 hover:file:bg-emerald-500/20 cursor-pointer border border-sidebar-border rounded-lg p-1 bg-background"
+                        />
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-sidebar-border/50">
+                    <Button
+                        @click="uploadGedcomFile"
+                        :disabled="isUploading || !selectedFile"
+                        class="w-full h-10 gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all active:scale-98 disabled:opacity-50"
+                    >
+                        <RefreshCw v-if="isUploading" class="w-4 h-4 animate-spin" />
+                        <FileText v-else class="w-4 h-4" />
+                        {{ isUploading ? 'Uploading & Parsing .ged...' : 'Upload & Parse .ged' }}
+                    </Button>
+                </div>
+            </div>
+
             <!-- GEDCOM ZIP Re-import Admin Card -->
             <div class="p-6 rounded-2xl bg-card border border-sidebar-border/70 shadow-sm space-y-4 flex flex-col justify-between">
                 <div class="space-y-2">
                     <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
                         <FolderArchive class="w-5 h-5" />
                     </div>
-                    <h2 class="text-base font-bold text-foreground">GEDCOM Data Maintenance</h2>
+                    <h2 class="text-base font-bold text-foreground">ZIP Archive Re-import</h2>
                     <p class="text-xs text-muted-foreground leading-relaxed">
-                        Re-extract active ZIP archives in <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">storage/app/private</code>, clear old media cache, and re-parse genealogical records. Only Superusers can perform this operation.
+                        Re-extract active ZIP archives in <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">storage/app/private</code>, <strong>clear old media cache</strong>, and re-parse genealogical records.
                     </p>
                 </div>
 
