@@ -241,11 +241,19 @@ class GedcomController extends Controller
         $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
         $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
 
-        if (!isset($data['individuals'][$id]) || ($allowedMap !== null && !isset($allowedMap[$id]))) {
+        $targetId = $id;
+        $cleanId = trim($id, '@');
+        if (isset($data['individuals'][$cleanId])) {
+            $targetId = $cleanId;
+        } elseif (isset($data['individuals'][$id])) {
+            $targetId = $id;
+        }
+
+        if (!isset($data['individuals'][$targetId]) || ($allowedMap !== null && !isset($allowedMap[$targetId]))) {
             return response()->json(['error' => 'Person not found'], 404);
         }
 
-        $ind = $data['individuals'][$id];
+        $ind = $data['individuals'][$targetId];
 
         // Format compact relation helper
         $formatMini = function (string $relId) use ($data, $allowedMap) {
