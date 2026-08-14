@@ -99,6 +99,41 @@ class GedcomController extends Controller
         ]);
     }
 
+    public function uploadGedcom(Request $request, GedcomParserService $parser)
+    {
+        $request->validate([
+            'file' => ['required', 'file', function ($attribute, $value, $fail) {
+                $ext = strtolower($value->getClientOriginalExtension());
+                if (!in_array($ext, ['ged', 'gedcom', 'txt'])) {
+                    $fail('The ' . $attribute . ' must be a .ged or .gedcom file.');
+                }
+            }],
+        ]);
+
+        $uploadedFile = $request->file('file');
+        $privateDir = storage_path('app/private');
+
+        File::ensureDirectoryExists($privateDir);
+
+        // Remove any existing ZIP archives so GedcomParserService detects gedcom.ged as the active source
+        $zipFiles = File::glob($privateDir . '/*.zip');
+        foreach ($zipFiles as $zip) {
+            File::delete($zip);
+        }
+
+        // Store the uploaded file as storage/app/private/gedcom.ged
+        $uploadedFile->move($privateDir, 'gedcom.ged');
+
+        // Re-parse GEDCOM while preserving existing media cache (clearMedia: false)
+        $data = $parser->parseAndCache(false);
+
+        return response()->json([
+            'message' => 'GEDCOM file uploaded and parsed successfully. Existing media cache was preserved.',
+            'stats' => $data['stats'],
+        ]);
+    }
+
+
 
     public function search(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
     {

@@ -52,6 +52,7 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
 Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
     Route::post('/api/gedcom/reimport', [GedcomController::class, 'reimport'])->name('gedcom.api.reimport');
+    Route::post('/api/gedcom/upload', [GedcomController::class, 'uploadGedcom'])->name('gedcom.api.upload');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
