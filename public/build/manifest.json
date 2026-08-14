@@ -403,7 +403,7 @@
     "isEntry": true
   },
   "resources/js/app.ts": {
-    "file": "assets/app-CHSBvkCV.js",
+    "file": "assets/app-LjEU64oK.js",
     "name": "app",
     "src": "resources/js/app.ts",
     "isEntry": true,
@@ -453,7 +453,7 @@
     ]
   },
   "resources/js/pages/Dashboard.vue": {
-    "file": "assets/Dashboard-D-XNy9Ie.js",
+    "file": "assets/Dashboard-DKH2WR-J.js",
     "name": "Dashboard",
     "src": "resources/js/pages/Dashboard.vue",
     "isDynamicEntry": true,
