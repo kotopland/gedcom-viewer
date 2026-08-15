@@ -8,6 +8,7 @@ import {
 
 import GedcomDirectory from '@/components/Gedcom/GedcomDirectory.vue';
 import GedcomTreeView from '@/components/Gedcom/GedcomTreeView.vue';
+import GedcomHeritageView from '@/components/Gedcom/GedcomHeritageView.vue';
 import GedcomFanView from '@/components/Gedcom/GedcomFanView.vue';
 import GedcomTextView from '@/components/Gedcom/GedcomTextView.vue';
 import GedcomStatsView from '@/components/Gedcom/GedcomStatsView.vue';
@@ -32,7 +33,7 @@ const props = defineProps<{
         top_surnames: Record<string, number>;
     };
     rootPersonId: string | null;
-    defaultTab?: 'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats' | 'lineage';
+    defaultTab?: 'directory' | 'tree' | 'heritage' | 'fan' | 'media' | 'text' | 'stats' | 'lineage';
 }>();
 
 const page = usePage();
@@ -43,7 +44,7 @@ const toggleTheme = () => {
     updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
 };
 
-const activeTab = ref<'directory' | 'tree' | 'fan' | 'media' | 'text' | 'stats' | 'lineage'>(props.defaultTab || 'tree');
+const activeTab = ref<'directory' | 'tree' | 'heritage' | 'fan' | 'media' | 'text' | 'stats' | 'lineage'>(props.defaultTab || 'heritage');
 const selectedPersonId = ref<string | null>(null);
 
 const getInitialFocusId = () => {
@@ -102,7 +103,7 @@ const openInTree = (id: string) => {
     selectedPersonId.value = null;
 };
 
-const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats' | 'lineage') => {
+const switchTab = (tab: 'tree' | 'heritage' | 'fan' | 'text' | 'directory' | 'media' | 'stats' | 'lineage') => {
     activeTab.value = tab;
     showReportsModal.value = false;
 };
@@ -135,12 +136,20 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                 <!-- Desktop Navigation Tabs (Hidden on mobile < md) -->
                 <nav class="hidden md:flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950/80 p-1.5 rounded-2xl border border-slate-300/80 dark:border-slate-800 text-xs font-bold">
                     <button
+                        @click="activeTab = 'heritage'"
+                        class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                        :class="activeTab === 'heritage' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
+                    >
+                        <Sparkles class="w-4 h-4 text-amber-300" />
+                        <span>Heritage Chart</span>
+                    </button>
+                    <button
                         @click="activeTab = 'tree'"
                         class="px-3 sm:px-4 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
                         :class="activeTab === 'tree' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                     >
                         <GitBranch class="w-4 h-4" />
-                        Family Tree
+                        <span>Family Tree</span>
                     </button>
                     <button
                         @click="activeTab = 'directory'"
@@ -156,7 +165,7 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                         :class="activeTab === 'media' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                     >
                         <ImageIcon class="w-4 h-4" />
-                        Media Explorer
+                        <span>Media Explorer</span>
                     </button>
                 </nav>
 
@@ -235,6 +244,18 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
                 </div>
 
                 <div class="grid grid-cols-1 gap-1.5">
+                    <button
+                        @click="activeTab = 'heritage'; isMobileMenuOpen = false"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        :class="activeTab === 'heritage' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'"
+                    >
+                        <div class="flex items-center gap-3">
+                            <Sparkles class="w-4 h-4 text-amber-300" />
+                            <span>Heritage Pedigree Chart</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 opacity-50" />
+                    </button>
+
                     <button
                         @click="activeTab = 'tree'; isMobileMenuOpen = false"
                         class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
@@ -369,9 +390,17 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
         <main class="w-full max-w-[96rem] mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex-1 flex flex-col min-h-0">
             <!-- Active Tab Content -->
             <div class="space-y-4 sm:space-y-6 flex-1 flex flex-col min-h-0">
+                <!-- Classic Heritage Pedigree Chart View -->
+                <GedcomHeritageView
+                    v-if="activeTab === 'heritage'"
+                    :root-person-id="currentRootPersonId"
+                    @select-person="selectPerson"
+                    @change-root="changeRootPerson"
+                />
+
                 <!-- Interactive Ancestor/Descendant Family Tree View -->
                 <GedcomTreeView
-                    v-if="activeTab === 'tree'"
+                    v-else-if="activeTab === 'tree'"
                     :root-person-id="currentRootPersonId"
                     @select-person="selectPerson"
                     @change-root="changeRootPerson"
@@ -460,6 +489,30 @@ const switchTab = (tab: 'tree' | 'fan' | 'text' | 'directory' | 'media' | 'stats
 
                 <!-- View Switcher Cards Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <!-- Heritage Pedigree Chart Card -->
+                    <button
+                        @click="switchTab('heritage')"
+                        class="p-4 rounded-2xl border transition-all text-left flex items-start gap-3.5 group cursor-pointer"
+                        :class="activeTab === 'heritage' ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                    >
+                        <div class="w-9 h-9 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform border border-slate-700">
+                            <Sparkles class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <h3 class="font-extrabold text-xs text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                    Heritage Pedigree Chart
+                                </h3>
+                                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                    Classic
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                Classical pedigree chart with circular portraits, dark stylized banners & vital dates.
+                            </p>
+                        </div>
+                    </button>
+
                     <!-- Family Tree Card -->
                     <button
                         @click="switchTab('tree')"
