@@ -394,7 +394,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-CooF3y_Y.css",
+    "file": "assets/app-BlIoQF3H.css",
     "name": "app",
     "names": [
       "app.css"
@@ -403,7 +403,7 @@
     "isEntry": true
   },
   "resources/js/app.ts": {
-    "file": "assets/app-LjEU64oK.js",
+    "file": "assets/app-B9E6_jms.js",
     "name": "app",
     "src": "resources/js/app.ts",
     "isEntry": true,
@@ -471,7 +471,7 @@
     ]
   },
   "resources/js/pages/Gedcom/Index.vue": {
-    "file": "assets/Index-B4STUeq3.js",
+    "file": "assets/Index-oU-7ThmR.js",
     "name": "Index",
     "src": "resources/js/pages/Gedcom/Index.vue",
     "isDynamicEntry": true,
@@ -491,6 +491,9 @@
       "_trash-2-BmkIc8gI.js",
       "_x-BoLOpUeJ.js",
       "_routes-OINowq35.js"
+    ],
+    "css": [
+      "assets/Index-CDXhPOxQ.css"
     ]
   },
   "resources/js/pages/Welcome.vue": {

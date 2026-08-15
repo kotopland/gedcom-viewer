@@ -494,6 +494,9 @@ onUnmounted(() => {
                             <option :value="3">3 (Gt-Grandparents)</option>
                             <option :value="4">4 Gen</option>
                             <option :value="5">5 Gen</option>
+                            <option :value="6">6 Gen</option>
+                            <option :value="7">7 Gen</option>
+                            <option :value="8">8 Gen</option>
                         </select>
                     </div>
 
@@ -513,6 +516,9 @@ onUnmounted(() => {
                             <option :value="3">3 (Gt-Grandchildren)</option>
                             <option :value="4">4 Gen</option>
                             <option :value="5">5 Gen</option>
+                            <option :value="6">6 Gen</option>
+                            <option :value="7">7 Gen</option>
+                            <option :value="8">8 Gen</option>
                         </select>
                     </div>
                 </div>

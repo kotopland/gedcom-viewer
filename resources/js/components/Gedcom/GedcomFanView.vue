@@ -445,6 +445,9 @@ const onWheel = (e: WheelEvent) => {
                             <option :value="3">3 Gen</option>
                             <option :value="4">4 Gen</option>
                             <option :value="5">5 Gen</option>
+                            <option :value="6">6 Gen</option>
+                            <option :value="7">7 Gen</option>
+                            <option :value="8">8 Gen</option>
                         </select>
                     </div>
 
