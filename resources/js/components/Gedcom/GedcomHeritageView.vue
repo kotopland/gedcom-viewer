@@ -87,6 +87,10 @@ const onPointerDown = (e: PointerEvent) => {
     startY = e.clientY;
     startPanX = panX.value;
     startPanY = panY.value;
+
+    try {
+        (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
+    } catch (_) {}
 };
 
 const onPointerMove = (e: PointerEvent) => {
@@ -96,12 +100,9 @@ const onPointerMove = (e: PointerEvent) => {
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
 
-    if (!dragMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+    if (!dragMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
         dragMoved = true;
         isDragging.value = true;
-        try {
-            (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
-        } catch (_) {}
     }
 
     if (dragMoved) {
@@ -124,7 +125,17 @@ const onPointerUp = (e?: PointerEvent) => {
 };
 
 const onTouchStart = (e: TouchEvent) => {
-    if (e.touches.length === 2 && canvasContainerRef.value) {
+    if (e.touches.length === 1) {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, select, input, a, [data-clickable]')) return;
+        const t = e.touches[0];
+        isPointerDown.value = true;
+        dragMoved = false;
+        startX = t.clientX;
+        startY = t.clientY;
+        startPanX = panX.value;
+        startPanY = panY.value;
+    } else if (e.touches.length === 2 && canvasContainerRef.value) {
         const rect = canvasContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
@@ -142,7 +153,22 @@ const onTouchStart = (e: TouchEvent) => {
 };
 
 const onTouchMove = (e: TouchEvent) => {
-    if (e.touches.length === 2 && initialPinchDistance && canvasContainerRef.value) {
+    if (e.touches.length === 1 && isPointerDown.value && initialPinchDistance === null) {
+        e.preventDefault();
+        const t = e.touches[0];
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+
+        if (!dragMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+            dragMoved = true;
+            isDragging.value = true;
+        }
+
+        if (dragMoved) {
+            panX.value = startPanX + dx;
+            panY.value = startPanY + dy;
+        }
+    } else if (e.touches.length === 2 && initialPinchDistance && canvasContainerRef.value) {
         e.preventDefault();
         const rect = canvasContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
@@ -165,8 +191,20 @@ const onTouchMove = (e: TouchEvent) => {
 };
 
 const onTouchEnd = (e: TouchEvent) => {
-    if (e.touches.length < 2) {
+    if (e.touches.length === 0) {
+        isPointerDown.value = false;
         initialPinchDistance = null;
+        setTimeout(() => {
+            isDragging.value = false;
+            dragMoved = false;
+        }, 50);
+    } else if (e.touches.length === 1) {
+        initialPinchDistance = null;
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        startPanX = panX.value;
+        startPanY = panY.value;
     }
 };
 
@@ -554,7 +592,10 @@ onUnmounted(() => {
         <!-- Canvas Container Area -->
         <div
             ref="canvasContainerRef"
-            class="flex-1 w-full h-full relative overflow-hidden select-none cursor-grab active:cursor-grabbing bg-slate-50/50 dark:bg-slate-950/70"
+            :class="[
+                'flex-1 w-full h-full relative overflow-hidden select-none touch-none bg-slate-50/50 dark:bg-slate-950/70',
+                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            ]"
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
@@ -581,7 +622,7 @@ onUnmounted(() => {
             <!-- Scaled and Panned Canvas Content -->
             <div
                 ref="treeContentRef"
-                class="absolute top-0 left-0 p-12 sm:p-24 flex flex-col items-center gap-16 transition-transform duration-75"
+                class="absolute top-0 left-0 min-w-max p-12 sm:p-24 flex flex-col items-center gap-16 shrink-0 transition-transform duration-75 ease-out"
                 :style="{
                     transform: `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
                     transformOrigin: '0 0',
