@@ -403,7 +403,7 @@
     "isEntry": true
   },
   "resources/js/app.ts": {
-    "file": "assets/app-B9E6_jms.js",
+    "file": "assets/app-DSFW2-T1.js",
     "name": "app",
     "src": "resources/js/app.ts",
     "isEntry": true,
@@ -471,7 +471,7 @@
     ]
   },
   "resources/js/pages/Gedcom/Index.vue": {
-    "file": "assets/Index-oU-7ThmR.js",
+    "file": "assets/Index-BOl_TDsa.js",
     "name": "Index",
     "src": "resources/js/pages/Gedcom/Index.vue",
     "isDynamicEntry": true,
