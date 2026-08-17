@@ -7,10 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::post('/login/magic-link', [MagicLinkController::class, 'send'])->name('magic-link.send');
-Route::get('/login/magic-link/verify/{user}', [MagicLinkController::class, 'verify'])
-    ->middleware(['signed'])
-    ->name('magic-link.verify');
+Route::middleware(['throttle:6,1'])->group(function () {
+    Route::post('/login/magic-link', [MagicLinkController::class, 'send'])->name('magic-link.send');
+    Route::get('/login/magic-link/verify/{user}', [MagicLinkController::class, 'verify'])
+        ->middleware(['signed'])
+        ->name('magic-link.verify');
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/pending-verification', function (Request $request) {
@@ -65,22 +67,6 @@ Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function (
 });
 
 require __DIR__.'/settings.php';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 if (class_exists(\Spatie\MailPreview\MailPreviewServiceProvider::class)) {
     Route::mailPreview();
