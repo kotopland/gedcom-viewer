@@ -68,7 +68,7 @@ const formatVal = (val?: string | null) => {
             <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40">
                 <img
                     v-if="person.primary_media"
-                    :src="person.primary_media.url"
+                    :src="person.portrait_url || person.primary_media.portrait_url || person.primary_media.url"
                     :alt="person.name"
                     class="w-full h-full object-cover"
                     loading="lazy"

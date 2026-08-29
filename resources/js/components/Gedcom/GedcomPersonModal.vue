@@ -205,7 +205,7 @@ const getEventBadgeStyle = (tag: string) => {
                     <div class="relative shrink-0">
                         <img
                             v-if="personData?.person?.primary_media"
-                            :src="personData.person.primary_media.url"
+                            :src="personData.person.portrait_url || personData.person.primary_media.portrait_url || personData.person.primary_media.url"
                             :alt="personData.person.name"
                             class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white/20 shadow-md bg-slate-800"
                         />
@@ -417,7 +417,7 @@ const getEventBadgeStyle = (tag: string) => {
                                     @click="emit('select-person', p.id)"
                                     class="flex items-center gap-3 p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 cursor-pointer transition-all shadow-2xs group"
                                 >
-                                    <img v-if="p.primary_media" :src="p.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
+                                    <img v-if="p.primary_media" :src="p.portrait_url || p.primary_media.portrait_url || p.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
                                     <div v-else class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
                                         <User class="w-5 h-5" />
                                     </div>
@@ -448,7 +448,7 @@ const getEventBadgeStyle = (tag: string) => {
                                     @click="emit('select-person', s.id)"
                                     class="flex items-center gap-3 p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-pink-500 dark:hover:border-pink-500 cursor-pointer transition-all shadow-2xs group"
                                 >
-                                    <img v-if="s.primary_media" :src="s.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
+                                    <img v-if="s.primary_media" :src="s.portrait_url || s.primary_media.portrait_url || s.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
                                     <div v-else class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
                                         <User class="w-5 h-5" />
                                     </div>
@@ -479,7 +479,7 @@ const getEventBadgeStyle = (tag: string) => {
                                     @click="emit('select-person', c.id)"
                                     class="flex items-center gap-3 p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 cursor-pointer transition-all shadow-2xs group"
                                 >
-                                    <img v-if="c.primary_media" :src="c.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
+                                    <img v-if="c.primary_media" :src="c.portrait_url || c.primary_media.portrait_url || c.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
                                     <div v-else class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
                                         <User class="w-5 h-5" />
                                     </div>
@@ -510,7 +510,7 @@ const getEventBadgeStyle = (tag: string) => {
                                     @click="emit('select-person', sb.id)"
                                     class="flex items-center gap-3 p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer transition-all shadow-2xs group"
                                 >
-                                    <img v-if="sb.primary_media" :src="sb.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
+                                    <img v-if="sb.primary_media" :src="sb.portrait_url || sb.primary_media.portrait_url || sb.primary_media.url" class="w-10 h-10 rounded-full object-cover shrink-0" />
                                     <div v-else class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
                                         <User class="w-5 h-5" />
                                     </div>
@@ -554,6 +554,14 @@ const getEventBadgeStyle = (tag: string) => {
                                 <div v-else class="w-full h-full flex flex-col items-center justify-center bg-slate-800 text-slate-400 p-4">
                                     <FileText class="w-10 h-10 mb-2" />
                                     <span class="text-xs font-semibold truncate max-w-full px-2">{{ m.title }}</span>
+                                </div>
+
+                                <div v-if="m.is_portrait" class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-indigo-600/90 text-white text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1 z-10">
+                                    <Sparkles class="w-2.5 h-2.5" />
+                                    Portrait
+                                </div>
+                                <div v-else-if="m.crop" class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-emerald-600/90 text-white text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1 z-10">
+                                    Tagged Face
                                 </div>
 
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex items-end">

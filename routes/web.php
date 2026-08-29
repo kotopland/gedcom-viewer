@@ -35,6 +35,7 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
 
     Route::get('/gedcom', [GedcomController::class, 'index'])->name('gedcom.index');
     Route::get('/storage/gedcom/media/{filename}', [GedcomController::class, 'serveMedia'])->where('filename', '.*')->name('gedcom.storage.media');
+    Route::get('/storage/gedcom/crops/{filename}', [GedcomController::class, 'serveCropMedia'])->where('filename', '.*')->name('gedcom.storage.crops');
     Route::get('/storage/contributions/{filename}', [GedcomController::class, 'serveContributionMedia'])->where('filename', '.*')->name('gedcom.storage.contributions');
     Route::get('/gedcom/media-file/{filename}', [GedcomController::class, 'serveMedia'])->where('filename', '.*')->name('gedcom.media.file');
 
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
         Route::get('/search', [GedcomController::class, 'search'])->name('gedcom.api.search');
         Route::get('/stats', [GedcomController::class, 'stats'])->name('gedcom.api.stats');
         Route::get('/person/{id}', [GedcomController::class, 'person'])->name('gedcom.api.person');
+        Route::get('/person/{id}/portrait', [GedcomController::class, 'servePortrait'])->name('gedcom.api.person.portrait');
         Route::post('/person/{id}/contribution', [GedcomController::class, 'submitContribution'])->name('gedcom.api.person.contribution');
         Route::get('/tree/{id}', [GedcomController::class, 'tree'])->name('gedcom.api.tree');
         Route::get('/lineage/{id}', [GedcomController::class, 'lineage'])->name('gedcom.api.lineage');
@@ -55,6 +57,8 @@ Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function (
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
     Route::post('/api/gedcom/reimport', [GedcomController::class, 'reimport'])->name('gedcom.api.reimport');
     Route::post('/api/gedcom/upload', [GedcomController::class, 'uploadGedcom'])->name('gedcom.api.upload');
+    Route::post('/api/gedcom/upload-faces', [GedcomController::class, 'uploadFaces'])->name('gedcom.api.upload-faces');
+    Route::get('/api/gedcom/download-face-script', [GedcomController::class, 'downloadFaceScript'])->name('gedcom.api.download-face-script');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');

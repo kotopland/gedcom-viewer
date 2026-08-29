@@ -136,7 +136,7 @@ onMounted(() => {
                     <!-- Photo Thumbnail -->
                     <img
                         v-if="statsData.oldest_person.primary_media?.url"
-                        :src="statsData.oldest_person.primary_media.url"
+                        :src="statsData.oldest_person.portrait_url || statsData.oldest_person.primary_media.portrait_url || statsData.oldest_person.primary_media.url"
                         class="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-500/40 shrink-0 shadow-md group-hover:scale-105 transition-transform"
                     />
                     <div v-else class="w-16 h-16 rounded-2xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold shrink-0">
@@ -181,7 +181,7 @@ onMounted(() => {
                         >
                             <img
                                 v-if="statsData.biggest_age_difference_couple.husband.primary_media?.url"
-                                :src="statsData.biggest_age_difference_couple.husband.primary_media.url"
+                                :src="statsData.biggest_age_difference_couple.husband.portrait_url || statsData.biggest_age_difference_couple.husband.primary_media.portrait_url || statsData.biggest_age_difference_couple.husband.primary_media.url"
                                 class="w-9 h-9 rounded-xl object-cover shrink-0"
                             />
                             <div v-else class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
@@ -204,7 +204,7 @@ onMounted(() => {
                         >
                             <img
                                 v-if="statsData.biggest_age_difference_couple.wife.primary_media?.url"
-                                :src="statsData.biggest_age_difference_couple.wife.primary_media.url"
+                                :src="statsData.biggest_age_difference_couple.wife.portrait_url || statsData.biggest_age_difference_couple.wife.primary_media.portrait_url || statsData.biggest_age_difference_couple.wife.primary_media.url"
                                 class="w-9 h-9 rounded-xl object-cover shrink-0"
                             />
                             <div v-else class="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 flex items-center justify-center shrink-0">

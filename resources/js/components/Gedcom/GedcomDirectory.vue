@@ -200,7 +200,7 @@ onMounted(() => {
                 <div class="flex items-start gap-3.5">
                     <img
                         v-if="person.primary_media"
-                        :src="person.primary_media.url"
+                        :src="person.portrait_url || person.primary_media.portrait_url || person.primary_media.url"
                         :alt="person.name"
                         class="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800"
                     />
@@ -253,7 +253,7 @@ onMounted(() => {
                 class="flex items-center justify-between p-3.5 hover:bg-indigo-50/50 dark:hover:bg-slate-800/80 cursor-pointer transition-colors"
             >
                 <div class="flex items-center gap-3.5 min-w-0">
-                    <img v-if="person.primary_media" :src="person.primary_media.url" class="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    <img v-if="person.primary_media" :src="person.portrait_url || person.primary_media.portrait_url || person.primary_media.url" class="w-10 h-10 rounded-lg object-cover shrink-0" />
                     <div v-else class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
                         <User class="w-5 h-5" />
                     </div>

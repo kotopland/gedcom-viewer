@@ -84,7 +84,7 @@ const emit = defineEmits<{
             <div class="flex items-center gap-2">
                 <img
                     v-if="person.primary_media"
-                    :src="person.primary_media.url"
+                    :src="person.portrait_url || person.primary_media.portrait_url || person.primary_media.url"
                     :class="[
                         'rounded-lg object-cover shrink-0',
                         level <= 2 ? 'w-8 h-8' : 'w-6 h-6'

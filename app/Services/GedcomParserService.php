@@ -8,13 +8,16 @@ class GedcomParserService
 {
     protected string $zipPath;
     protected string $storageMediaDir;
+    protected string $storageCropsDir;
     protected string $cachePath;
 
     public function __construct()
     {
         $this->storageMediaDir = storage_path('app/public/gedcom/media');
+        $this->storageCropsDir = storage_path('app/public/gedcom/crops');
         $this->cachePath = storage_path('app/gedcom_parsed.json');
         $this->zipPath = $this->findActiveZipPath();
+        File::ensureDirectoryExists($this->storageCropsDir);
     }
 
     public function findActiveZipPath(): string
@@ -322,6 +325,16 @@ class GedcomParserService
             }
         }
 
+        $facesJsonPath = storage_path('app/private/faces.json');
+        if (!File::exists($facesJsonPath)) {
+            $facesJsonPath = storage_path('app/faces.json');
+        }
+        $facesJson = null;
+        if (File::exists($facesJsonPath)) {
+            $facesJson = json_decode(File::get($facesJsonPath), true);
+        }
+        $imageDimCache = [];
+
         foreach ($indivMap as $id => &$ind) {
             $ind['spouses'] = array_values(array_unique($ind['spouses']));
             $ind['children'] = array_values(array_unique($ind['children']));
@@ -355,18 +368,146 @@ class GedcomParserService
             }
             unset($ev);
 
-            // Expand linked media objects
+            // Expand linked media objects & resolve face crops
             $ind['media_items'] = [];
-            foreach ($ind['media_ids'] as $mId) {
-                if (isset($objMap[$mId])) {
-                    $ind['media_items'][] = $objMap[$mId];
+            $ind['media_crops'] = [];
+
+            $personFaces = $facesJson['by_person'][$ind['id']] ?? [];
+            $facesByMedia = [];
+            foreach ($personFaces as $pf) {
+                if (!empty($pf['media_id'])) {
+                    $facesByMedia[$pf['media_id']] = $pf;
                 }
             }
 
+            $mediaRefs = $ind['media_refs'] ?? [];
+            if (empty($mediaRefs) && !empty($ind['media_ids'])) {
+                foreach ($ind['media_ids'] as $mId) {
+                    $mediaRefs[] = ['id' => $mId, 'crop' => null];
+                }
+            }
+
+            foreach ($mediaRefs as $idx => $mRef) {
+                $mId = $mRef['id'];
+                if (!isset($objMap[$mId])) {
+                    continue;
+                }
+
+                $baseObj = $objMap[$mId];
+                $filename = $baseObj['file'] ?? '';
+
+                $cropInfo = null;
+                $cssInfo = null;
+                $rawCrop = $mRef['crop'] ?? null;
+
+                // Cache image dimensions
+                if (!empty($filename) && !array_key_exists($filename, $imageDimCache)) {
+                    $targetPath = $this->storageMediaDir . '/' . $filename;
+                    if (!File::exists($targetPath)) {
+                        $targetPath = storage_path('app/private/' . $filename);
+                    }
+                    if (File::exists($targetPath)) {
+                        $dim = @getimagesize($targetPath);
+                        $imageDimCache[$filename] = $dim ? ['w' => $dim[0], 'h' => $dim[1]] : null;
+                    } else {
+                        $imageDimCache[$filename] = null;
+                    }
+                }
+
+                $imgDim = $imageDimCache[$filename] ?? null;
+
+                if ($rawCrop !== null) {
+                    $top = $rawCrop['top'];
+                    $left = $rawCrop['left'];
+                    $hPx = $rawCrop['height'];
+                    $wPx = $rawCrop['width'];
+
+                    if ($imgDim && $imgDim['w'] > 0 && $imgDim['h'] > 0) {
+                        $x = round($left / $imgDim['w'], 4);
+                        $y = round($top / $imgDim['h'], 4);
+                        $w = round($wPx / $imgDim['w'], 4);
+                        $h = round($hPx / $imgDim['h'], 4);
+
+                        $cropInfo = [
+                            'x' => $x,
+                            'y' => $y,
+                            'width' => $w,
+                            'height' => $h,
+                            'top' => $top,
+                            'left' => $left,
+                            'height_px' => $hPx,
+                            'width_px' => $wPx,
+                        ];
+                        $cssInfo = [
+                            'left' => number_format($x * 100, 2, '.', '') . '%',
+                            'top' => number_format($y * 100, 2, '.', '') . '%',
+                            'width' => number_format($w * 100, 2, '.', '') . '%',
+                            'height' => number_format($h * 100, 2, '.', '') . '%',
+                        ];
+                    } else {
+                        $cropInfo = [
+                            'top' => $top,
+                            'left' => $left,
+                            'height_px' => $hPx,
+                            'width_px' => $wPx,
+                        ];
+                    }
+                } elseif (isset($facesByMedia[$mId])) {
+                    // Fallback from faces.json
+                    $fEntry = $facesByMedia[$mId];
+                    $fCrop = $fEntry['crop'] ?? [];
+                    $cropInfo = [
+                        'x' => $fCrop['x'] ?? 0,
+                        'y' => $fCrop['y'] ?? 0,
+                        'width' => $fCrop['width'] ?? 1,
+                        'height' => $fCrop['height'] ?? 1,
+                    ];
+                    if ($imgDim && $imgDim['w'] > 0 && $imgDim['h'] > 0) {
+                        $cropInfo['top'] = (int) round(($fCrop['y'] ?? 0) * $imgDim['h']);
+                        $cropInfo['left'] = (int) round(($fCrop['x'] ?? 0) * $imgDim['w']);
+                        $cropInfo['width_px'] = (int) round(($fCrop['width'] ?? 1) * $imgDim['w']);
+                        $cropInfo['height_px'] = (int) round(($fCrop['height'] ?? 1) * $imgDim['h']);
+                    }
+                    $cssInfo = $fEntry['css'] ?? null;
+                }
+
+                $isPortrait = ($idx === 0);
+                $mediaItem = array_merge($baseObj, [
+                    'crop' => $cropInfo,
+                    'css' => $cssInfo,
+                    'is_portrait' => $isPortrait,
+                ]);
+
+                if ($isPortrait) {
+                    $mediaItem['portrait_url'] = "/api/gedcom/person/{$ind['id']}/portrait";
+                }
+
+                $ind['media_items'][] = $mediaItem;
+
+                if ($cropInfo !== null) {
+                    $ind['media_crops'][$mId] = $cropInfo;
+                }
+
+                // Tag this individual on the media object
+                if (!isset($objMap[$mId]['faces'])) {
+                    $objMap[$mId]['faces'] = [];
+                }
+                $objMap[$mId]['faces'][] = [
+                    'person_id' => $ind['id'],
+                    'person_name' => $ind['name'],
+                    'crop' => $cropInfo,
+                    'css' => $cssInfo,
+                    'portrait_url' => "/api/gedcom/person/{$ind['id']}/portrait",
+                ];
+            }
+
+            // Designate the FIRST file reference as the portrait picture
             if (!empty($ind['media_items'])) {
                 $ind['primary_media'] = $ind['media_items'][0];
+                $ind['portrait_url'] = "/api/gedcom/person/{$ind['id']}/portrait";
             } else {
                 $ind['primary_media'] = null;
+                $ind['portrait_url'] = null;
             }
         }
         unset($ind);
@@ -395,6 +536,8 @@ class GedcomParserService
             }
         }
         arsort($surnames);
+
+        $this->generatePortraitCrops($indivMap, $objMap);
 
         return [
             'stats' => [
@@ -476,6 +619,7 @@ class GedcomParserService
             $fams = [];
             $famc = [];
             $mediaIds = [];
+            $mediaRefs = [];
             $notes = [];
 
             $events = [];
@@ -565,6 +709,34 @@ class GedcomParserService
                 } elseif ($sub['tag'] === 'OBJE') {
                     $mId = trim($sub['value'], '@');
                     if ($mId) {
+                        $cropData = null;
+                        foreach ($sub['sub'] ?? [] as $osub) {
+                            if ($osub['tag'] === 'CROP') {
+                                $cTop = null;
+                                $cLeft = null;
+                                $cHeight = null;
+                                $cWidth = null;
+                                foreach ($osub['sub'] ?? [] as $csub) {
+                                    $val = (int) trim($csub['value'] ?? '');
+                                    if ($csub['tag'] === 'TOP') $cTop = $val;
+                                    elseif ($csub['tag'] === 'LEFT') $cLeft = $val;
+                                    elseif ($csub['tag'] === 'HEIGHT') $cHeight = $val;
+                                    elseif ($csub['tag'] === 'WIDTH') $cWidth = $val;
+                                }
+                                if ($cTop !== null && $cLeft !== null && $cHeight !== null && $cWidth !== null) {
+                                    $cropData = [
+                                        'top' => $cTop,
+                                        'left' => $cLeft,
+                                        'height' => $cHeight,
+                                        'width' => $cWidth,
+                                    ];
+                                }
+                            }
+                        }
+                        $mediaRefs[] = [
+                            'id' => $mId,
+                            'crop' => $cropData,
+                        ];
                         $mediaIds[] = $mId;
                     }
                 } elseif ($sub['tag'] === 'NOTE') {
@@ -639,6 +811,7 @@ class GedcomParserService
                 'fams' => $fams,
                 'famc' => $famc,
                 'media_ids' => array_values(array_unique($mediaIds)),
+                'media_refs' => $mediaRefs,
                 'notes' => $notes,
                 'events' => $events,
             ];
@@ -756,5 +929,122 @@ class GedcomParserService
             'wav' => 'audio/wav',
             default => 'application/octet-stream',
         };
+    }
+
+    public function generatePortraitCrops(array &$individuals, array $objMap): void
+    {
+        File::ensureDirectoryExists($this->storageCropsDir);
+
+        foreach ($individuals as &$ind) {
+            $primary = $ind['primary_media'] ?? null;
+            if (!$primary || empty($primary['file'])) {
+                continue;
+            }
+
+            $crop = $primary['crop'] ?? null;
+            if (!$crop) {
+                continue;
+            }
+
+            $targetId = $ind['id'];
+            $filename = $primary['file'];
+            $destPath = $this->storageCropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+
+            $sourcePath = $this->storageMediaDir . '/' . $filename;
+            if (!File::exists($sourcePath)) {
+                $sourcePath = storage_path('app/private/' . $filename);
+            }
+
+            if (!File::exists($sourcePath)) {
+                continue;
+            }
+
+            if (!File::exists($destPath) || File::size($destPath) === 0) {
+                $this->cropFaceImage($sourcePath, $crop, $destPath);
+            }
+
+            if (File::exists($destPath) && File::size($destPath) > 0) {
+                $ind['portrait_crop_url'] = '/storage/gedcom/crops/' . basename($destPath);
+            }
+        }
+        unset($ind);
+    }
+
+    public function cropFaceImage(string $sourcePath, array $crop, string $destPath): bool
+    {
+        if (!extension_loaded('gd')) {
+            return false;
+        }
+
+        $imgInfo = @getimagesize($sourcePath);
+        if (!$imgInfo) {
+            return false;
+        }
+
+        $origW = $imgInfo[0];
+        $origH = $imgInfo[1];
+        $mime = $imgInfo['mime'] ?? '';
+
+        $src = match ($mime) {
+            'image/jpeg' => @imagecreatefromjpeg($sourcePath),
+            'image/png' => @imagecreatefrompng($sourcePath),
+            'image/webp' => @imagecreatefromwebp($sourcePath),
+            'image/gif' => @imagecreatefromgif($sourcePath),
+            default => null,
+        };
+
+        if (!$src) {
+            return false;
+        }
+
+        $left = $crop['left'] ?? null;
+        $top = $crop['top'] ?? null;
+        $width = $crop['width_px'] ?? null;
+        $height = $crop['height_px'] ?? null;
+
+        if ($left === null || $top === null || $width === null || $height === null) {
+            $left = (int) round(($crop['x'] ?? 0) * $origW);
+            $top = (int) round(($crop['y'] ?? 0) * $origH);
+            $width = (int) round(($crop['width'] ?? 1) * $origW);
+            $height = (int) round(($crop['height'] ?? 1) * $origH);
+        }
+
+        $left = max(0, min($origW - 1, (int) $left));
+        $top = max(0, min($origH - 1, (int) $top));
+        $width = max(1, min($origW - $left, (int) $width));
+        $height = max(1, min($origH - $top, (int) $height));
+
+        $centerX = $left + $width / 2;
+        $centerY = $top + $height / 2;
+        $faceSize = max($width, $height);
+        $boxSize = (int) round($faceSize * 1.15);
+
+        $cropX = max(0, min($origW - $boxSize, (int) round($centerX - $boxSize / 2)));
+        $cropY = max(0, min($origH - $boxSize, (int) round($centerY - $boxSize / 2)));
+        $cropW = min($origW - $cropX, $boxSize);
+        $cropH = min($origH - $cropY, $boxSize);
+
+        if ($cropW < 20 || $cropH < 20) {
+            $cropX = $left;
+            $cropY = $top;
+            $cropW = $width;
+            $cropH = $height;
+        }
+
+        $avatarSize = 320;
+        $dst = imagecreatetruecolor($avatarSize, $avatarSize);
+
+        $white = imagecolorallocate($dst, 255, 255, 255);
+        imagefill($dst, 0, 0, $white);
+
+        imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $avatarSize, $avatarSize, $cropW, $cropH);
+
+        File::ensureDirectoryExists(dirname($destPath));
+        imagejpeg($dst, $destPath, 90);
+
+        imagedestroy($dst);
+        imagedestroy($src);
+
+        return true;
     }
 }

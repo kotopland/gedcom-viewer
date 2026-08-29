@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FolderArchive, Users, ShieldCheck, CheckCircle2, AlertCircle, UploadCloud, FileText } from '@lucide/vue';
+import { RefreshCw, FolderArchive, Users, ShieldCheck, CheckCircle2, AlertCircle, UploadCloud, FileText, Sparkles, Download, Terminal, ChevronDown, ChevronUp, Copy, Check } from '@lucide/vue';
 
 defineOptions({
     layout: AppLayout,
@@ -13,6 +13,13 @@ const isReimporting = ref(false);
 const isUploading = ref(false);
 const selectedFile = ref<File | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const isUploadingFaces = ref(false);
+const selectedFacesFile = ref<File | null>(null);
+const facesFileInputRef = ref<HTMLInputElement | null>(null);
+const showFacesInstructions = ref(false);
+const copySuccess = ref(false);
+
 const statusMessage = ref<string | null>(null);
 const errorMessage = ref<string | null>(null);
 
@@ -22,6 +29,15 @@ const onFileChange = (e: Event) => {
         selectedFile.value = target.files[0];
     } else {
         selectedFile.value = null;
+    }
+};
+
+const onFacesFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        selectedFacesFile.value = target.files[0];
+    } else {
+        selectedFacesFile.value = null;
     }
 };
 
@@ -75,6 +91,55 @@ const uploadGedcomFile = async () => {
     } finally {
         isUploading.value = false;
     }
+};
+
+const uploadFacesFile = async () => {
+    if (!selectedFacesFile.value) {
+        errorMessage.value = 'Please select a faces.json file to upload.';
+        return;
+    }
+
+    isUploadingFaces.value = true;
+    statusMessage.value = null;
+    errorMessage.value = null;
+
+    try {
+        const formData = new FormData();
+        formData.append('file', selectedFacesFile.value);
+
+        const res = await fetch('/api/gedcom/upload-faces', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+            statusMessage.value = json.message || 'Face tags uploaded and applied successfully!';
+            selectedFacesFile.value = null;
+            if (facesFileInputRef.value) {
+                facesFileInputRef.value.value = '';
+            }
+        } else {
+            errorMessage.value = json.message || json.error || 'Failed to upload faces.json file.';
+        }
+    } catch (e: any) {
+        console.error('Faces upload failed:', e);
+        errorMessage.value = e.message || 'An unexpected error occurred during faces upload.';
+    } finally {
+        isUploadingFaces.value = false;
+    }
+};
+
+const copyCommand = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    copySuccess.value = true;
+    setTimeout(() => {
+        copySuccess.value = false;
+    }, 2000);
 };
 
 const reimportArchive = async () => {
@@ -147,7 +212,7 @@ const reimportArchive = async () => {
         </div>
 
         <!-- Admin Actions Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <!-- Upload Standalone .ged File (Preserve Media Cache) -->
             <div class="p-6 rounded-2xl bg-card border border-sidebar-border/70 shadow-sm space-y-4 flex flex-col justify-between">
                 <div class="space-y-3">
@@ -182,6 +247,91 @@ const reimportArchive = async () => {
                         <RefreshCw v-if="isUploading" class="w-4 h-4 animate-spin" />
                         <FileText v-else class="w-4 h-4" />
                         {{ isUploading ? 'Uploading & Parsing .ged...' : 'Upload & Parse .ged' }}
+                    </Button>
+                </div>
+            </div>
+
+            <!-- MacFamilyTree 11 Face Tags & Crops Card -->
+            <div class="p-6 rounded-2xl bg-card border border-sidebar-border/70 shadow-sm space-y-4 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+                            <Sparkles class="w-5 h-5" />
+                        </div>
+                        <a
+                            href="/api/gedcom/download-face-script"
+                            download="mft11_export_faces.py"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold transition-colors"
+                            title="Download Python export script"
+                        >
+                            <Download class="w-3.5 h-3.5" />
+                            Download Script
+                        </a>
+                    </div>
+                    <div class="space-y-1">
+                        <h2 class="text-base font-bold text-foreground">MacFamilyTree Face Tags</h2>
+                        <p class="text-xs text-muted-foreground leading-relaxed">
+                            Export face rectangles from your MacFamilyTree 11 database package and upload <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">faces.json</code> to apply cropped portraits.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="showFacesInstructions = !showFacesInstructions"
+                        class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                    >
+                        <Terminal class="w-3.5 h-3.5" />
+                        <span>{{ showFacesInstructions ? 'Hide Instructions' : 'View Instructions & Guide' }}</span>
+                        <ChevronUp v-if="showFacesInstructions" class="w-3.5 h-3.5" />
+                        <ChevronDown v-else class="w-3.5 h-3.5" />
+                    </button>
+
+                    <div v-if="showFacesInstructions" class="p-3.5 rounded-xl bg-muted/70 border border-sidebar-border space-y-2 text-xs text-muted-foreground">
+                        <div class="font-semibold text-foreground text-[11px]">
+                            How to extract from MacFamilyTree 11:
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
+                            <li>Right-click your <strong class="text-foreground">.mftpkg</strong> file in Finder and choose <em class="text-foreground">"Show Package Contents"</em>.</li>
+                            <li>Locate <code class="font-mono text-foreground bg-background px-1 py-0.5 rounded text-[10px]">Database.sqlite</code> inside.</li>
+                            <li>Run the Python script in your Terminal:</li>
+                        </ol>
+                        <div class="relative bg-slate-950 text-slate-200 p-2.5 pr-8 rounded-lg font-mono text-[10px] overflow-x-auto">
+                            <code>python3 scripts/mft11_export_faces.py ~/Documents/*.mftpkg/Database.sqlite faces.json</code>
+                            <button
+                                @click="copyCommand('python3 scripts/mft11_export_faces.py ~/Documents/*.mftpkg/Database.sqlite faces.json')"
+                                class="absolute top-1.5 right-1.5 p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                                title="Copy command"
+                            >
+                                <Check v-if="copySuccess" class="w-3.5 h-3.5 text-emerald-400" />
+                                <Copy v-else class="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-muted-foreground">
+                            Upload the generated <code class="font-mono">faces.json</code> below.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2 pt-1">
+                        <label class="block text-xs font-medium text-muted-foreground">Select faces.json File</label>
+                        <input
+                            ref="facesFileInputRef"
+                            type="file"
+                            accept=".json"
+                            @change="onFacesFileChange"
+                            class="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500/10 file:text-amber-600 hover:file:bg-amber-500/20 cursor-pointer border border-sidebar-border rounded-lg p-1 bg-background"
+                        />
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-sidebar-border/50">
+                    <Button
+                        @click="uploadFacesFile"
+                        :disabled="isUploadingFaces || !selectedFacesFile"
+                        class="w-full h-10 gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition-all active:scale-98 disabled:opacity-50"
+                    >
+                        <RefreshCw v-if="isUploadingFaces" class="w-4 h-4 animate-spin" />
+                        <Sparkles v-else class="w-4 h-4" />
+                        {{ isUploadingFaces ? 'Uploading & Applying Faces...' : 'Upload & Apply Faces' }}
                     </Button>
                 </div>
             </div>
