@@ -548,7 +548,7 @@ const onWheel = (e: WheelEvent) => {
                                 <!-- Center Avatar Image or Placeholder -->
                                 <image
                                     v-if="rootPerson.primary_media?.url"
-                                    :href="rootPerson.primary_media.url"
+                                    :href="rootPerson.portrait_url || rootPerson.primary_media?.portrait_url || rootPerson.primary_media.url"
                                     :x="CENTER_X - 24"
                                     :y="CENTER_Y - 48"
                                     width="48"
@@ -618,7 +618,7 @@ const onWheel = (e: WheelEvent) => {
                                         <!-- Sector Avatar Photo Image (Radially Inner Band) -->
                                         <template v-if="sector.person.primary_media?.url">
                                             <image
-                                                :href="sector.person.primary_media.url"
+                                                :href="sector.person.portrait_url || sector.person.primary_media?.portrait_url || sector.person.primary_media.url"
                                                 :x="getSectorImageCenter(sector.gen, sector.index - Math.pow(2, sector.gen), Math.pow(2, sector.gen)).x - (sector.gen <= 2 ? 14 : 10)"
                                                 :y="getSectorImageCenter(sector.gen, sector.index - Math.pow(2, sector.gen), Math.pow(2, sector.gen)).y - (sector.gen <= 2 ? 14 : 10)"
                                                 :width="sector.gen <= 2 ? 28 : 20"
@@ -671,7 +671,7 @@ const onWheel = (e: WheelEvent) => {
                         <!-- Hovered Person Photo Thumbnail -->
                         <img
                             v-if="hoveredPerson.primary_media?.url"
-                            :src="hoveredPerson.primary_media.url"
+                            :src="hoveredPerson.portrait_url || hoveredPerson.primary_media?.portrait_url || hoveredPerson.primary_media.url"
                             class="w-10 h-10 rounded-xl object-cover border border-white/20 shrink-0 shadow-md"
                         />
                         <div v-else class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
@@ -727,7 +727,7 @@ const onWheel = (e: WheelEvent) => {
                         <!-- Person Picture Photo Thumbnail -->
                         <img
                             v-if="sec.person.primary_media?.url"
-                            :src="sec.person.primary_media.url"
+                            :src="sec.person.portrait_url || sec.person.primary_media?.portrait_url || sec.person.primary_media.url"
                             class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
                         />
                         <div v-else class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-750 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">

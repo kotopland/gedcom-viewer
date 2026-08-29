@@ -248,9 +248,14 @@ onMounted(() => {
                         v-for="p in activePreviewItem.people"
                         :key="p.id"
                         @click="activePreviewItem = null; emit('select-person', p.id)"
-                        class="px-3 py-1 bg-indigo-600/30 border border-indigo-500/50 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded-full text-xs font-semibold transition-colors"
+                        class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-600/30 border border-indigo-500/50 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded-full text-xs font-semibold transition-colors"
                     >
-                        {{ p.name }}
+                        <img
+                            v-if="p.portrait_url"
+                            :src="p.portrait_url"
+                            class="w-4 h-4 rounded-full object-cover border border-white/30"
+                        />
+                        <span>{{ p.name }}</span>
                     </button>
                 </div>
 

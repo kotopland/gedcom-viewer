@@ -214,7 +214,7 @@ const selectFocusPerson = (person: any) => {
                             <div class="flex items-center gap-3">
                                 <img
                                     v-if="anc.primary_media?.url"
-                                    :src="anc.primary_media.url"
+                                    :src="anc.portrait_url || anc.primary_media.portrait_url || anc.primary_media.url"
                                     class="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-sm group-hover:scale-105 transition-transform"
                                 />
                                 <div v-else class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">

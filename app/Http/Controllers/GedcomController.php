@@ -133,6 +133,60 @@ class GedcomController extends Controller
         ]);
     }
 
+    public function uploadFaces(Request $request, GedcomParserService $parser)
+    {
+        $request->validate([
+            'file' => ['required', 'file', function ($attribute, $value, $fail) {
+                $ext = strtolower($value->getClientOriginalExtension());
+                if ($ext !== 'json') {
+                    $fail('The ' . $attribute . ' must be a valid .json file.');
+                }
+            }],
+        ]);
+
+        $uploadedFile = $request->file('file');
+        $content = file_get_contents($uploadedFile->getRealPath());
+
+        $decoded = json_decode($content, true);
+        if (!is_array($decoded) || (!isset($decoded['by_person']) && !isset($decoded['all_tags']))) {
+            return response()->json([
+                'error' => 'Invalid faces.json format. Expected JSON containing "by_person" or "all_tags".',
+            ], 422);
+        }
+
+        $privateDir = storage_path('app/private');
+        File::ensureDirectoryExists($privateDir);
+        File::put($privateDir . '/faces.json', $content);
+
+        // Re-parse and cache data to regenerate crops while preserving media
+        $data = $parser->parseAndCache(false);
+
+        $faceCount = count($decoded['all_tags'] ?? []);
+        if ($faceCount === 0 && isset($decoded['by_person'])) {
+            foreach ($decoded['by_person'] as $arr) {
+                $faceCount += count($arr);
+            }
+        }
+
+        return response()->json([
+            'message' => "Successfully imported {$faceCount} face tag(s) into the family tree.",
+            'total_faces' => $faceCount,
+            'stats' => $data['stats'] ?? [],
+        ]);
+    }
+
+    public function downloadFaceScript()
+    {
+        $path = base_path('scripts/mft11_export_faces.py');
+        if (!File::exists($path)) {
+            abort(404, 'Script file not found');
+        }
+
+        return response()->download($path, 'mft11_export_faces.py', [
+            'Content-Type' => 'text/x-python',
+        ]);
+    }
+
 
 
     public function search(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
@@ -216,6 +270,7 @@ class GedcomController extends Controller
                 'death_date' => $ind['death_date'],
                 'death_year' => $ind['death_year'],
                 'primary_media' => $ind['primary_media'],
+                'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
                 'media_count' => count($ind['media_items']),
             ];
         }
@@ -271,6 +326,7 @@ class GedcomController extends Controller
                 'birth_year' => $r['birth_year'],
                 'death_year' => $r['death_year'],
                 'primary_media' => $r['primary_media'],
+                'portrait_url' => $r['portrait_url'] ?? $r['primary_media']['portrait_url'] ?? null,
             ];
         };
 
@@ -648,6 +704,7 @@ class GedcomController extends Controller
                 'marriage_place' => $mInfo['place'],
                 'marriage_spouse_name' => $mInfo['spouse_name'],
                 'primary_media' => $ind['primary_media'] ?? null,
+                'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
             ];
         };
 
@@ -777,10 +834,14 @@ class GedcomController extends Controller
             if ($allowedMap !== null && !isset($allowedMap[$ind['id']])) {
                 continue;
             }
-            foreach ($ind['media_ids'] as $mId) {
+            foreach ($ind['media_items'] ?? [] as $mItem) {
+                $mId = $mItem['id'];
                 $objectPeopleMap[$mId][] = [
                     'id' => $ind['id'],
                     'name' => $ind['name'],
+                    'portrait_url' => $ind['portrait_url'] ?? null,
+                    'crop' => $mItem['crop'] ?? null,
+                    'css' => $mItem['css'] ?? null,
                 ];
             }
         }
@@ -853,6 +914,72 @@ class GedcomController extends Controller
 
         return response()->file($path, [
             'Content-Type' => $contentType,
+            'Cache-Control' => 'public, max-age=31536000',
+        ]);
+    }
+
+    public function servePortrait(Request $request, string $id, GedcomParserService $parser)
+    {
+        $data = $parser->getOrParseData();
+        $targetId = trim($id, '@');
+
+        if (!isset($data['individuals'][$targetId])) {
+            abort(404, 'Person not found');
+        }
+
+        $person = $data['individuals'][$targetId];
+        $primary = $person['primary_media'] ?? null;
+
+        if (!$primary || empty($primary['file'])) {
+            abort(404, 'No portrait image found');
+        }
+
+        $filename = $primary['file'];
+        $crop = $primary['crop'] ?? null;
+
+        $sourcePath = storage_path('app/public/gedcom/media/' . basename($filename));
+        if (!File::exists($sourcePath)) {
+            $sourcePath = storage_path('app/private/' . basename($filename));
+        }
+
+        if (!File::exists($sourcePath)) {
+            abort(404, 'Source image file not found');
+        }
+
+        // If no crop is specified, serve the original media
+        if (!$crop) {
+            return $this->serveMedia($filename);
+        }
+
+        $cropsDir = storage_path('app/public/gedcom/crops');
+        File::ensureDirectoryExists($cropsDir);
+        $cachedCropPath = $cropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+
+        if (!File::exists($cachedCropPath) || File::size($cachedCropPath) === 0) {
+            $parser->cropFaceImage($sourcePath, $crop, $cachedCropPath);
+        }
+
+        if (File::exists($cachedCropPath) && File::size($cachedCropPath) > 0) {
+            return response()->file($cachedCropPath, [
+                'Content-Type' => 'image/jpeg',
+                'Cache-Control' => 'public, max-age=31536000',
+            ]);
+        }
+
+        return $this->serveMedia($filename);
+    }
+
+    public function serveCropMedia(string $filename): BinaryFileResponse
+    {
+        $safeFilename = basename($filename);
+        $path = storage_path('app/public/gedcom/crops/' . $safeFilename);
+
+        if (!File::exists($path)) {
+            abort(404, 'Cropped media file not found');
+        }
+
+        return response()->file($path, [
+            'Content-Type' => 'image/jpeg',
             'Cache-Control' => 'public, max-age=31536000',
         ]);
     }

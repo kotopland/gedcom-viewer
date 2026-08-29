@@ -58,23 +58,38 @@ GEDCOM;
 
         $uploadedFile = UploadedFile::fake()->createWithContent('family_tree.ged', $gedcomContent);
 
-        $response = $this->postJson(route('gedcom.api.upload'), [
-            'file' => $uploadedFile,
-        ]);
+        $realGed = storage_path('app/private/gedcom.ged');
+        $realCache = storage_path('app/gedcom_parsed.json');
+        $backupGed = File::exists($realGed) ? File::get($realGed) : null;
+        $backupCache = File::exists($realCache) ? File::get($realCache) : null;
 
-        $response->assertOk();
-        $response->assertJsonStructure([
-            'message',
-            'stats' => ['total_individuals', 'total_families'],
-        ]);
+        try {
+            $response = $this->postJson(route('gedcom.api.upload'), [
+                'file' => $uploadedFile,
+            ]);
 
-        // Verify ZIP archive was removed
-        $this->assertFileDoesNotExist($dummyZipFile);
+            $response->assertOk();
+            $response->assertJsonStructure([
+                'message',
+                'stats' => ['total_individuals', 'total_families'],
+            ]);
 
-        // Verify newly uploaded gedcom.ged exists in storage/app/private
-        $this->assertFileExists(storage_path('app/private/gedcom.ged'));
+            // Verify ZIP archive was removed
+            $this->assertFileDoesNotExist($dummyZipFile);
 
-        // Verify existing media cache file was preserved
-        $this->assertFileExists($dummyMediaFile);
+            // Verify newly uploaded gedcom.ged exists in storage/app/private
+            $this->assertFileExists(storage_path('app/private/gedcom.ged'));
+
+            // Verify existing media cache file was preserved
+            $this->assertFileExists($dummyMediaFile);
+        } finally {
+            if ($backupGed !== null) {
+                File::put($realGed, $backupGed);
+            }
+            if ($backupCache !== null) {
+                File::put($realCache, $backupCache);
+            }
+            File::delete($dummyMediaFile);
+        }
     }
 }

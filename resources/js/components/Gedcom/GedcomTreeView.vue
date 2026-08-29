@@ -617,7 +617,7 @@ onUnmounted(() => {
                                 <div class="flex items-center gap-4">
                                     <img
                                         v-if="primaryPerson.primary_media"
-                                        :src="primaryPerson.primary_media.url"
+                                        :src="primaryPerson.portrait_url || primaryPerson.primary_media.portrait_url || primaryPerson.primary_media.url"
                                         class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-indigo-500 dark:border-indigo-400 shadow-md"
                                     />
                                     <div v-else class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
@@ -661,7 +661,7 @@ onUnmounted(() => {
                                         <div class="flex items-center gap-4">
                                             <img
                                                 v-if="spouse.primary_media"
-                                                :src="spouse.primary_media.url"
+                                                :src="spouse.portrait_url || spouse.primary_media.portrait_url || spouse.primary_media.url"
                                                 class="w-16 h-16 rounded-2xl object-cover shrink-0 border-2 border-rose-400/60 shadow-md"
                                             />
                                             <div v-else class="w-16 h-16 rounded-2xl bg-rose-50 dark:bg-slate-800 border border-rose-200 dark:border-slate-700 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
@@ -723,7 +723,7 @@ onUnmounted(() => {
                             >
                                 <img
                                     v-if="sibling.primary_media"
-                                    :src="sibling.primary_media.url"
+                                    :src="sibling.portrait_url || sibling.primary_media.portrait_url || sibling.primary_media.url"
                                     class="w-11 h-11 rounded-xl object-cover border-2 border-purple-400/60 dark:border-purple-500/50 shadow-sm shrink-0"
                                 />
                                 <div v-else class="w-11 h-11 rounded-xl bg-purple-50 dark:bg-slate-800 border border-purple-200 dark:border-slate-700 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
@@ -764,7 +764,7 @@ onUnmounted(() => {
                                     <Heart class="w-3 h-3 text-rose-500 fill-rose-500/40 shrink-0" />
                                     <img
                                         v-if="sp.primary_media"
-                                        :src="sp.primary_media.url"
+                                        :src="sp.portrait_url || sp.primary_media.portrait_url || sp.primary_media.url"
                                         class="w-7 h-7 rounded-lg object-cover shrink-0"
                                     />
                                     <div v-else class="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-900/80 text-rose-600 dark:text-rose-300 flex items-center justify-center text-xs shrink-0">
@@ -793,7 +793,7 @@ onUnmounted(() => {
                                         >
                                             <img
                                                 v-if="spSib.primary_media"
-                                                :src="spSib.primary_media.url"
+                                                :src="spSib.portrait_url || spSib.primary_media.portrait_url || spSib.primary_media.url"
                                                 class="w-11 h-11 rounded-xl object-cover border-2 border-rose-400/60 dark:border-rose-500/50 shadow-sm shrink-0"
                                             />
                                             <div v-else class="w-11 h-11 rounded-xl bg-rose-50 dark:bg-slate-800 border border-rose-200 dark:border-slate-700 flex items-center justify-center text-rose-500 dark:text-rose-400 shrink-0">
@@ -834,7 +834,7 @@ onUnmounted(() => {
                                                 <Heart class="w-3 h-3 text-rose-500 fill-rose-500/40 shrink-0" />
                                                 <img
                                                     v-if="sp.primary_media"
-                                                    :src="sp.primary_media.url"
+                                                    :src="sp.portrait_url || sp.primary_media.portrait_url || sp.primary_media.url"
                                                     class="w-7 h-7 rounded-lg object-cover shrink-0"
                                                 />
                                                 <div v-else class="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-900/80 text-rose-600 dark:text-rose-300 flex items-center justify-center text-xs shrink-0">
