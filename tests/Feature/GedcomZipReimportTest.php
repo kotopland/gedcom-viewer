@@ -50,6 +50,10 @@ class GedcomZipReimportTest extends TestCase
         if (File::exists($this->staleCrop)) {
             File::delete($this->staleCrop);
         }
+        $testAlice = storage_path('app/public/gedcom/media/alice_portrait.jpg');
+        if (File::exists($testAlice)) {
+            File::delete($testAlice);
+        }
 
         $realGed = storage_path('app/private/gedcom.ged');
         $realFaces = storage_path('app/private/faces.json');

@@ -130,8 +130,8 @@ class GedcomController extends Controller
         // Store the uploaded file as storage/app/private/gedcom.ged
         $uploadedFile->move($privateDir, 'gedcom.ged');
 
-        // Re-parse GEDCOM while preserving existing media cache (clearMedia: false)
-        $data = $parser->parseAndCache(false);
+        // Re-parse GEDCOM directly from uploaded file while preserving existing media cache
+        $data = $parser->parseAndCache(false, storage_path('app/private/gedcom.ged'));
 
         return response()->json([
             'message' => 'GEDCOM file uploaded and parsed successfully. Existing media cache was preserved.',
