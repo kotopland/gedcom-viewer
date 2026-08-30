@@ -180,4 +180,73 @@ class GedcomTreeSiblingsTest extends TestCase
             }
         }
     }
+
+    public function test_civil_partnership_is_returned_with_correct_relationship_type()
+    {
+        $superuser = User::factory()->superuser()->create(['is_verified' => true]);
+        $this->actingAs($superuser);
+
+        $cacheFile = storage_path('app/gedcom_parsed.json');
+        $backupCache = File::exists($cacheFile) ? File::get($cacheFile) : null;
+
+        $synthData = [
+            'stats' => ['total_individuals' => 2, 'total_families' => 1],
+            'individuals' => [
+                '58176864' => [
+                    'id' => '58176864',
+                    'name' => 'Kamiel Neeleman',
+                    'sex' => 'M',
+                    'birth_year' => 1999,
+                    'parents' => [],
+                    'spouses' => ['I500263'],
+                    'children' => [],
+                    'fams' => ['33325904'],
+                    'primary_media' => null,
+                ],
+                'I500263' => [
+                    'id' => 'I500263',
+                    'name' => 'Oda Marte Topland',
+                    'sex' => 'F',
+                    'birth_year' => 2000,
+                    'parents' => [],
+                    'spouses' => ['58176864'],
+                    'children' => [],
+                    'fams' => ['33325904'],
+                    'primary_media' => null,
+                ],
+            ],
+            'families' => [
+                '33325904' => [
+                    'id' => '33325904',
+                    'husband_id' => '58176864',
+                    'wife_id' => 'I500263',
+                    'children_ids' => [],
+                    'marriage_date' => '',
+                    'marriage_place' => '',
+                    'relationship_type' => 'Civil Partnership',
+                    'events' => [],
+                ],
+            ],
+            'media' => [],
+        ];
+
+        File::put($cacheFile, json_encode($synthData));
+
+        try {
+            $response = $this->get('/api/gedcom/tree/I500263?ancestors=1&descendants=1');
+            $response->assertOk();
+
+            $json = $response->json();
+            $this->assertEquals('I500263', $json['primary']['id']);
+            $this->assertEquals('Civil Partnership', $json['primary']['marriage_type']);
+            $this->assertEquals('Civil Partnership', $json['primary']['relationship_type']);
+            $this->assertEquals('Kamiel Neeleman', $json['primary']['marriage_spouse_name']);
+        } finally {
+            if ($backupCache !== null) {
+                File::put($cacheFile, $backupCache);
+            } else {
+                File::delete($cacheFile);
+            }
+        }
+    }
 }

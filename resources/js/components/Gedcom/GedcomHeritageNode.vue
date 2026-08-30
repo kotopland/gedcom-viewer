@@ -61,8 +61,8 @@ const formatPlace = (place?: string | null) => {
 <template>
     <div
         @click="emit('select-person', person.id)"
-        class="heritage-node-card group relative flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] select-none"
-        style="width: 220px;"
+        data-clickable="true"
+        class="heritage-node-card group relative flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] select-none w-[220px] h-[416px] shrink-0"
     >
         <!-- Floating Focus Quick-Button on Hover -->
         <button
@@ -75,15 +75,20 @@ const formatPlace = (place?: string | null) => {
 
         <!-- 1. Circular Portrait Avatar (matching name box width) -->
         <div class="relative z-10 w-full px-1 mb-[-12px] flex justify-center">
-            <div class="w-[212px] h-[212px] shrink-0 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40">
+            <div
+                @click.stop="emit('select-person', person.id)"
+                data-clickable="true"
+                class="w-[212px] h-[212px] shrink-0 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40 cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:ring-4 hover:ring-indigo-500/50"
+                title="View person details"
+            >
                 <img
                     v-if="person.primary_media"
                     :src="person.portrait_url || person.primary_media.portrait_url || person.primary_media.url"
                     :alt="person.name"
-                    class="w-full h-full object-cover"
+                    class="w-full h-full object-cover pointer-events-none"
                     loading="lazy"
                 />
-                <div v-else class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-slate-500 dark:text-slate-400">
+                <div v-else class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-slate-500 dark:text-slate-400 pointer-events-none">
                     <User class="w-16 h-16 stroke-[1.5]" />
                     <span class="text-[10px] font-serif uppercase tracking-widest mt-1.5 opacity-70">
                         {{ person.sex === 'M' ? 'Male' : (person.sex === 'F' ? 'Female' : 'Individual') }}
@@ -118,8 +123,8 @@ const formatPlace = (place?: string | null) => {
             </div>
         </div>
 
-        <!-- 3. Aligned Vital Statistics Table -->
-        <div class="w-full pt-2.5 px-1 pb-1 space-y-1.5 text-[11px] font-sans leading-tight text-slate-800 dark:text-slate-200">
+        <!-- 3. Aligned Vital Statistics Table (fixed height for perfect row alignment) -->
+        <div class="w-full h-[170px] pt-2.5 px-1 pb-1 space-y-1.5 text-[11px] font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start">
             <!-- Birth -->
             <div v-if="person.birth_date || person.birth_year || formatPlace(person.birth_place)" class="flex items-start justify-between gap-1.5">
                 <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Birth</span>
@@ -133,18 +138,14 @@ const formatPlace = (place?: string | null) => {
                 </div>
             </div>
 
-            <!-- Marriage -->
-            <div v-if="person.marriage_date || person.marriage_year || person.marriage_spouse_name || formatPlace(person.marriage_place)" class="flex items-start justify-between gap-1.5">
-                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Marriage</span>
+            <!-- Marriage / Civil Partnership -->
+            <div v-if="person.marriage_date || person.marriage_year || (person.marriage_type && person.marriage_type !== 'Marriage')" class="flex items-start justify-between gap-1.5">
+                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">
+                    {{ person.marriage_type || person.relationship_type || 'Marriage' }}
+                </span>
                 <div class="text-right flex-1 min-w-0">
                     <div v-if="person.marriage_date || person.marriage_year" class="font-medium text-slate-900 dark:text-white">
                         {{ formatVal(person.marriage_date) || person.marriage_year }}
-                    </div>
-                    <div v-if="person.marriage_spouse_name" class="text-[10.5px] font-semibold text-slate-800 dark:text-slate-200 truncate" :title="person.marriage_spouse_name">
-                        {{ person.marriage_spouse_name }}
-                    </div>
-                    <div v-if="formatPlace(person.marriage_place)" class="text-[10px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.marriage_place)">
-                        {{ formatPlace(person.marriage_place) }}
                     </div>
                 </div>
             </div>
@@ -173,14 +174,11 @@ const formatPlace = (place?: string | null) => {
             </div>
 
             <!-- Burial -->
-            <div v-if="person.burial_date || formatPlace(person.burial_place)" class="flex items-start justify-between gap-1.5">
+            <div v-if="person.burial_date" class="flex items-start justify-between gap-1.5">
                 <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Burial</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.burial_date" class="font-medium text-slate-900 dark:text-white">
+                    <div class="font-medium text-slate-900 dark:text-white">
                         {{ formatVal(person.burial_date) }}
-                    </div>
-                    <div v-if="formatPlace(person.burial_place)" class="text-[10px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.burial_place)">
-                        {{ formatPlace(person.burial_place) }}
                     </div>
                 </div>
             </div>

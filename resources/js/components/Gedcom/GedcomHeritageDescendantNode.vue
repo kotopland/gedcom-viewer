@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import GedcomHeritageNode from './GedcomHeritageNode.vue';
-import { ChevronDown } from '@lucide/vue';
 
 defineProps<{
     person: any;
@@ -45,28 +44,27 @@ const emit = defineEmits<{
         </div>
 
         <!-- Children Section Below (Recursive) -->
-        <div v-if="person.children && person.children.length > 0" class="flex flex-col items-center relative mt-1">
-            <!-- Vertical Drop Line from Couple down to Sibling Bar -->
-            <div class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 mt-[-8px] z-0"></div>
-
-            <!-- Horizontal Distribution Sibling Bracket -->
-            <div
-                v-if="person.children.length > 1"
-                class="h-[3px] bg-slate-900 dark:bg-slate-300 z-0 relative mb-2"
-                :style="{
-                    width: `calc(100% - ${person.children.length === 2 ? '230px' : '240px'})`
-                }"
-            ></div>
+        <div v-if="person.children && person.children.length > 0" class="flex flex-col items-center relative mt-[-6px]">
+            <!-- Vertical Drop Line from Couple down to Children Bracket -->
+            <div class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 z-0"></div>
 
             <!-- Row of Children -->
-            <div class="flex items-start justify-center gap-4 sm:gap-6 flex-wrap">
+            <div class="flex items-start justify-center">
                 <div
-                    v-for="child in person.children"
+                    v-for="(child, cIdx) in person.children"
                     :key="child.id"
-                    class="flex flex-col items-center relative"
+                    class="flex flex-col items-center relative px-2 sm:px-3 pt-2"
                 >
-                    <!-- Vertical Drop Line into Child -->
-                    <div class="w-[3px] h-3.5 bg-slate-900 dark:bg-slate-300 -mt-2 mb-0.5 z-0"></div>
+                    <!-- Horizontal Distribution Bracket across Children -->
+                    <div
+                        v-if="person.children.length > 1"
+                        class="absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                        :class="[
+                            cIdx === 0 ? 'left-1/2 right-0' : '',
+                            cIdx === person.children.length - 1 ? 'left-0 right-1/2' : '',
+                            cIdx > 0 && cIdx < person.children.length - 1 ? 'left-0 right-0' : ''
+                        ]"
+                    ></div>
 
                     <!-- Recursive Child Descendant Node -->
                     <GedcomHeritageDescendantNode
@@ -77,18 +75,6 @@ const emit = defineEmits<{
                     />
                 </div>
             </div>
-        </div>
-
-        <!-- Load More Descendants Button if at leaf of tree -->
-        <div v-else class="mt-1.5">
-            <button
-                @click.stop="emit('change-root', person.id)"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-all shadow-xs hover:scale-105 cursor-pointer"
-                title="Focus tree on this person to load more descendants"
-            >
-                <ChevronDown class="w-3 h-3" />
-                <span>More Descendants</span>
-            </button>
         </div>
     </div>
 </template>
