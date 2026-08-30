@@ -75,7 +75,7 @@ const resetRootPerson = () => {
 };
 
 const reimportArchive = async () => {
-    if (!confirm('Re-importing will wipe current extracted media and re-parse the active ZIP archive in storage/app/private. Continue?')) {
+    if (!confirm('Re-importing will wipe the current family tree data and re-import the active ZIP archive (including media files, gedcom.ged, and faces.json). Continue?')) {
         return;
     }
     isReimporting.value = true;
