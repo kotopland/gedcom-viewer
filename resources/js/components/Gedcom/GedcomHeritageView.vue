@@ -921,10 +921,24 @@ onUnmounted(() => {
                                 v-if="focusParents.length > 0 && siblingGeneration.length > 1"
                                 class="absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                                 :class="[
-                                    sIdx === 0 ? 'left-1/2 right-0' : '',
-                                    sIdx === siblingGeneration.length - 1 ? 'left-0 right-1/2' : '',
+                                    sIdx === 0
+                                        ? (member.is_primary && member.spouses && member.spouses.length > 0
+                                            ? 'left-[calc(50%-116px)] sm:left-[calc(50%-118px)] right-0'
+                                            : 'left-1/2 right-0')
+                                        : '',
+                                    sIdx === siblingGeneration.length - 1
+                                        ? (member.is_primary && member.spouses && member.spouses.length > 0
+                                            ? 'left-0 right-[calc(50%-116px)] sm:right-[calc(50%-118px)]'
+                                            : 'left-0 right-1/2')
+                                        : '',
                                     sIdx > 0 && sIdx < siblingGeneration.length - 1 ? 'left-0 right-0' : ''
                                 ]"
+                            ></div>
+
+                            <!-- Horizontal Bar above Focused Person with Spouse -->
+                            <div
+                                v-if="focusParents.length > 0 && member.is_primary && member.spouses && member.spouses.length > 0"
+                                class="absolute top-0 left-[calc(50%-116px)] right-[calc(50%-116px)] sm:left-[calc(50%-118px)] sm:right-[calc(50%-118px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                             ></div>
 
                             <!-- Vertical Drop Line from Parents' Bracket into this Sibling/Primary -->
@@ -981,17 +995,31 @@ onUnmounted(() => {
                                     <div
                                         v-for="(child, cIdx) in member.children"
                                         :key="child.id"
-                                        class="flex flex-col items-center relative px-2 sm:px-3 pt-2"
+                                        class="flex flex-col items-center relative px-2 sm:px-3 pt-6"
                                     >
                                         <!-- Horizontal Distribution Bracket across Children -->
                                         <div
                                             v-if="member.children.length > 1"
                                             class="absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                                             :class="[
-                                                cIdx === 0 ? 'left-1/2 right-0' : '',
-                                                cIdx === member.children.length - 1 ? 'left-0 right-1/2' : '',
+                                                cIdx === 0
+                                                    ? (child.spouses && child.spouses.length > 0
+                                                        ? 'left-[calc(50%-115px)] sm:left-[calc(50%-117px)] right-0'
+                                                        : 'left-1/2 right-0')
+                                                    : '',
+                                                cIdx === member.children.length - 1
+                                                    ? (child.spouses && child.spouses.length > 0
+                                                        ? 'left-0 right-[calc(50%-115px)] sm:right-[calc(50%-117px)]'
+                                                        : 'left-0 right-1/2')
+                                                    : '',
                                                 cIdx > 0 && cIdx < member.children.length - 1 ? 'left-0 right-0' : ''
                                             ]"
+                                        ></div>
+
+                                        <!-- Horizontal Bar above Single Child with Spouse/Partner -->
+                                        <div
+                                            v-if="member.children.length === 1 && child.spouses && child.spouses.length > 0"
+                                            class="absolute top-0 left-[calc(50%-115px)] right-[calc(50%-115px)] sm:left-[calc(50%-117px)] sm:right-[calc(50%-117px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                                         ></div>
 
                                         <!-- Recursive Descendant Node for Child, Spouses, Grandchildren, etc. -->
