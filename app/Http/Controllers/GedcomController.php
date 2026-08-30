@@ -91,12 +91,18 @@ class GedcomController extends Controller
 
     public function reimport(GedcomParserService $parser)
     {
-        $data = $parser->parseAndCache(true);
+        try {
+            $data = $parser->parseAndCache(true);
 
-        return response()->json([
-            'message' => 'GEDCOM archive re-imported and media refreshed successfully.',
-            'stats' => $data['stats'],
-        ]);
+            return response()->json([
+                'message' => 'GEDCOM archive re-imported and media refreshed successfully.',
+                'stats' => $data['stats'],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Failed to re-import GEDCOM archive: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function uploadGedcom(Request $request, GedcomParserService $parser)
@@ -261,18 +267,18 @@ class GedcomController extends Controller
             $filtered[] = [
                 'id' => $ind['id'],
                 'name' => $ind['name'],
-                'given_name' => $ind['given_name'],
-                'surname' => $ind['surname'],
-                'sex' => $ind['sex'],
-                'birth_date' => $ind['birth_date'],
+                'given_name' => $ind['given_name'] ?? '',
+                'surname' => $ind['surname'] ?? '',
+                'sex' => $ind['sex'] ?? 'U',
+                'birth_date' => $ind['birth_date'] ?? null,
                 'birth_place' => GedcomParserService::cleanPlace($ind['birth_place'] ?? null),
-                'birth_year' => $ind['birth_year'],
-                'death_date' => $ind['death_date'],
+                'birth_year' => $ind['birth_year'] ?? null,
+                'death_date' => $ind['death_date'] ?? null,
                 'death_place' => GedcomParserService::cleanPlace($ind['death_place'] ?? null),
-                'death_year' => $ind['death_year'],
-                'primary_media' => $ind['primary_media'],
+                'death_year' => $ind['death_year'] ?? null,
+                'primary_media' => $ind['primary_media'] ?? null,
                 'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
-                'media_count' => count($ind['media_items']),
+                'media_count' => count($ind['media_items'] ?? []),
             ];
         }
 
@@ -321,13 +327,13 @@ class GedcomController extends Controller
             }
             $r = $data['individuals'][$relId];
             return [
-                'id' => $r['id'],
-                'name' => $r['name'],
+                'id' => $r['id'] ?? $relId,
+                'name' => $r['name'] ?? 'Unknown',
                 'surname' => $r['surname'] ?? '',
-                'sex' => $r['sex'],
-                'birth_year' => $r['birth_year'],
-                'death_year' => $r['death_year'],
-                'primary_media' => $r['primary_media'],
+                'sex' => $r['sex'] ?? 'U',
+                'birth_year' => $r['birth_year'] ?? null,
+                'death_year' => $r['death_year'] ?? null,
+                'primary_media' => $r['primary_media'] ?? null,
                 'portrait_url' => $r['portrait_url'] ?? $r['primary_media']['portrait_url'] ?? null,
             ];
         };

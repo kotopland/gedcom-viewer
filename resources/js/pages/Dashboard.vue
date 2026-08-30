@@ -143,7 +143,7 @@ const copyCommand = (cmd: string) => {
 };
 
 const reimportArchive = async () => {
-    if (!confirm('Re-importing will wipe current extracted media and re-parse the active ZIP archive in storage/app/private. Continue?')) {
+    if (!confirm('Re-importing will wipe the current family tree data and re-import the active ZIP archive (including media files, gedcom.ged, and faces.json). Continue?')) {
         return;
     }
     isReimporting.value = true;
@@ -344,7 +344,7 @@ const reimportArchive = async () => {
                     </div>
                     <h2 class="text-base font-bold text-foreground">ZIP Archive Re-import</h2>
                     <p class="text-xs text-muted-foreground leading-relaxed">
-                        Re-extract active ZIP archives in <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">storage/app/private</code>, <strong>clear old media cache</strong>, and re-parse genealogical records.
+                        Wipe current family tree data and re-import active ZIP archive containing media files, <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">gedcom.ged</code>, and <code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px]">faces.json</code>.
                     </p>
                 </div>
 

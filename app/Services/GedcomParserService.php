@@ -53,10 +53,18 @@ class GedcomParserService
                 return $dir;
             }
 
+            $appFiles = File::glob(storage_path('app/*.zip'));
+            if (!empty($appFiles)) {
+                usort($appFiles, function ($a, $b) {
+                    return File::lastModified($b) <=> File::lastModified($a);
+                });
+                return $appFiles[0];
+            }
+
             return $dir;
         }
 
-        // Return the most recently modified zip file
+        // Return the most recently modified zip file in storage/app/private
         usort($files, function ($a, $b) {
             return File::lastModified($b) <=> File::lastModified($a);
         });
@@ -87,12 +95,20 @@ class GedcomParserService
     {
         $this->zipPath = $this->findActiveZipPath();
 
-        if ($clearMedia && File::exists($this->storageMediaDir)) {
-            File::cleanDirectory($this->storageMediaDir);
-        }
+        if ($clearMedia) {
+            // 1. Delete previous parsed family tree cache
+            if (File::exists($this->cachePath)) {
+                File::delete($this->cachePath);
+            }
 
-        if (File::exists($this->storageCropsDir)) {
-            File::cleanDirectory($this->storageCropsDir);
+            // 2. Clear old extracted media and face crops
+            if (File::exists($this->storageMediaDir)) {
+                File::cleanDirectory($this->storageMediaDir);
+            }
+
+            if (File::exists($this->storageCropsDir)) {
+                File::cleanDirectory($this->storageCropsDir);
+            }
         }
 
         $this->extractMediaFiles();
@@ -101,7 +117,9 @@ class GedcomParserService
             throw new \Exception("Zip file or directory not found at: {$this->zipPath}");
         }
 
-        if (is_dir($this->zipPath)) {
+        if (File::exists(storage_path('app/private/gedcom.ged'))) {
+            $content = File::get(storage_path('app/private/gedcom.ged'));
+        } elseif (is_dir($this->zipPath)) {
             $gedcomPath = File::exists($this->zipPath . '/gedcom.ged')
                 ? $this->zipPath . '/gedcom.ged'
                 : null;
@@ -124,10 +142,24 @@ class GedcomParserService
                 throw new \Exception("Failed to open ZIP archive at: {$this->zipPath}");
             }
 
-            $stream = $zip->getStream('gedcom.ged');
+            $gedEntry = null;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entryName = $zip->getNameIndex($i);
+                if (strcasecmp(basename($entryName), 'gedcom.ged') === 0 || str_ends_with(strtolower($entryName), '.ged')) {
+                    $gedEntry = $entryName;
+                    break;
+                }
+            }
+
+            if (!$gedEntry) {
+                $zip->close();
+                throw new \Exception("gedcom.ged not found inside ZIP archive: {$this->zipPath}");
+            }
+
+            $stream = $zip->getStream($gedEntry);
             if (!$stream) {
                 $zip->close();
-                throw new \Exception("gedcom.ged not found inside ZIP archive.");
+                throw new \Exception("Failed to read {$gedEntry} from ZIP archive.");
             }
 
             $content = stream_get_contents($stream);
@@ -154,6 +186,7 @@ class GedcomParserService
         }
 
         File::ensureDirectoryExists($this->storageMediaDir);
+        File::ensureDirectoryExists(storage_path('app/private'));
 
         if (!File::exists($this->zipPath)) {
             return;
@@ -162,7 +195,22 @@ class GedcomParserService
         if (is_dir($this->zipPath)) {
             $files = File::allFiles($this->zipPath);
             foreach ($files as $file) {
-                if ($file->getFilename() === 'gedcom.ged' || $file->getFilename() === '.DS_Store') {
+                $filename = $file->getFilename();
+                if ($filename === '.DS_Store' || str_starts_with($filename, '._')) {
+                    continue;
+                }
+                if (strcasecmp($filename, 'gedcom.ged') === 0 || str_ends_with(strtolower($filename), '.ged')) {
+                    $targetGed = storage_path('app/private/gedcom.ged');
+                    if ($file->getPathname() !== $targetGed) {
+                        File::copy($file->getPathname(), $targetGed);
+                    }
+                    continue;
+                }
+                if (strcasecmp($filename, 'faces.json') === 0) {
+                    $targetFaces = storage_path('app/private/faces.json');
+                    if ($file->getPathname() !== $targetFaces) {
+                        File::copy($file->getPathname(), $targetFaces);
+                    }
                     continue;
                 }
                 $basename = $file->getFilename();
@@ -179,10 +227,34 @@ class GedcomParserService
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
                 $name = $stat['name'];
-                if ($name === 'gedcom.ged' || str_ends_with($name, '/')) {
+                if (str_ends_with($name, '/') || str_contains($name, '__MACOSX')) {
                     continue;
                 }
                 $basename = basename($name);
+                if ($basename === '.DS_Store' || str_starts_with($basename, '._') || $basename === 'Thumbs.db') {
+                    continue;
+                }
+
+                // Extract gedcom.ged to storage/app/private/gedcom.ged
+                if (strcasecmp($basename, 'gedcom.ged') === 0 || str_ends_with(strtolower($basename), '.ged')) {
+                    $stream = $zip->getStream($name);
+                    if ($stream) {
+                        file_put_contents(storage_path('app/private/gedcom.ged'), stream_get_contents($stream));
+                        fclose($stream);
+                    }
+                    continue;
+                }
+
+                // Extract faces.json to storage/app/private/faces.json
+                if (strcasecmp($basename, 'faces.json') === 0) {
+                    $stream = $zip->getStream($name);
+                    if ($stream) {
+                        file_put_contents(storage_path('app/private/faces.json'), stream_get_contents($stream));
+                        fclose($stream);
+                    }
+                    continue;
+                }
+
                 $targetFile = $this->storageMediaDir . '/' . $basename;
                 if (!File::exists($targetFile)) {
                     $stream = $zip->getStream($name);
