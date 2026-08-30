@@ -34,42 +34,32 @@ class GedcomParserService
 
     public function findActiveZipPath(): string
     {
-        $dir = storage_path('app/private');
-        $files = File::glob($dir . '/*.zip');
+        $files = array_merge(
+            File::glob(storage_path('app/private/*.zip')) ?: [],
+            File::glob(storage_path('app/*.zip')) ?: []
+        );
 
-        if (empty($files)) {
-            $directories = array_filter(File::directories($dir), function ($subDir) {
-                return File::exists($subDir . '/gedcom.ged') || !empty(File::glob($subDir . '/**/gedcom.ged'));
+        if (!empty($files)) {
+            // Return the most recently modified zip file
+            usort($files, function ($a, $b) {
+                return File::lastModified($b) <=> File::lastModified($a);
             });
-
-            if (!empty($directories)) {
-                usort($directories, function ($a, $b) {
-                    return File::lastModified($b) <=> File::lastModified($a);
-                });
-                return $directories[0];
-            }
-
-            if (File::exists($dir . '/gedcom.ged')) {
-                return $dir;
-            }
-
-            $appFiles = File::glob(storage_path('app/*.zip'));
-            if (!empty($appFiles)) {
-                usort($appFiles, function ($a, $b) {
-                    return File::lastModified($b) <=> File::lastModified($a);
-                });
-                return $appFiles[0];
-            }
-
-            return $dir;
+            return $files[0];
         }
 
-        // Return the most recently modified zip file in storage/app/private
-        usort($files, function ($a, $b) {
-            return File::lastModified($b) <=> File::lastModified($a);
+        $dir = storage_path('app/private');
+        $directories = array_filter(File::directories($dir), function ($subDir) {
+            return File::exists($subDir . '/gedcom.ged') || !empty(File::glob($subDir . '/**/gedcom.ged'));
         });
 
-        return $files[0];
+        if (!empty($directories)) {
+            usort($directories, function ($a, $b) {
+                return File::lastModified($b) <=> File::lastModified($a);
+            });
+            return $directories[0];
+        }
+
+        return $dir;
     }
 
     public function getOrParseData(bool $forceRefresh = false): array
@@ -91,9 +81,9 @@ class GedcomParserService
         return $this->parseAndCache($forceRefresh);
     }
 
-    public function parseAndCache(bool $clearMedia = false): array
+    public function parseAndCache(bool $clearMedia = false, ?string $sourcePath = null): array
     {
-        $this->zipPath = $this->findActiveZipPath();
+        $this->zipPath = $sourcePath ?: $this->findActiveZipPath();
 
         if ($clearMedia) {
             // 1. Delete previous parsed family tree cache
@@ -145,7 +135,7 @@ class GedcomParserService
             $gedEntry = null;
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $entryName = $zip->getNameIndex($i);
-                if (strcasecmp(basename($entryName), 'gedcom.ged') === 0 || str_ends_with(strtolower($entryName), '.ged')) {
+                if (preg_match('/(^|\/)gedcom\.ged$/i', $entryName) || preg_match('/\.ged$/i', $entryName)) {
                     $gedEntry = $entryName;
                     break;
                 }
@@ -156,14 +146,7 @@ class GedcomParserService
                 throw new \Exception("gedcom.ged not found inside ZIP archive: {$this->zipPath}");
             }
 
-            $stream = $zip->getStream($gedEntry);
-            if (!$stream) {
-                $zip->close();
-                throw new \Exception("Failed to read {$gedEntry} from ZIP archive.");
-            }
-
-            $content = stream_get_contents($stream);
-            fclose($stream);
+            $content = $zip->getFromName($gedEntry);
             $zip->close();
         }
 
@@ -239,7 +222,11 @@ class GedcomParserService
                 if (strcasecmp($basename, 'gedcom.ged') === 0 || str_ends_with(strtolower($basename), '.ged')) {
                     $stream = $zip->getStream($name);
                     if ($stream) {
-                        file_put_contents(storage_path('app/private/gedcom.ged'), stream_get_contents($stream));
+                        $dest = fopen(storage_path('app/private/gedcom.ged'), 'wb');
+                        if ($dest) {
+                            stream_copy_to_stream($stream, $dest);
+                            fclose($dest);
+                        }
                         fclose($stream);
                     }
                     continue;
@@ -249,7 +236,11 @@ class GedcomParserService
                 if (strcasecmp($basename, 'faces.json') === 0) {
                     $stream = $zip->getStream($name);
                     if ($stream) {
-                        file_put_contents(storage_path('app/private/faces.json'), stream_get_contents($stream));
+                        $dest = fopen(storage_path('app/private/faces.json'), 'wb');
+                        if ($dest) {
+                            stream_copy_to_stream($stream, $dest);
+                            fclose($dest);
+                        }
                         fclose($stream);
                     }
                     continue;
@@ -259,7 +250,11 @@ class GedcomParserService
                 if (!File::exists($targetFile)) {
                     $stream = $zip->getStream($name);
                     if ($stream) {
-                        file_put_contents($targetFile, stream_get_contents($stream));
+                        $dest = fopen($targetFile, 'wb');
+                        if ($dest) {
+                            stream_copy_to_stream($stream, $dest);
+                            fclose($dest);
+                        }
                         fclose($stream);
                     }
                 }
