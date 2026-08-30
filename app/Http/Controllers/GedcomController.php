@@ -317,12 +317,13 @@ class GedcomController extends Controller
                 return null;
             }
             if (!isset($data['individuals'][$relId])) {
-                return ['id' => $relId, 'name' => 'Unknown'];
+                return ['id' => $relId, 'name' => 'Unknown', 'surname' => ''];
             }
             $r = $data['individuals'][$relId];
             return [
                 'id' => $r['id'],
                 'name' => $r['name'],
+                'surname' => $r['surname'] ?? '',
                 'sex' => $r['sex'],
                 'birth_year' => $r['birth_year'],
                 'death_year' => $r['death_year'],
@@ -334,9 +335,35 @@ class GedcomController extends Controller
         $filterNull = fn (array $arr) => array_values(array_filter(array_map($formatMini, $arr), fn ($item) => $item !== null));
 
         $parents = $filterNull($ind['parents']);
-        $spouses = $filterNull($ind['spouses']);
         $children = $filterNull($ind['children']);
         $siblings = $filterNull($ind['siblings']);
+
+        // Enrich spouses with marriage details from shared family records
+        $spouses = array_values(array_filter(array_map(function ($sId) use ($formatMini, $ind, $data) {
+            $mini = $formatMini($sId);
+            if (!$mini) return null;
+
+            $marrDate = null;
+            $marrYear = null;
+            $relType = null;
+            foreach ($ind['fams'] ?? [] as $fId) {
+                if (isset($data['families'][$fId])) {
+                    $f = $data['families'][$fId];
+                    if (($f['husband_id'] === $ind['id'] && $f['wife_id'] === $sId) || ($f['wife_id'] === $ind['id'] && $f['husband_id'] === $sId)) {
+                        $marrDate = $f['marriage_date'] ?? null;
+                        $marrYear = $f['marriage_year'] ?? null;
+                        $relType = $f['relationship_type'] ?? null;
+                        break;
+                    }
+                }
+            }
+
+            $mini['marriage_date'] = $marrDate;
+            $mini['marriage_year'] = $marrYear;
+            $mini['relationship_type'] = $relType;
+
+            return $mini;
+        }, $ind['spouses']), fn ($item) => $item !== null));
 
         $tagLabels = [
             'BIRT' => 'Birth',
@@ -367,6 +394,7 @@ class GedcomController extends Controller
             'FACT' => 'Fact',
             'EVEN' => 'Event',
             'MARR' => 'Marriage',
+            '_PRS' => 'Civil Partnership',
             'DIV'  => 'Divorce',
             'ENG'  => 'Engagement',
             'ANUL' => 'Annulment',
@@ -388,6 +416,13 @@ class GedcomController extends Controller
             $place = $ev['place'] ?? '';
             $val = $ev['value'] ?? '';
             $type = $ev['type'] ?? '';
+
+            // If this is an individual marriage event and person has family records, let the family loop handle it with full spouse details
+            $isMarrEvent = in_array($tag, ['MARR', '_PRS']) || ($tag === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', $type . ' ' . $val));
+            if ($isMarrEvent && !empty($ind['fams'])) {
+                continue;
+            }
+
             $key = "ind_{$tag}_{$date}_{$place}_{$val}";
 
             if (isset($seenKeys[$key])) {
@@ -521,7 +556,13 @@ class GedcomController extends Controller
                     }
                     $seenKeys[$key] = true;
 
-                    $title = !empty($type) ? $type : ($tagLabels[$tag] ?? $tag);
+                    if ($tag === '_PRS') {
+                        $title = !empty($val) ? $val : (!empty($type) ? $type : 'Civil Partnership');
+                    } elseif ($tag === 'MARR' && !empty($fam['relationship_type'])) {
+                        $title = $fam['relationship_type'];
+                    } else {
+                        $title = !empty($type) ? $type : ($tagLabels[$tag] ?? $tag);
+                    }
 
                     $timelineEvents[] = [
                         'id' => "ev_fam_{$famId}_{$feIdx}",
@@ -537,21 +578,41 @@ class GedcomController extends Controller
                         'spouse' => $spouseInfo,
                     ];
                 }
-            } elseif (!empty($fam['marriage_date']) || !empty($fam['marriage_place'])) {
+            } elseif (!empty($fam['marriage_date']) || !empty($fam['marriage_place']) || !empty($fam['relationship_type'])) {
                 $mYear = null;
                 if (preg_match('/\b(1\d{3}|20\d{2})\b/', $fam['marriage_date'] ?? '', $ym)) {
                     $mYear = (int) $ym[1];
                 }
-                $key = "fam_{$famId}_MARR_{$fam['marriage_date']}_{$fam['marriage_place']}";
+                $relType = !empty($fam['relationship_type']) ? $fam['relationship_type'] : 'Marriage';
+                $key = "fam_{$famId}_{$relType}_{$fam['marriage_date']}_{$fam['marriage_place']}";
                 if (!isset($seenKeys[$key])) {
                     $seenKeys[$key] = true;
                     $timelineEvents[] = [
                         'id' => "ev_fam_marr_{$famId}",
-                        'tag' => 'MARR',
-                        'title' => 'Marriage',
+                        'tag' => !empty($fam['relationship_type']) ? '_PRS' : 'MARR',
+                        'title' => $relType,
                         'date' => $fam['marriage_date'] ?? '',
                         'place' => $fam['marriage_place'] ?? '',
                         'year' => $mYear,
+                        'value' => '',
+                        'note' => '',
+                        'age' => '',
+                        'cause' => '',
+                        'spouse' => $spouseInfo,
+                    ];
+                }
+            } elseif ($spouseInfo) {
+                $relType = !empty($fam['relationship_type']) ? $fam['relationship_type'] : 'Marriage';
+                $key = "fam_{$famId}_{$relType}_undated";
+                if (!isset($seenKeys[$key])) {
+                    $seenKeys[$key] = true;
+                    $timelineEvents[] = [
+                        'id' => "ev_fam_marr_{$famId}",
+                        'tag' => !empty($fam['relationship_type']) ? '_PRS' : 'MARR',
+                        'title' => $relType,
+                        'date' => '',
+                        'place' => '',
+                        'year' => null,
                         'value' => '',
                         'note' => '',
                         'age' => '',
@@ -639,7 +700,7 @@ class GedcomController extends Controller
         $descendantMaxDepth = $descendantLevels + 1;
 
         $getMarriageInfo = function (string $personId) use ($data) {
-            if (!isset($data['individuals'][$personId])) return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null];
+            if (!isset($data['individuals'][$personId])) return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null, 'type' => null];
             $ind = $data['individuals'][$personId];
             foreach ($ind['fams'] ?? [] as $famId) {
                 if (isset($data['families'][$famId])) {
@@ -650,6 +711,7 @@ class GedcomController extends Controller
                     $date = $fam['marriage_date'] ?? null;
                     $place = GedcomParserService::cleanPlace($fam['marriage_place'] ?? null);
                     $year = null;
+                    $type = !empty($fam['relationship_type']) ? $fam['relationship_type'] : null;
 
                     if ($date) {
                         if (preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $m)) {
@@ -659,26 +721,32 @@ class GedcomController extends Controller
 
                     if (!$date) {
                         foreach ($fam['events'] ?? [] as $fev) {
-                            if (($fev['tag'] ?? '') === 'MARR' && !empty($fev['date'])) {
+                            if ((($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') && !empty($fev['date'])) {
                                 $date = $fev['date'];
                                 $year = $fev['year'] ?? null;
                                 $place = GedcomParserService::cleanPlace($fev['place'] ?? $place);
+                                if (!empty($fev['type'])) {
+                                    $type = $fev['type'];
+                                } elseif (!empty($fev['value'])) {
+                                    $type = $fev['value'];
+                                }
                                 break;
                             }
                         }
                     }
 
-                    if ($date || $place || $spouseName) {
+                    if ($date || $place || $spouseName || $type) {
                         return [
                             'date' => $date,
                             'year' => $year,
                             'place' => $place,
                             'spouse_name' => $spouseName,
+                            'type' => $type ?: 'Marriage',
                         ];
                     }
                 }
             }
-            return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null];
+            return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null, 'type' => null];
         };
 
         $formatPersonData = function (array $ind) use ($getMarriageInfo) {
@@ -727,6 +795,8 @@ class GedcomController extends Controller
                 'marriage_year' => $mInfo['year'],
                 'marriage_place' => GedcomParserService::cleanPlace($mInfo['place']),
                 'marriage_spouse_name' => $mInfo['spouse_name'],
+                'marriage_type' => $mInfo['type'] ?? 'Marriage',
+                'relationship_type' => $mInfo['type'] ?? null,
                 'primary_media' => $ind['primary_media'] ?? null,
                 'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
             ];

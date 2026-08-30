@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import {
     X, User, Calendar, MapPin, Heart, Users, FileText, Image as ImageIcon,
     FileCode, Music, Volume2, Download, ExternalLink, ChevronRight, Target,
@@ -139,7 +139,36 @@ const getGenderColor = (sex: string) => {
     return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800';
 };
 
-const getEventBadgeStyle = (tag: string) => {
+const displayName = computed(() => {
+    if (!personData.value?.person) return 'Loading...';
+    const p = personData.value.person;
+
+    // Check if name already has parentheses
+    if (p.name && p.name.includes('(') && p.name.includes(')')) {
+        return p.name;
+    }
+
+    // Check all_names for married name / maiden name
+    if (p.all_names && Array.isArray(p.all_names)) {
+        const marriedName = p.all_names.find((n: any) => (n.type === 'married' || (n.surname && n.surname !== p.surname)) && n.surname);
+        if (marriedName && marriedName.surname && p.surname) {
+            return `${p.given_name || ''} ${p.surname} (${marriedName.surname})`.trim();
+        }
+    }
+
+    // Check if spouse surname differs and person is female with marriage
+    const firstSpouse = personData.value.relations?.spouses?.[0];
+    if (firstSpouse && firstSpouse.surname && p.surname && p.sex === 'F' && firstSpouse.surname !== p.surname) {
+        return `${p.name} (${firstSpouse.surname})`;
+    }
+
+    return p.name || 'Unknown';
+});
+
+const getEventBadgeStyle = (tag: string, title?: string) => {
+    if (tag === 'MARR' || tag === 'ENG' || tag === '_PRS' || (title && /\b(marriage|married|wedding|partner|civil partnership)\b/i.test(title))) {
+        return { icon: Heart, bg: 'bg-pink-500', ring: 'border-pink-200 dark:border-pink-900', text: 'text-pink-600 dark:text-pink-400' };
+    }
     switch (tag) {
         case 'BIRT':
             return { icon: Baby, bg: 'bg-indigo-600', ring: 'border-indigo-200 dark:border-indigo-900', text: 'text-indigo-600 dark:text-indigo-400' };
@@ -225,7 +254,7 @@ const getEventBadgeStyle = (tag: string) => {
 
                     <div class="flex-1 min-w-0 pr-8">
                         <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
-                            {{ personData?.person?.name || 'Loading...' }}
+                            {{ displayName }}
                         </h2>
                         
                         <p class="text-slate-300 font-medium text-xs sm:text-sm mt-1 flex items-center gap-2">
@@ -238,6 +267,28 @@ const getEventBadgeStyle = (tag: string) => {
                         <p v-if="personData?.person?.birth_place" class="text-slate-400 text-xs mt-1 flex items-center gap-1.5 truncate">
                             <MapPin class="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                             <span class="truncate">{{ personData.person.birth_place }}</span>
+                        </p>
+
+                        <!-- Spouse / Partner Header Link -->
+                        <p v-if="personData?.relations?.spouses?.length" class="text-slate-300 text-xs mt-1 flex items-center gap-1.5 truncate">
+                            <Heart class="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                            <span class="text-slate-400">
+                                {{ personData.relations.spouses.length > 1 ? 'Spouses:' : (personData.relations.spouses[0].relationship_type || 'Spouse:') }}
+                            </span>
+                            <span class="truncate flex items-center gap-1.5">
+                                <template v-for="(sp, sIdx) in personData.relations.spouses" :key="sp.id">
+                                    <button
+                                        @click="emit('select-person', sp.id)"
+                                        class="font-semibold text-pink-300 hover:text-pink-200 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                        {{ sp.name }}
+                                        <span v-if="sp.marriage_year || sp.marriage_date" class="text-[11px] text-slate-300 font-normal">
+                                            (m. {{ sp.marriage_year || sp.marriage_date }})
+                                        </span>
+                                    </button>
+                                    <span v-if="sIdx < personData.relations.spouses.length - 1" class="text-slate-500">,</span>
+                                </template>
+                            </span>
                         </p>
 
                         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-4">
@@ -333,7 +384,7 @@ const getEventBadgeStyle = (tag: string) => {
                                     <!-- Badge Indicator -->
                                     <span
                                         class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-white"
-                                        :class="getEventBadgeStyle(ev.tag).bg"
+                                        :class="getEventBadgeStyle(ev.tag, ev.title).bg"
                                     ></span>
 
                                     <div class="flex flex-wrap items-baseline justify-between gap-x-2">
@@ -354,7 +405,9 @@ const getEventBadgeStyle = (tag: string) => {
 
                                     <!-- Spouse Link if Marriage Event -->
                                     <div v-if="ev.spouse" class="mt-1.5 flex items-center gap-2">
-                                        <span class="text-xs text-slate-500 dark:text-slate-400">Spouse:</span>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400">
+                                            {{ ev.tag === '_PRS' || (ev.title && ev.title.toLowerCase().includes('partner')) ? 'Partner:' : 'Spouse:' }}
+                                        </span>
                                         <button
                                             @click="emit('select-person', ev.spouse.id)"
                                             class="inline-flex items-center gap-1.5 text-xs font-semibold text-pink-600 dark:text-pink-400 hover:underline bg-pink-500/10 px-2.5 py-1 rounded-lg border border-pink-200 dark:border-pink-900/50"

@@ -92,4 +92,54 @@ GEDCOM;
             File::delete($dummyMediaFile);
         }
     }
+
+    public function test_upload_parses_prs_tag_as_relationship_type()
+    {
+        $superuser = User::factory()->superuser()->create(['is_verified' => true]);
+        $this->actingAs($superuser);
+
+        $gedcomContent = <<<'GEDCOM'
+0 HEAD
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME John /Doe/
+1 SEX M
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Jane /Smith/
+1 SEX F
+1 FAMS @F1@
+0 @F1@ FAM
+1 _PRS Civil Partnership
+1 HUSB @I1@
+1 WIFE @I2@
+0 TRLR
+GEDCOM;
+
+        $uploadedFile = UploadedFile::fake()->createWithContent('family_tree.ged', $gedcomContent);
+
+        $realGed = storage_path('app/private/gedcom.ged');
+        $realCache = storage_path('app/gedcom_parsed.json');
+        $backupGed = File::exists($realGed) ? File::get($realGed) : null;
+        $backupCache = File::exists($realCache) ? File::get($realCache) : null;
+
+        try {
+            $response = $this->postJson(route('gedcom.api.upload'), [
+                'file' => $uploadedFile,
+            ]);
+
+            $response->assertOk();
+
+            $parsedData = json_decode(File::get($realCache), true);
+            $this->assertArrayHasKey('F1', $parsedData['families']);
+            $this->assertEquals('Civil Partnership', $parsedData['families']['F1']['relationship_type']);
+        } finally {
+            if ($backupGed !== null) {
+                File::put($realGed, $backupGed);
+            }
+            if ($backupCache !== null) {
+                File::put($realCache, $backupCache);
+            }
+        }
+    }
 }

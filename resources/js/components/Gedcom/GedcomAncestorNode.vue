@@ -118,7 +118,7 @@ const emit = defineEmits<{
                             <span class="font-bold opacity-75">b.</span> {{ person.birth_date || person.birth_year }}
                         </div>
                         <div v-if="person.marriage_date || person.marriage_year" class="truncate text-rose-600 dark:text-rose-400">
-                            <span class="font-bold opacity-75">m.</span> {{ person.marriage_date || person.marriage_year }}
+                            <span class="font-bold opacity-75">{{ (person.marriage_type === 'Civil Partnership' || person.relationship_type === 'Civil Partnership') ? 'cp.' : 'm.' }}</span> {{ person.marriage_date || person.marriage_year }}
                         </div>
                         <div v-if="person.death_date || person.death_year" class="truncate">
                             <span class="font-bold opacity-75">d.</span> {{ person.death_date || person.death_year }}

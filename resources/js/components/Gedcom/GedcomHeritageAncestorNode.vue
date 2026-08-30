@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import GedcomHeritageNode from './GedcomHeritageNode.vue';
-import { ChevronUp } from '@lucide/vue';
 
 defineProps<{
     person: any;
@@ -20,20 +19,27 @@ const emit = defineEmits<{
         <!-- Render Parents Above Recursively -->
         <div v-if="person.parents && person.parents.length > 0" class="flex flex-col items-center">
             <!-- Row of Parent Nodes -->
-            <div class="flex items-start justify-center gap-4 sm:gap-6 relative">
+            <div class="flex items-start justify-center relative">
                 <!-- Parent 1 (e.g. Father) -->
-                <GedcomHeritageAncestorNode
-                    :person="person.parents[0]"
-                    :level="level + 1"
-                    :parent-index="0"
-                    :spouse="person.parents[1]"
-                    @select-person="emit('select-person', $event)"
-                    @change-root="emit('change-root', $event)"
-                />
+                <div class="flex flex-col items-center relative px-2 sm:px-3">
+                    <GedcomHeritageAncestorNode
+                        :person="person.parents[0]"
+                        :level="level + 1"
+                        :parent-index="0"
+                        :spouse="person.parents[1]"
+                        @select-person="emit('select-person', $event)"
+                        @change-root="emit('change-root', $event)"
+                    />
+                    <!-- Horizontal Bracket from Parent 1 center to seam -->
+                    <div
+                        v-if="person.parents.length > 1"
+                        class="absolute bottom-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none left-1/2 right-0"
+                    ></div>
+                </div>
 
-                <!-- Marriage Bar between Parents if both exist -->
+                <!-- Marriage Bar between Parents if both exist (only when parents have no parents above them) -->
                 <div
-                    v-if="person.parents.length > 1"
+                    v-if="person.parents.length > 1 && (!person.parents[0].parents || person.parents[0].parents.length === 0) && (!person.parents[1].parents || person.parents[1].parents.length === 0)"
                     class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                 >
                     <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
@@ -41,31 +47,27 @@ const emit = defineEmits<{
                 </div>
 
                 <!-- Parent 2 (e.g. Mother) -->
-                <GedcomHeritageAncestorNode
+                <div
                     v-if="person.parents.length > 1"
-                    :person="person.parents[1]"
-                    :level="level + 1"
-                    :parent-index="1"
-                    :spouse="person.parents[0]"
-                    @select-person="emit('select-person', $event)"
-                    @change-root="emit('change-root', $event)"
-                />
+                    class="flex flex-col items-center relative px-2 sm:px-3"
+                >
+                    <GedcomHeritageAncestorNode
+                        :person="person.parents[1]"
+                        :level="level + 1"
+                        :parent-index="1"
+                        :spouse="person.parents[0]"
+                        @select-person="emit('select-person', $event)"
+                        @change-root="emit('change-root', $event)"
+                    />
+                    <!-- Horizontal Bracket from seam to Parent 2 center -->
+                    <div
+                        class="absolute bottom-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none left-0 right-1/2"
+                    ></div>
+                </div>
             </div>
 
-            <!-- Vertical Drop Line from Parents' Marriage Bar down to This Person -->
-            <div class="w-[3px] h-6 sm:h-7 bg-slate-900 dark:bg-slate-300 mt-[-6px] z-0"></div>
-        </div>
-
-        <!-- Load More Ancestors Button if no parents loaded for this top ancestor -->
-        <div v-else class="mb-1">
-            <button
-                @click.stop="emit('change-root', person.id)"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-300 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-all shadow-xs hover:scale-105 cursor-pointer"
-                title="Focus tree on this ancestor to load more generations"
-            >
-                <ChevronUp class="w-3 h-3" />
-                <span>More Ancestors</span>
-            </button>
+            <!-- Vertical Drop Line from Parents down to This Person -->
+            <div class="w-[3px] h-6 sm:h-7 bg-slate-900 dark:bg-slate-300 z-0"></div>
         </div>
 
         <!-- This Individual Node Card -->

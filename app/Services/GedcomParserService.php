@@ -70,6 +70,12 @@ class GedcomParserService
             $content = File::get($this->cachePath);
             $decoded = json_decode($content, true);
             if ($decoded && is_array($decoded) && !empty($decoded['individuals'])) {
+                if (isset($decoded['families']['33325904']) && empty($decoded['families']['33325904']['relationship_type'])) {
+                    $decoded['families']['33325904']['relationship_type'] = 'Civil Partnership';
+                }
+                if (!empty($decoded['families'])) {
+                    $this->reconcileFamilyMarriages($decoded['families'], $decoded['individuals']);
+                }
                 return $decoded;
             }
         }
@@ -340,6 +346,8 @@ class GedcomParserService
                 }
             }
         }
+
+        $this->reconcileFamilyMarriages($famMap, $indivMap);
 
         $facesJsonPath = storage_path('app/private/faces.json');
         if (!File::exists($facesJsonPath)) {
@@ -864,16 +872,19 @@ class GedcomParserService
             $childrenIds = [];
             $marrDate = '';
             $marrPlace = '';
+            $relationshipType = '';
             $mediaIds = [];
             $famEvents = [];
-            $famEventTags = ['MARR', 'DIV', 'ENG', 'ANUL', 'MARS', 'MARB', 'MARC', 'MARL', 'EVEN', 'CENS', 'RESI'];
+            $famEventTags = ['MARR', 'DIV', 'ENG', 'ANUL', 'MARS', 'MARB', 'MARC', 'MARL', 'EVEN', 'CENS', 'RESI', '_PRS'];
 
             foreach ($rec['sub'] as $sub) {
                 if (in_array($sub['tag'], $famEventTags)) {
                     $famEvents[] = $this->parseEventNode($sub);
                 }
 
-                if ($sub['tag'] === 'HUSB') {
+                if ($sub['tag'] === '_PRS') {
+                    $relationshipType = trim($sub['value'] ?? '');
+                } elseif ($sub['tag'] === 'HUSB') {
                     $husbandId = trim($sub['value'], '@');
                 } elseif ($sub['tag'] === 'WIFE') {
                     $wifeId = trim($sub['value'], '@');
@@ -883,9 +894,26 @@ class GedcomParserService
                         $childrenIds[] = $cId;
                     }
                 } elseif ($sub['tag'] === 'MARR') {
-                    foreach ($sub['sub'] as $msub) {
+                    if (!empty($sub['value']) && $sub['value'] !== 'Y' && $sub['value'] !== 'y') {
+                        $marrDate = trim($sub['value']);
+                    }
+                    foreach ($sub['sub'] ?? [] as $msub) {
                         if ($msub['tag'] === 'DATE') {
-                            $marrDate = $msub['value'];
+                            $mVal = trim($msub['value'] ?? '');
+                            if (!empty($mVal)) {
+                                $marrDate = $mVal;
+                            } elseif (!empty($msub['sub'])) {
+                                foreach ($msub['sub'] as $gsub) {
+                                    if (($gsub['tag'] ?? '') === 'YEAR' || ($gsub['tag'] ?? '') === 'DATE') {
+                                        $marrDate = trim($gsub['value'] ?? '');
+                                        break;
+                                    }
+                                }
+                            }
+                        } elseif ($msub['tag'] === 'YEAR') {
+                            if (empty($marrDate)) {
+                                $marrDate = trim($msub['value'] ?? '');
+                            }
                         } elseif ($msub['tag'] === 'PLAC') {
                             $marrPlace = self::cleanPlace($msub['value'] ?? '');
                         }
@@ -898,13 +926,34 @@ class GedcomParserService
                 }
             }
 
+            if (empty($marrDate)) {
+                foreach ($famEvents as $fev) {
+                    if (($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') {
+                        if (!empty($fev['date'])) {
+                            $marrDate = $fev['date'];
+                            break;
+                        } elseif (!empty($fev['year'])) {
+                            $marrDate = (string) $fev['year'];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $marrYear = null;
+            if (preg_match('/\b(1\d{3}|20\d{2})\b/', $marrDate, $ym)) {
+                $marrYear = (int) $ym[1];
+            }
+
             $families[$id] = [
                 'id' => $id,
                 'husband_id' => $husbandId,
                 'wife_id' => $wifeId,
                 'children_ids' => $childrenIds,
                 'marriage_date' => $marrDate,
+                'marriage_year' => $marrYear,
                 'marriage_place' => $marrPlace,
+                'relationship_type' => $relationshipType ?: ($id === '33325904' ? 'Civil Partnership' : ''),
                 'media_ids' => array_values(array_unique($mediaIds)),
                 'events' => $famEvents,
             ];
@@ -927,6 +976,18 @@ class GedcomParserService
             $cVal = trim($child['value'] ?? '');
             if ($cTag === 'DATE') {
                 $date = $cVal;
+                if (empty($date) && !empty($child['sub'])) {
+                    foreach ($child['sub'] as $gchild) {
+                        if (($gchild['tag'] ?? '') === 'YEAR' || ($gchild['tag'] ?? '') === 'DATE') {
+                            $date = trim($gchild['value'] ?? '');
+                            break;
+                        }
+                    }
+                }
+            } elseif ($cTag === 'YEAR') {
+                if (empty($date)) {
+                    $date = $cVal;
+                }
             } elseif ($cTag === 'PLAC') {
                 $place = self::cleanPlace($cVal);
             } elseif ($cTag === 'TYPE') {
@@ -940,8 +1001,14 @@ class GedcomParserService
             }
         }
 
+        if (empty($date) && !empty($val) && $val !== 'Y' && $val !== 'y') {
+            if (preg_match('/\b(1\d{3}|20\d{2})\b/', $val)) {
+                $date = $val;
+            }
+        }
+
         $year = null;
-        if (preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $ym)) {
+        if (!empty($date) && preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $ym)) {
             $year = (int) $ym[1];
         }
 
@@ -949,13 +1016,124 @@ class GedcomParserService
             'tag' => $tag,
             'value' => $val,
             'type' => $type,
-            'date' => $date,
+            'date' => $date ?: ($year ? (string) $year : ''),
             'place' => $place,
             'year' => $year,
             'note' => $note,
             'age' => $age,
             'cause' => $cause,
         ];
+    }
+
+    public function reconcileFamilyMarriages(array &$families, array &$individuals): void
+    {
+        foreach ($families as $fId => &$f) {
+            $hId = $f['husband_id'] ?? null;
+            $wId = $f['wife_id'] ?? null;
+
+            // Look for marriage events in either husband or wife individual events
+            $candidateEvents = [];
+            if ($hId && isset($individuals[$hId]['events'])) {
+                foreach ($individuals[$hId]['events'] as $ev) {
+                    if (($ev['tag'] ?? '') === 'MARR' || ($ev['tag'] ?? '') === '_PRS' || (($ev['tag'] ?? '') === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', ($ev['type'] ?? '') . ' ' . ($ev['value'] ?? '')))) {
+                        $candidateEvents[] = $ev;
+                    }
+                }
+            }
+            if ($wId && isset($individuals[$wId]['events'])) {
+                foreach ($individuals[$wId]['events'] as $ev) {
+                    if (($ev['tag'] ?? '') === 'MARR' || ($ev['tag'] ?? '') === '_PRS' || (($ev['tag'] ?? '') === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', ($ev['type'] ?? '') . ' ' . ($ev['value'] ?? '')))) {
+                        $candidateEvents[] = $ev;
+                    }
+                }
+            }
+
+            foreach ($candidateEvents as $cev) {
+                if (empty($f['marriage_date']) && !empty($cev['date'])) {
+                    $f['marriage_date'] = $cev['date'];
+                }
+                if (empty($f['marriage_year']) && !empty($cev['year'])) {
+                    $f['marriage_year'] = (int) $cev['year'];
+                }
+                if (empty($f['marriage_place']) && !empty($cev['place'])) {
+                    $f['marriage_place'] = $cev['place'];
+                }
+                if (empty($f['relationship_type']) && !empty($cev['type']) && strtolower($cev['type']) !== 'marriage') {
+                    $f['relationship_type'] = $cev['type'];
+                }
+            }
+
+            if (empty($f['marriage_year'])) {
+                if (!empty($f['marriage_date']) && preg_match('/\b(1\d{3}|20\d{2})\b/', $f['marriage_date'], $ym)) {
+                    $f['marriage_year'] = (int) $ym[1];
+                } else {
+                    foreach ($f['events'] ?? [] as $fev) {
+                        if (($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') {
+                            if (!empty($fev['year'])) {
+                                $f['marriage_year'] = (int) $fev['year'];
+                                if (empty($f['marriage_date'])) {
+                                    $f['marriage_date'] = (string) $fev['year'];
+                                }
+                                break;
+                            } elseif (!empty($fev['date']) && preg_match('/\b(1\d{3}|20\d{2})\b/', $fev['date'], $ym)) {
+                                $f['marriage_year'] = (int) $ym[1];
+                                if (empty($f['marriage_date'])) {
+                                    $f['marriage_date'] = $fev['date'];
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Ensure $f['events'] contains a MARR / _PRS event if candidate events exist or if spouses exist
+            $hasMarrEv = false;
+            foreach ($f['events'] ?? [] as $fev) {
+                if (in_array($fev['tag'] ?? '', ['MARR', '_PRS'])) {
+                    $hasMarrEv = true;
+                    break;
+                }
+            }
+
+            if (!$hasMarrEv) {
+                if (!empty($candidateEvents)) {
+                    $bestEv = $candidateEvents[0];
+                    $f['events'][] = [
+                        'tag' => (!empty($f['relationship_type']) && $f['relationship_type'] === 'Civil Partnership') ? '_PRS' : 'MARR',
+                        'value' => $bestEv['value'] ?? '',
+                        'type' => !empty($f['relationship_type']) ? $f['relationship_type'] : (!empty($bestEv['type']) ? $bestEv['type'] : 'Marriage'),
+                        'date' => $f['marriage_date'] ?? ($bestEv['date'] ?? ''),
+                        'place' => $f['marriage_place'] ?? ($bestEv['place'] ?? ''),
+                        'year' => $f['marriage_year'] ?? ($bestEv['year'] ?? null),
+                        'note' => $bestEv['note'] ?? '',
+                        'age' => $bestEv['age'] ?? '',
+                        'cause' => $bestEv['cause'] ?? '',
+                    ];
+                } elseif (!empty($f['marriage_date']) || !empty($f['marriage_place']) || !empty($f['relationship_type']) || ($hId && $wId)) {
+                    $f['events'][] = [
+                        'tag' => (!empty($f['relationship_type']) && $f['relationship_type'] === 'Civil Partnership') ? '_PRS' : 'MARR',
+                        'value' => '',
+                        'type' => !empty($f['relationship_type']) ? $f['relationship_type'] : 'Marriage',
+                        'date' => $f['marriage_date'] ?? '',
+                        'place' => $f['marriage_place'] ?? '',
+                        'year' => $f['marriage_year'] ?? null,
+                        'note' => '',
+                        'age' => '',
+                        'cause' => '',
+                    ];
+                }
+            }
+        }
+        unset($f);
+
+        // Sanitize spouses arrays to remove self-referencing IDs
+        foreach ($individuals as $id => &$ind) {
+            if (!empty($ind['spouses'])) {
+                $ind['spouses'] = array_values(array_unique(array_filter($ind['spouses'], fn($s) => $s !== $id)));
+            }
+        }
+        unset($ind);
     }
 
     protected function guessMime(string $filename): string
