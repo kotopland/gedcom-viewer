@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     Users, Image as ImageIcon, GitBranch, FolderArchive, RefreshCw, LogOut, ShieldCheck, Shield, Sun, Moon,
@@ -19,6 +19,9 @@ import { useAppearance } from '@/composables/useAppearance';
 import { logout } from '@/routes';
 import type { User } from '@/types/auth';
 
+type TabType = 'directory' | 'tree' | 'heritage' | 'fan' | 'media' | 'text' | 'stats' | 'lineage';
+const validTabs: TabType[] = ['directory', 'tree', 'heritage', 'fan', 'media', 'text', 'stats', 'lineage'];
+
 const props = defineProps<{
     stats: {
         total_individuals: number;
@@ -33,7 +36,7 @@ const props = defineProps<{
         top_surnames: Record<string, number>;
     };
     rootPersonId: string | null;
-    defaultTab?: 'directory' | 'tree' | 'heritage' | 'fan' | 'media' | 'text' | 'stats' | 'lineage';
+    defaultTab?: TabType;
 }>();
 
 const page = usePage();
@@ -44,7 +47,57 @@ const toggleTheme = () => {
     updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
 };
 
-const activeTab = ref<'directory' | 'tree' | 'heritage' | 'fan' | 'media' | 'text' | 'stats' | 'lineage'>(props.defaultTab || 'heritage');
+const getInitialTab = (): TabType => {
+    if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab') as TabType | null;
+        if (tabParam && validTabs.includes(tabParam)) {
+            return tabParam;
+        }
+
+        const sessionStored = sessionStorage.getItem('gedcom_active_tab') as TabType | null;
+        if (sessionStored && validTabs.includes(sessionStored)) {
+            return sessionStored;
+        }
+
+        const localStored = localStorage.getItem('gedcom_active_tab') as TabType | null;
+        if (localStored && validTabs.includes(localStored)) {
+            return localStored;
+        }
+    }
+    return props.defaultTab || 'heritage';
+};
+
+const activeTab = ref<TabType>(getInitialTab());
+
+watch(activeTab, (newTab) => {
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem('gedcom_active_tab', newTab);
+        localStorage.setItem('gedcom_active_tab', newTab);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('tab') !== newTab) {
+            url.searchParams.set('tab', newTab);
+            window.history.replaceState({}, '', url.toString());
+        }
+    }
+}, { immediate: true });
+
+const handlePopState = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab') as TabType | null;
+    if (tabParam && validTabs.includes(tabParam) && activeTab.value !== tabParam) {
+        activeTab.value = tabParam;
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('popstate', handlePopState);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('popstate', handlePopState);
+});
+
 const selectedPersonId = ref<string | null>(null);
 
 const getInitialFocusId = () => {

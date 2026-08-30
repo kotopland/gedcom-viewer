@@ -26,9 +26,31 @@ const exportPdfLoading = ref(false);
 const loading = ref(false);
 const treeData = ref<any>(null);
 const focusId = ref<string | null>(props.rootPersonId);
-const ancestorLevels = ref(2);
-const descendantLevels = ref(2);
-const showSiblings = ref(false);
+const ancestorLevels = ref(
+    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_ancestor_levels')
+        ? parseInt(sessionStorage.getItem('gedcom_heritage_ancestor_levels')!, 10) || 2
+        : 2
+);
+const descendantLevels = ref(
+    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_descendant_levels')
+        ? parseInt(sessionStorage.getItem('gedcom_heritage_descendant_levels')!, 10) || 2
+        : 2
+);
+const showSiblings = ref(
+    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_show_siblings') !== null
+        ? sessionStorage.getItem('gedcom_heritage_show_siblings') === 'true'
+        : false
+);
+
+watch(ancestorLevels, (val) => {
+    if (typeof window !== 'undefined') sessionStorage.setItem('gedcom_heritage_ancestor_levels', String(val));
+});
+watch(descendantLevels, (val) => {
+    if (typeof window !== 'undefined') sessionStorage.setItem('gedcom_heritage_descendant_levels', String(val));
+});
+watch(showSiblings, (val) => {
+    if (typeof window !== 'undefined') sessionStorage.setItem('gedcom_heritage_show_siblings', String(val));
+});
 
 // Zoom and Pan
 const zoomLevel = ref(0.85);
