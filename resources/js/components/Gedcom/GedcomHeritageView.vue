@@ -28,13 +28,13 @@ const treeData = ref<any>(null);
 const focusId = ref<string | null>(props.rootPersonId);
 const ancestorLevels = ref(
     typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_ancestor_levels')
-        ? parseInt(sessionStorage.getItem('gedcom_heritage_ancestor_levels')!, 10) || 2
-        : 2
+        ? parseInt(sessionStorage.getItem('gedcom_heritage_ancestor_levels')!, 10) || 3
+        : 3
 );
 const descendantLevels = ref(
     typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_descendant_levels')
-        ? parseInt(sessionStorage.getItem('gedcom_heritage_descendant_levels')!, 10) || 2
-        : 2
+        ? parseInt(sessionStorage.getItem('gedcom_heritage_descendant_levels')!, 10) || 3
+        : 3
 );
 const showSiblings = ref(
     typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_show_siblings') !== null
