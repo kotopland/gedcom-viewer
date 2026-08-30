@@ -265,9 +265,10 @@ class GedcomController extends Controller
                 'surname' => $ind['surname'],
                 'sex' => $ind['sex'],
                 'birth_date' => $ind['birth_date'],
-                'birth_place' => $ind['birth_place'],
+                'birth_place' => GedcomParserService::cleanPlace($ind['birth_place'] ?? null),
                 'birth_year' => $ind['birth_year'],
                 'death_date' => $ind['death_date'],
+                'death_place' => GedcomParserService::cleanPlace($ind['death_place'] ?? null),
                 'death_year' => $ind['death_year'],
                 'primary_media' => $ind['primary_media'],
                 'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
@@ -594,6 +595,17 @@ class GedcomController extends Controller
             return $aWeight <=> $bWeight;
         });
 
+        $ind['birth_place'] = GedcomParserService::cleanPlace($ind['birth_place'] ?? null);
+        $ind['death_place'] = GedcomParserService::cleanPlace($ind['death_place'] ?? null);
+        $ind['burial_place'] = GedcomParserService::cleanPlace($ind['burial_place'] ?? null);
+
+        foreach ($timelineEvents as &$te) {
+            if (!empty($te['place'])) {
+                $te['place'] = GedcomParserService::cleanPlace($te['place']);
+            }
+        }
+        unset($te);
+
         $personData = array_merge($ind, [
             'events' => $timelineEvents,
         ]);
@@ -636,7 +648,7 @@ class GedcomController extends Controller
                     $spouseName = ($spouseId && isset($data['individuals'][$spouseId])) ? $data['individuals'][$spouseId]['name'] : null;
 
                     $date = $fam['marriage_date'] ?? null;
-                    $place = $fam['marriage_place'] ?? null;
+                    $place = GedcomParserService::cleanPlace($fam['marriage_place'] ?? null);
                     $year = null;
 
                     if ($date) {
@@ -650,7 +662,7 @@ class GedcomController extends Controller
                             if (($fev['tag'] ?? '') === 'MARR' && !empty($fev['date'])) {
                                 $date = $fev['date'];
                                 $year = $fev['year'] ?? null;
-                                $place = $fev['place'] ?? $place;
+                                $place = GedcomParserService::cleanPlace($fev['place'] ?? $place);
                                 break;
                             }
                         }
@@ -672,16 +684,27 @@ class GedcomController extends Controller
         $formatPersonData = function (array $ind) use ($getMarriageInfo) {
             $mInfo = $getMarriageInfo($ind['id']);
 
-            $deathNote = null;
+            $occupations = [];
             foreach ($ind['events'] ?? [] as $ev) {
-                if (($ev['tag'] ?? '') === 'DEAT' && !empty($ev['note'])) {
-                    $deathNote = $ev['note'];
-                    break;
+                if (($ev['tag'] ?? '') === 'OCCU') {
+                    $occu = trim($ev['value'] ?? '');
+                    $place = GedcomParserService::cleanPlace($ev['place'] ?? '');
+                    if ($occu === '' && !empty($ev['type'])) {
+                        $occu = trim($ev['type']);
+                    }
+                    if ($occu !== '' && $place) {
+                        if (stripos($occu, $place) === false) {
+                            $occu .= " ({$place})";
+                        }
+                    } elseif ($occu === '' && $place) {
+                        $occu = $place;
+                    }
+                    if ($occu !== '' && !in_array($occu, $occupations, true)) {
+                        $occupations[] = $occu;
+                    }
                 }
             }
-            if (!$deathNote && !empty($ind['notes'])) {
-                $deathNote = $ind['notes'][0] ?? null;
-            }
+            $occupation = !empty($occupations) ? implode(', ', $occupations) : ($ind['occupation'] ?? null);
 
             return [
                 'id' => $ind['id'],
@@ -691,17 +714,18 @@ class GedcomController extends Controller
                 'all_names' => $ind['all_names'] ?? [],
                 'sex' => $ind['sex'] ?? 'U',
                 'birth_date' => $ind['birth_date'] ?? null,
-                'birth_place' => $ind['birth_place'] ?? null,
+                'birth_place' => GedcomParserService::cleanPlace($ind['birth_place'] ?? null),
                 'birth_year' => $ind['birth_year'] ?? null,
                 'death_date' => $ind['death_date'] ?? null,
-                'death_place' => $ind['death_place'] ?? null,
+                'death_place' => GedcomParserService::cleanPlace($ind['death_place'] ?? null),
                 'death_year' => $ind['death_year'] ?? null,
-                'death_note' => $deathNote,
+                'death_note' => null,
                 'burial_date' => $ind['burial_date'] ?? null,
-                'burial_place' => $ind['burial_place'] ?? null,
+                'burial_place' => GedcomParserService::cleanPlace($ind['burial_place'] ?? null),
+                'occupation' => $occupation,
                 'marriage_date' => $mInfo['date'],
                 'marriage_year' => $mInfo['year'],
-                'marriage_place' => $mInfo['place'],
+                'marriage_place' => GedcomParserService::cleanPlace($mInfo['place']),
                 'marriage_spouse_name' => $mInfo['spouse_name'],
                 'primary_media' => $ind['primary_media'] ?? null,
                 'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
@@ -726,40 +750,6 @@ class GedcomController extends Controller
             }
 
             return $node;
-        };
-
-        $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $formatPersonData, &$formatMiniSpouses) {
-            $siblingsList = [];
-            $ind = $data['individuals'][$personId] ?? null;
-            if (! $ind) return [];
-
-            $parentIds = $ind['parents'] ?? [];
-            $siblingIdsSet = [];
-
-            foreach ($parentIds as $pId) {
-                if (isset($data['individuals'][$pId])) {
-                    $parentInd = $data['individuals'][$pId];
-                    foreach ($parentInd['children'] ?? [] as $childId) {
-                        if ($childId !== $personId) {
-                            $siblingIdsSet[$childId] = true;
-                        }
-                    }
-                }
-            }
-
-            foreach (array_keys($siblingIdsSet) as $sibId) {
-                if ($allowedMap !== null && ! isset($allowedMap[$sibId])) {
-                    continue;
-                }
-                if (isset($data['individuals'][$sibId])) {
-                    $sib = $data['individuals'][$sibId];
-                    $sibData = $formatPersonData($sib);
-                    $sibData['spouses'] = $formatMiniSpouses($sib['spouses'] ?? []);
-                    $siblingsList[] = $sibData;
-                }
-            }
-
-            return $siblingsList;
         };
 
         $formatMiniSpouses = function (array $spouseIds, bool $includeDetails = false) use ($data, $allowedMap, $formatPersonData, $buildAncestorTree, &$getSiblingsForPerson) {
@@ -800,11 +790,66 @@ class GedcomController extends Controller
             return $node;
         };
 
+        $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $formatPersonData, &$formatMiniSpouses, &$buildDescendantTree, $descendantLevels) {
+            $siblingsList = [];
+            $ind = $data['individuals'][$personId] ?? null;
+            if (! $ind) return [];
+
+            $parentIds = $ind['parents'] ?? [];
+            $siblingIdsSet = [];
+
+            foreach ($parentIds as $pId) {
+                if (isset($data['individuals'][$pId])) {
+                    $parentInd = $data['individuals'][$pId];
+                    foreach ($parentInd['children'] ?? [] as $childId) {
+                        if ($childId !== $personId) {
+                            $siblingIdsSet[$childId] = true;
+                        }
+                    }
+                }
+            }
+
+            foreach (array_keys($siblingIdsSet) as $sibId) {
+                if ($allowedMap !== null && ! isset($allowedMap[$sibId])) {
+                    continue;
+                }
+                if (isset($data['individuals'][$sibId])) {
+                    $sib = $data['individuals'][$sibId];
+                    $sibData = $formatPersonData($sib);
+                    $sibData['spouses'] = $formatMiniSpouses($sib['spouses'] ?? []);
+
+                    if ($descendantLevels > 0) {
+                        $sibTree = $buildDescendantTree($sibId, 0);
+                        $sibData['children'] = $sibTree['children'] ?? [];
+                    } else {
+                        $sibData['children'] = [];
+                    }
+
+                    $siblingsList[] = $sibData;
+                }
+            }
+
+            usort($siblingsList, function ($a, $b) {
+                $yA = $a['birth_year'] ?? 9999;
+                $yB = $b['birth_year'] ?? 9999;
+                if ($yA !== $yB) {
+                    return $yA <=> $yB;
+                }
+                return strcmp($a['name'] ?? '', $b['name'] ?? '');
+            });
+
+            return $siblingsList;
+        };
+
         $focusInd = $data['individuals'][$id] ?? null;
         $primaryData = null;
         if ($focusInd) {
             $primaryData = $formatPersonData($focusInd);
             $primaryData['spouses'] = $formatMiniSpouses($focusInd['spouses'] ?? [], includeDetails: true);
+        }
+        $descendantsTree = $descendantLevels > 0 ? $buildDescendantTree($id) : null;
+        if ($primaryData && $descendantsTree) {
+            $primaryData['children'] = $descendantsTree['children'] ?? [];
         }
         $siblingsList = $focusInd ? $getSiblingsForPerson($id) : [];
 
@@ -953,7 +998,7 @@ class GedcomController extends Controller
 
         $cropsDir = storage_path('app/public/gedcom/crops');
         File::ensureDirectoryExists($cropsDir);
-        $cachedCropPath = $cropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+        $cachedCropPath = $cropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '_v2.jpg';
 
         if (!File::exists($cachedCropPath) || File::size($cachedCropPath) === 0) {
             $parser->cropFaceImage($sourcePath, $crop, $cachedCropPath);

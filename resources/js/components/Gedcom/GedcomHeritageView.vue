@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import {
     ZoomIn, ZoomOut, Maximize2, RefreshCcw, SlidersHorizontal,
     Expand, Shrink, ChevronRight, ChevronLeft, Search, Plus, Minus,
-    ArrowUp, ArrowDown, Sparkles
+    ArrowUp, ArrowDown, Sparkles, Users
 } from '@lucide/vue';
 import GedcomHeritageNode from './GedcomHeritageNode.vue';
 import GedcomHeritageAncestorNode from './GedcomHeritageAncestorNode.vue';
@@ -23,6 +23,7 @@ const treeData = ref<any>(null);
 const focusId = ref<string | null>(props.rootPersonId);
 const ancestorLevels = ref(2);
 const descendantLevels = ref(2);
+const showSiblings = ref(true);
 
 // Zoom and Pan
 const zoomLevel = ref(0.85);
@@ -350,6 +351,47 @@ const childrenList = computed(() => {
     return treeData.value?.descendants?.children || [];
 });
 
+// Combined sibling generation list: focused person + siblings
+// Sorted chronologically by birth year (with focused person flagged with is_primary: true)
+const siblingGeneration = computed(() => {
+    if (!primary.value) return [];
+
+    if (!showSiblings.value) {
+        return [
+            {
+                ...primary.value,
+                is_primary: true,
+                children: childrenList.value,
+                spouses: primarySpouse.value ? [primarySpouse.value] : []
+            }
+        ];
+    }
+
+    const sibs = (treeData.value?.siblings || []).map((s: any) => ({
+        ...s,
+        is_primary: false,
+    }));
+
+    const primaryEntry = {
+        ...primary.value,
+        is_primary: true,
+        children: childrenList.value,
+        spouses: primarySpouse.value ? [primarySpouse.value] : []
+    };
+
+    const all = [...sibs, primaryEntry];
+
+    // Sort chronologically by birth year
+    all.sort((a, b) => {
+        const yA = a.birth_year ?? 9999;
+        const yB = b.birth_year ?? 9999;
+        if (yA !== yB) return yA - yB;
+        return (a.name || '').localeCompare(b.name || '');
+    });
+
+    return all;
+});
+
 watch(
     [() => props.rootPersonId, ancestorLevels, descendantLevels],
     ([newId]) => {
@@ -401,7 +443,7 @@ onUnmounted(() => {
                     <SlidersHorizontal class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
                     <span>Heritage Chart</span>
                     <span class="text-[10px] text-slate-600 dark:text-slate-400 font-medium px-1 bg-slate-200/80 dark:bg-slate-700/60 rounded-md">
-                        {{ Math.round(zoomLevel * 100) }}% ({{ ancestorLevels }}A / {{ descendantLevels }}D)
+                        {{ Math.round(zoomLevel * 100) }}% ({{ ancestorLevels }}A / {{ descendantLevels }}D{{ showSiblings && treeData?.siblings?.length ? ' + Siblings' : '' }})
                     </span>
                     <ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
@@ -553,6 +595,30 @@ onUnmounted(() => {
                     </div>
                 </div>
 
+                <!-- Siblings Toggle Button -->
+                <div class="flex items-center border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
+                    <button
+                        @click="showSiblings = !showSiblings"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        :class="[
+                            showSiblings
+                                ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800/50 shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        ]"
+                        title="Toggle siblings and their descendants"
+                    >
+                        <Users class="w-3.5 h-3.5" />
+                        <span>Siblings</span>
+                        <span
+                            v-if="treeData?.siblings && treeData.siblings.length > 0"
+                            class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold"
+                            :class="showSiblings ? 'bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
+                        >
+                            {{ treeData.siblings.length }}
+                        </span>
+                    </button>
+                </div>
+
                 <!-- Search Input -->
                 <div class="relative min-w-[180px] border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
                     <div class="relative">
@@ -622,7 +688,7 @@ onUnmounted(() => {
             <!-- Scaled and Panned Canvas Content -->
             <div
                 ref="treeContentRef"
-                class="absolute top-0 left-0 min-w-max p-12 sm:p-24 flex flex-col items-center gap-16 shrink-0 transition-transform duration-75 ease-out"
+                class="absolute top-0 left-0 min-w-max p-8 sm:p-16 flex flex-col items-center gap-0 shrink-0 transition-transform duration-75 ease-out"
                 :style="{
                     transform: `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
                     transformOrigin: '0 0',
@@ -632,11 +698,11 @@ onUnmounted(() => {
                 <!-- ================= ANCESTORS SECTION (RECURSIVE MULTI-GENERATION) ================= -->
                 <div
                     v-if="ancestorLevels >= 1 && (focusParents.length > 0 || spouseParents.length > 0)"
-                    class="flex items-start justify-center gap-16 sm:gap-28"
+                    class="flex items-start justify-center gap-6 sm:gap-10"
                 >
                     <!-- Focus Person Ancestor Tree (Recursive Parents/Grandparents/Great-GP) -->
                     <div v-if="focusParents.length > 0" class="flex flex-col items-center">
-                        <div class="flex items-start justify-center gap-8 sm:gap-14 relative">
+                        <div class="flex items-start justify-center gap-4 sm:gap-6 relative">
                             <!-- Father Side Ancestors -->
                             <GedcomHeritageAncestorNode
                                 :person="focusParents[0]"
@@ -650,7 +716,7 @@ onUnmounted(() => {
                             <!-- Marriage Bar between Focus Person's Parents -->
                             <div
                                 v-if="focusParents.length > 1"
-                                class="absolute top-[148px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                             >
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
@@ -669,12 +735,12 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Drop Line down from Parents to Focus Person -->
-                        <div class="w-[3px] h-14 bg-slate-900 dark:bg-slate-300 mt-[-10px] z-0"></div>
+                        <div class="w-[3px] h-7 bg-slate-900 dark:bg-slate-300 mt-[-6px] z-0"></div>
                     </div>
 
                     <!-- Spouse Side Ancestor Tree (Recursive Parents/Grandparents/Great-GP) -->
                     <div v-if="spouseParents.length > 0" class="flex flex-col items-center">
-                        <div class="flex items-start justify-center gap-8 sm:gap-14 relative">
+                        <div class="flex items-start justify-center gap-4 sm:gap-6 relative">
                             <!-- Spouse Father Side Ancestors -->
                             <GedcomHeritageAncestorNode
                                 :person="spouseParents[0]"
@@ -688,7 +754,7 @@ onUnmounted(() => {
                             <!-- Marriage Bar between Spouse's Parents -->
                             <div
                                 v-if="spouseParents.length > 1"
-                                class="absolute top-[148px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                             >
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
@@ -707,80 +773,120 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Drop Line down from Spouse Parents to Spouse -->
-                        <div class="w-[3px] h-14 bg-slate-900 dark:bg-slate-300 mt-[-10px] z-0"></div>
+                        <div class="w-[3px] h-7 bg-slate-900 dark:bg-slate-300 mt-[-6px] z-0"></div>
                     </div>
                 </div>
 
-                <!-- ================= PRIMARY FOCUS INDIVIDUAL & SPOUSE ================= -->
-                <div v-if="primary" class="flex flex-col items-center relative">
-                    <!-- Primary Focus Row -->
-                    <div class="flex items-start gap-4 sm:gap-8 relative">
-                        <!-- Primary Individual -->
-                        <GedcomHeritageNode
-                            :person="primary"
-                            :spouse="primarySpouse"
-                            :is-primary="true"
-                            @select-person="handlePersonSelect"
-                            @change-root="handleChangeRoot"
-                        />
-
-                        <!-- Marriage Horizontal Bar with Anchor Pins -->
-                        <div
-                            v-if="primarySpouse"
-                            class="absolute top-[148px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
-                        >
-                            <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
-                            <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
-                        </div>
-
-                        <!-- Spouse of Primary -->
-                        <GedcomHeritageNode
-                            v-if="primarySpouse"
-                            :person="primarySpouse"
-                            :spouse="primary"
-                            @select-person="handlePersonSelect"
-                            @change-root="handleChangeRoot"
-                        />
-                    </div>
-
-                    <!-- Vertical Drop Line from Primary Marriage Bar down to Children -->
+                <!-- ================= SIBLINGS & PRIMARY GENERATION SECTION ================= -->
+                <div v-if="siblingGeneration.length > 0" class="flex flex-col items-center relative">
+                    <!-- Horizontal Distribution Bracket across All Siblings & Primary (when parents exist and there are multiple members) -->
                     <div
-                        v-if="descendantLevels >= 1 && childrenList.length > 0"
-                        class="w-[3px] h-14 bg-slate-900 dark:bg-slate-300 mt-[-10px] z-0"
-                    ></div>
-                </div>
-
-                <!-- ================= DESCENDANTS SECTION (RECURSIVE MULTI-GENERATION) ================= -->
-                <div
-                    v-if="descendantLevels >= 1 && childrenList.length > 0"
-                    class="flex flex-col items-center relative mt-[-20px]"
-                >
-                    <!-- Horizontal Distribution Bracket across Children -->
-                    <div
-                        v-if="childrenList.length > 1"
-                        class="h-[3px] bg-slate-900 dark:bg-slate-300 z-0 relative mb-4"
+                        v-if="focusParents.length > 0 && siblingGeneration.length > 1"
+                        class="h-[3px] bg-slate-900 dark:bg-slate-300 z-0 relative mb-3"
                         :style="{
-                            width: `calc(100% - ${childrenList.length === 2 ? '240px' : '260px'})`
+                            width: `calc(100% - ${siblingGeneration.length === 2 ? '230px' : '250px'})`
                         }"
                     ></div>
 
-                    <!-- Row of Children -->
-                    <div class="flex items-start justify-center gap-12 sm:gap-16 flex-wrap">
+                    <!-- Row of Siblings & Primary Couple Branches -->
+                    <div class="flex items-start justify-center gap-6 sm:gap-10 flex-wrap">
                         <div
-                            v-for="child in childrenList"
-                            :key="child.id"
+                            v-for="member in siblingGeneration"
+                            :key="member.id"
                             class="flex flex-col items-center relative"
                         >
-                            <!-- Vertical Drop Line into Child -->
-                            <div class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 -mt-4 mb-1 z-0"></div>
+                            <!-- Vertical Drop Line from Parents' Distribution Bracket into this Sibling/Primary -->
+                            <div
+                                v-if="focusParents.length > 0 && siblingGeneration.length > 1"
+                                class="w-[3px] h-4 bg-slate-900 dark:bg-slate-300 -mt-3 mb-1 z-0"
+                            ></div>
 
-                            <!-- Recursive Descendant Node for Child, Spouses, Grandchildren, etc. -->
-                            <GedcomHeritageDescendantNode
-                                :person="child"
-                                :level="1"
-                                @select-person="handlePersonSelect"
-                                @change-root="handleChangeRoot"
-                            />
+                            <!-- Couple Row: Member + Partner (if any) -->
+                            <div class="flex items-start gap-3 sm:gap-4 relative">
+                                <!-- Person Node (Primary or Sibling) -->
+                                <div class="relative flex flex-col items-center">
+                                    <span
+                                        v-if="member.is_primary"
+                                        class="absolute -top-3.5 z-20 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500 text-slate-950 border border-amber-300 shadow-md flex items-center gap-1"
+                                    >
+                                        <Sparkles class="w-2.5 h-2.5" />
+                                        Focused
+                                    </span>
+                                    <span
+                                        v-else
+                                        class="absolute -top-3.5 z-20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 shadow-xs"
+                                    >
+                                        {{ member.sex === 'M' ? 'Brother' : (member.sex === 'F' ? 'Sister' : 'Sibling') }}
+                                    </span>
+
+                                    <GedcomHeritageNode
+                                        :person="member"
+                                        :spouse="member.spouses?.[0]"
+                                        :is-primary="member.is_primary"
+                                        @select-person="handlePersonSelect"
+                                        @change-root="handleChangeRoot"
+                                    />
+                                </div>
+
+                                <!-- Marriage Horizontal Bar with Anchor Pins -->
+                                <div
+                                    v-if="member.spouses && member.spouses.length > 0"
+                                    class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                >
+                                    <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
+                                    <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
+                                </div>
+
+                                <!-- Partner / Spouse Node -->
+                                <GedcomHeritageNode
+                                    v-if="member.spouses && member.spouses.length > 0"
+                                    :person="member.spouses[0]"
+                                    :spouse="member"
+                                    @select-person="handlePersonSelect"
+                                    @change-root="handleChangeRoot"
+                                />
+                            </div>
+
+                            <!-- Vertical Drop Line from Couple down to Children Bracket -->
+                            <div
+                                v-if="descendantLevels >= 1 && member.children && member.children.length > 0"
+                                class="w-[3px] h-7 bg-slate-900 dark:bg-slate-300 mt-[-6px] z-0"
+                            ></div>
+
+                            <!-- Descendants of this Member & Spouse (Recursive Multi-Generation) -->
+                            <div
+                                v-if="descendantLevels >= 1 && member.children && member.children.length > 0"
+                                class="flex flex-col items-center relative mt-[-14px]"
+                            >
+                                <!-- Horizontal Distribution Bracket across Children -->
+                                <div
+                                    v-if="member.children.length > 1"
+                                    class="h-[3px] bg-slate-900 dark:bg-slate-300 z-0 relative mb-2"
+                                    :style="{
+                                        width: `calc(100% - ${member.children.length === 2 ? '230px' : '240px'})`
+                                    }"
+                                ></div>
+
+                                <!-- Row of Children -->
+                                <div class="flex items-start justify-center gap-4 sm:gap-6 flex-wrap">
+                                    <div
+                                        v-for="child in member.children"
+                                        :key="child.id"
+                                        class="flex flex-col items-center relative"
+                                    >
+                                        <!-- Vertical Drop Line into Child -->
+                                        <div class="w-[3px] h-3.5 bg-slate-900 dark:bg-slate-300 -mt-2 mb-0.5 z-0"></div>
+
+                                        <!-- Recursive Descendant Node for Child, Spouses, Grandchildren, etc. -->
+                                        <GedcomHeritageDescendantNode
+                                            :person="child"
+                                            :level="1"
+                                            @select-person="handlePersonSelect"
+                                            @change-root="handleChangeRoot"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
