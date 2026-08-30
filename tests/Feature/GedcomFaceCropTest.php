@@ -393,7 +393,7 @@ GEDCOM;
         $this->actingAs($superuser);
 
         $mediaFile = storage_path('app/public/gedcom/media/synth_portrait.jpg');
-        $cropFile = storage_path('app/public/gedcom/crops/ISYNTH_synth_portrait.jpg');
+        $cropFile = storage_path('app/public/gedcom/crops/ISYNTH_synth_portrait_v2.jpg');
 
         if (extension_loaded('gd')) {
             $img = imagecreatetruecolor(200, 200);
@@ -543,5 +543,51 @@ GEDCOM;
 
         $response = $this->get(route('gedcom.storage.crops', ['filename' => 'non_existent_crop.jpg']));
         $response->assertNotFound();
+    }
+
+    public function test_cropFaceImage_preserves_aspect_ratio_without_distortion()
+    {
+        if (!extension_loaded('gd')) {
+            $this->markTestSkipped('GD extension not loaded.');
+        }
+
+        $sourceFile = storage_path('app/public/gedcom/media/test_asymmetric.jpg');
+        $destFile = storage_path('app/public/gedcom/crops/test_asymmetric_crop.jpg');
+
+        $src = imagecreatetruecolor(400, 800);
+        $blue = imagecolorallocate($src, 0, 0, 255);
+        $red = imagecolorallocate($src, 255, 0, 0);
+        imagefill($src, 0, 0, $blue);
+        imagefilledrectangle($src, 100, 150, 300, 350, $red);
+        imagejpeg($src, $sourceFile);
+        imagedestroy($src);
+
+        $parser = new GedcomParserService();
+
+        // 1. Test whole image crop
+        $success = $parser->cropFaceImage($sourceFile, ['x' => 0.0, 'y' => 0.0, 'width' => 1.0, 'height' => 1.0], $destFile);
+        $this->assertTrue($success);
+        $this->assertFileExists($destFile);
+
+        $info = getimagesize($destFile);
+        $this->assertEquals(320, $info[0]);
+        $this->assertEquals(320, $info[1]);
+
+        // 2. Test asymmetric face crop (width 100, height 200)
+        $successFace = $parser->cropFaceImage($sourceFile, [
+            'left' => 100,
+            'top' => 150,
+            'width_px' => 100,
+            'height_px' => 200,
+        ], $destFile);
+        $this->assertTrue($successFace);
+        $this->assertFileExists($destFile);
+
+        $infoFace = getimagesize($destFile);
+        $this->assertEquals(320, $infoFace[0]);
+        $this->assertEquals(320, $infoFace[1]);
+
+        File::delete($sourceFile);
+        File::delete($destFile);
     }
 }

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 <template>
     <div class="flex flex-col items-center relative">
         <!-- Person & Spouse(s) Row -->
-        <div class="flex items-start gap-3 sm:gap-5 relative">
+        <div class="flex items-start gap-2.5 sm:gap-3.5 relative">
             <!-- Main Person Node -->
             <GedcomHeritageNode
                 :person="person"
@@ -28,7 +28,7 @@ const emit = defineEmits<{
             <!-- Marriage Horizontal Bar with Anchor Pins -->
             <div
                 v-if="person.spouses && person.spouses.length > 0"
-                class="absolute top-[148px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
             >
                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
@@ -45,28 +45,28 @@ const emit = defineEmits<{
         </div>
 
         <!-- Children Section Below (Recursive) -->
-        <div v-if="person.children && person.children.length > 0" class="flex flex-col items-center relative mt-3">
+        <div v-if="person.children && person.children.length > 0" class="flex flex-col items-center relative mt-1">
             <!-- Vertical Drop Line from Couple down to Sibling Bar -->
-            <div class="w-[3px] h-12 bg-slate-900 dark:bg-slate-300 mt-[-14px] z-0"></div>
+            <div class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 mt-[-8px] z-0"></div>
 
             <!-- Horizontal Distribution Sibling Bracket -->
             <div
                 v-if="person.children.length > 1"
-                class="h-[3px] bg-slate-900 dark:bg-slate-300 z-0 relative mb-4"
+                class="h-[3px] bg-slate-900 dark:bg-slate-300 z-0 relative mb-2"
                 :style="{
-                    width: `calc(100% - ${person.children.length === 2 ? '240px' : '260px'})`
+                    width: `calc(100% - ${person.children.length === 2 ? '230px' : '240px'})`
                 }"
             ></div>
 
             <!-- Row of Children -->
-            <div class="flex items-start justify-center gap-10 sm:gap-14 flex-wrap">
+            <div class="flex items-start justify-center gap-4 sm:gap-6 flex-wrap">
                 <div
                     v-for="child in person.children"
                     :key="child.id"
                     class="flex flex-col items-center relative"
                 >
                     <!-- Vertical Drop Line into Child -->
-                    <div class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 -mt-4 mb-1 z-0"></div>
+                    <div class="w-[3px] h-3.5 bg-slate-900 dark:bg-slate-300 -mt-2 mb-0.5 z-0"></div>
 
                     <!-- Recursive Child Descendant Node -->
                     <GedcomHeritageDescendantNode
@@ -80,7 +80,7 @@ const emit = defineEmits<{
         </div>
 
         <!-- Load More Descendants Button if at leaf of tree -->
-        <div v-else class="mt-3">
+        <div v-else class="mt-1.5">
             <button
                 @click.stop="emit('change-root', person.id)"
                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-all shadow-xs hover:scale-105 cursor-pointer"

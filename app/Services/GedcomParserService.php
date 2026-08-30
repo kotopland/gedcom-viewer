@@ -20,6 +20,18 @@ class GedcomParserService
         File::ensureDirectoryExists($this->storageCropsDir);
     }
 
+    public static function cleanPlace(?string $place): ?string
+    {
+        if ($place === null || trim($place) === '') {
+            return null;
+        }
+        $parts = array_filter(array_map('trim', explode(',', $place)), fn($p) => $p !== '');
+        if (empty($parts)) {
+            return null;
+        }
+        return implode(', ', $parts);
+    }
+
     public function findActiveZipPath(): string
     {
         $dir = storage_path('app/private');
@@ -57,7 +69,7 @@ class GedcomParserService
         if (!$forceRefresh && File::exists($this->cachePath)) {
             $content = File::get($this->cachePath);
             $decoded = json_decode($content, true);
-            if ($decoded && is_array($decoded)) {
+            if ($decoded && is_array($decoded) && !empty($decoded['individuals'])) {
                 return $decoded;
             }
         }
@@ -71,6 +83,10 @@ class GedcomParserService
 
         if ($clearMedia && File::exists($this->storageMediaDir)) {
             File::cleanDirectory($this->storageMediaDir);
+        }
+
+        if (File::exists($this->storageCropsDir)) {
+            File::cleanDirectory($this->storageCropsDir);
         }
 
         $this->extractMediaFiles();
@@ -683,7 +699,7 @@ class GedcomParserService
                         if ($bsub['tag'] === 'DATE') {
                             $birthDate = $bsub['value'];
                         } elseif ($bsub['tag'] === 'PLAC') {
-                            $birthPlace = $bsub['value'];
+                            $birthPlace = self::cleanPlace($bsub['value'] ?? '');
                         }
                     }
                 } elseif ($sub['tag'] === 'DEAT') {
@@ -691,7 +707,7 @@ class GedcomParserService
                         if ($dsub['tag'] === 'DATE') {
                             $deathDate = $dsub['value'];
                         } elseif ($dsub['tag'] === 'PLAC') {
-                            $deathPlace = $dsub['value'];
+                            $deathPlace = self::cleanPlace($dsub['value'] ?? '');
                         }
                     }
                 } elseif ($sub['tag'] === 'BURI') {
@@ -699,7 +715,7 @@ class GedcomParserService
                         if ($busub['tag'] === 'DATE') {
                             $burialDate = $busub['value'];
                         } elseif ($busub['tag'] === 'PLAC') {
-                            $burialPlace = $busub['value'];
+                            $burialPlace = self::cleanPlace($busub['value'] ?? '');
                         }
                     }
                 } elseif ($sub['tag'] === 'FAMS') {
@@ -793,6 +809,32 @@ class GedcomParserService
                 $deathYear = (int) $ymd[1];
             }
 
+            $occupations = [];
+            foreach ($events as $ev) {
+                if (($ev['tag'] ?? '') === 'OCCU') {
+                    $occu = trim($ev['value'] ?? '');
+                    $place = '';
+                    if (!empty($ev['place'])) {
+                        $parts = array_filter(array_map('trim', explode(',', $ev['place'])));
+                        $place = implode(', ', $parts);
+                    }
+                    if ($occu === '' && !empty($ev['type'])) {
+                        $occu = trim($ev['type']);
+                    }
+                    if ($occu !== '' && $place !== '') {
+                        if (stripos($occu, $place) === false) {
+                            $occu .= " ({$place})";
+                        }
+                    } elseif ($occu === '' && $place !== '') {
+                        $occu = $place;
+                    }
+                    if ($occu !== '' && !in_array($occu, $occupations, true)) {
+                        $occupations[] = $occu;
+                    }
+                }
+            }
+            $primaryOccupation = !empty($occupations) ? implode(', ', $occupations) : null;
+
             $individuals[$id] = [
                 'id' => $id,
                 'name' => $name ?: 'Unknown Person',
@@ -808,6 +850,7 @@ class GedcomParserService
                 'death_year' => $deathYear,
                 'burial_date' => $burialDate,
                 'burial_place' => $burialPlace,
+                'occupation' => $primaryOccupation,
                 'fams' => $fams,
                 'famc' => $famc,
                 'media_ids' => array_values(array_unique($mediaIds)),
@@ -844,7 +887,7 @@ class GedcomParserService
                         if ($msub['tag'] === 'DATE') {
                             $marrDate = $msub['value'];
                         } elseif ($msub['tag'] === 'PLAC') {
-                            $marrPlace = $msub['value'];
+                            $marrPlace = self::cleanPlace($msub['value'] ?? '');
                         }
                     }
                 } elseif ($sub['tag'] === 'OBJE') {
@@ -885,7 +928,7 @@ class GedcomParserService
             if ($cTag === 'DATE') {
                 $date = $cVal;
             } elseif ($cTag === 'PLAC') {
-                $place = $cVal;
+                $place = self::cleanPlace($cVal);
             } elseif ($cTag === 'TYPE') {
                 $type = $cVal;
             } elseif ($cTag === 'NOTE') {
@@ -931,7 +974,7 @@ class GedcomParserService
         };
     }
 
-    public function generatePortraitCrops(array &$individuals, array $objMap): void
+    public function generatePortraitCrops(array &$individuals, array $objMap, bool $force = false): void
     {
         File::ensureDirectoryExists($this->storageCropsDir);
 
@@ -948,7 +991,7 @@ class GedcomParserService
 
             $targetId = $ind['id'];
             $filename = $primary['file'];
-            $destPath = $this->storageCropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+            $destPath = $this->storageCropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '_v2.jpg';
 
             $sourcePath = $this->storageMediaDir . '/' . $filename;
             if (!File::exists($sourcePath)) {
@@ -959,7 +1002,7 @@ class GedcomParserService
                 continue;
             }
 
-            if (!File::exists($destPath) || File::size($destPath) === 0) {
+            if ($force || !File::exists($destPath) || File::size($destPath) === 0) {
                 $this->cropFaceImage($sourcePath, $crop, $destPath);
             }
 
@@ -1014,21 +1057,39 @@ class GedcomParserService
         $width = max(1, min($origW - $left, (int) $width));
         $height = max(1, min($origH - $top, (int) $height));
 
-        $centerX = $left + $width / 2;
-        $centerY = $top + $height / 2;
-        $faceSize = max($width, $height);
-        $boxSize = (int) round($faceSize * 1.15);
+        $isWholeImage = ($width >= (int) round($origW * 0.95) && $height >= (int) round($origH * 0.95));
 
-        $cropX = max(0, min($origW - $boxSize, (int) round($centerX - $boxSize / 2)));
-        $cropY = max(0, min($origH - $boxSize, (int) round($centerY - $boxSize / 2)));
-        $cropW = min($origW - $cropX, $boxSize);
-        $cropH = min($origH - $cropY, $boxSize);
+        if ($isWholeImage) {
+            // Whole photo is designated as portrait: cut a 1:1 square from the image without stretching
+            $boxSize = min($origW, $origH);
+            if ($origW > $origH) {
+                // Landscape: center horizontally
+                $cropX = (int) round(($origW - $boxSize) / 2.0);
+                $cropY = 0;
+            } else {
+                // Portrait/tall: center horizontally, frame head & shoulders from the upper area
+                $cropX = 0;
+                $cropY = max(0, min($origH - $boxSize, (int) round(($origH - $boxSize) * 0.15)));
+            }
+        } else {
+            // Specific face crop box: center a 1:1 square around the face with natural breathing room
+            $centerX = $left + $width / 2.0;
+            $centerY = $top + $height / 2.0;
 
-        if ($cropW < 20 || $cropH < 20) {
-            $cropX = $left;
-            $cropY = $top;
-            $cropW = $width;
-            $cropH = $height;
+            $faceSize = max($width, $height);
+            $boxSize = (int) round($faceSize * 1.35);
+
+            // Cannot exceed image dimensions
+            $boxSize = min($boxSize, min($origW, $origH));
+            $boxSize = max(1, $boxSize);
+
+            // Center box around the face center point
+            $cropX = (int) round($centerX - $boxSize / 2.0);
+            $cropY = (int) round($centerY - $boxSize / 2.0);
+
+            // Clamp so the square never exceeds image boundaries
+            $cropX = max(0, min($origW - $boxSize, $cropX));
+            $cropY = max(0, min($origH - $boxSize, $cropY));
         }
 
         $avatarSize = 320;
@@ -1037,7 +1098,9 @@ class GedcomParserService
         $white = imagecolorallocate($dst, 255, 255, 255);
         imagefill($dst, 0, 0, $white);
 
-        imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $avatarSize, $avatarSize, $cropW, $cropH);
+        // Always copy a true square ($boxSize x $boxSize) into a true square ($avatarSize x $avatarSize)
+        // guaranteeing 100% distortion-free natural proportions!
+        imagecopyresampled($dst, $src, 0, 0, $cropX, $cropY, $avatarSize, $avatarSize, $boxSize, $boxSize);
 
         File::ensureDirectoryExists(dirname($destPath));
         imagejpeg($dst, $destPath, 90);
