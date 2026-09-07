@@ -864,7 +864,7 @@ onUnmounted(() => {
                             <!-- Marriage Bar between Focus Person's Parents (only when parents have no parents above them) -->
                             <div
                                 v-if="focusParents.length > 1 && (!focusParents[0].parents || focusParents[0].parents.length === 0) && (!focusParents[1].parents || focusParents[1].parents.length === 0)"
-                                class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                class="absolute top-[250px] left-[254px] right-[254px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                             >
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
@@ -905,7 +905,7 @@ onUnmounted(() => {
                             <!-- Marriage Bar between Spouse's Parents (only when parents have no parents above them) -->
                             <div
                                 v-if="spouseParents.length > 1 && (!spouseParents[0].parents || spouseParents[0].parents.length === 0) && (!spouseParents[1].parents || spouseParents[1].parents.length === 0)"
-                                class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                class="absolute top-[250px] left-[254px] right-[254px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                             >
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                                 <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
@@ -945,12 +945,12 @@ onUnmounted(() => {
                                 :class="[
                                     sIdx === 0
                                         ? (member.is_primary && member.spouses && member.spouses.length > 0
-                                            ? 'left-[calc(50%-116px)] sm:left-[calc(50%-118px)] right-0'
+                                            ? 'left-[calc(50%-138px)] sm:left-[calc(50%-140px)] right-0'
                                             : 'left-1/2 right-0')
                                         : '',
                                     sIdx === siblingGeneration.length - 1
                                         ? (member.is_primary && member.spouses && member.spouses.length > 0
-                                            ? 'left-0 right-[calc(50%-116px)] sm:right-[calc(50%-118px)]'
+                                            ? 'left-0 right-[calc(50%-138px)] sm:right-[calc(50%-140px)]'
                                             : 'left-0 right-1/2')
                                         : '',
                                     sIdx > 0 && sIdx < siblingGeneration.length - 1 ? 'left-0 right-0' : ''
@@ -960,7 +960,7 @@ onUnmounted(() => {
                             <!-- Horizontal Bar above Focused Person with Spouse -->
                             <div
                                 v-if="focusParents.length > 0 && member.is_primary && member.spouses && member.spouses.length > 0"
-                                class="absolute top-0 left-[calc(50%-116px)] right-[calc(50%-116px)] sm:left-[calc(50%-118px)] sm:right-[calc(50%-118px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                class="absolute top-0 left-[calc(50%-138px)] right-[calc(50%-138px)] sm:left-[calc(50%-140px)] sm:right-[calc(50%-140px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                             ></div>
 
                             <!-- Vertical Drop Line from Parents' Bracket into this Sibling/Primary -->
@@ -985,7 +985,7 @@ onUnmounted(() => {
                                 <!-- Marriage Horizontal Bar with Anchor Pins (only for primary couple) -->
                                 <div
                                     v-if="member.is_primary && member.spouses && member.spouses.length > 0"
-                                    class="absolute top-[223px] left-[210px] right-[210px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                    class="absolute top-[250px] left-[254px] right-[254px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                                 >
                                     <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                                     <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
@@ -1026,12 +1026,12 @@ onUnmounted(() => {
                                             :class="[
                                                 cIdx === 0
                                                     ? (child.spouses && child.spouses.length > 0
-                                                        ? 'left-[calc(50%-115px)] sm:left-[calc(50%-117px)] right-0'
+                                                        ? 'left-[calc(50%-137px)] sm:left-[calc(50%-139px)] right-0'
                                                         : 'left-1/2 right-0')
                                                     : '',
                                                 cIdx === member.children.length - 1
                                                     ? (child.spouses && child.spouses.length > 0
-                                                        ? 'left-0 right-[calc(50%-115px)] sm:right-[calc(50%-117px)]'
+                                                        ? 'left-0 right-[calc(50%-137px)] sm:right-[calc(50%-139px)]'
                                                         : 'left-0 right-1/2')
                                                     : '',
                                                 cIdx > 0 && cIdx < member.children.length - 1 ? 'left-0 right-0' : ''
@@ -1041,7 +1041,7 @@ onUnmounted(() => {
                                         <!-- Horizontal Bar above Single Child with Spouse/Partner -->
                                         <div
                                             v-if="member.children.length === 1 && child.spouses && child.spouses.length > 0"
-                                            class="absolute top-0 left-[calc(50%-115px)] right-[calc(50%-115px)] sm:left-[calc(50%-117px)] sm:right-[calc(50%-117px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                            class="absolute top-0 left-[calc(50%-137px)] right-[calc(50%-137px)] sm:left-[calc(50%-139px)] sm:right-[calc(50%-139px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                                         ></div>
 
                                         <!-- Recursive Descendant Node for Child, Spouses, Grandchildren, etc. -->
