@@ -62,7 +62,7 @@ const formatPlace = (place?: string | null) => {
     <div
         @click="emit('select-person', person.id)"
         data-clickable="true"
-        class="heritage-node-card group relative flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] select-none w-[220px] h-[416px] shrink-0"
+        class="heritage-node-card group relative flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] select-none w-[264px] h-[460px] shrink-0"
     >
         <!-- Floating Focus Quick-Button on Hover -->
         <button
@@ -74,11 +74,11 @@ const formatPlace = (place?: string | null) => {
         </button>
 
         <!-- 1. Circular Portrait Avatar (matching name box width) -->
-        <div class="relative z-10 w-full px-1 mb-[-12px] flex justify-center">
+        <div class="relative z-10 w-full px-0.5 mb-[-36px] flex justify-center">
             <div
                 @click.stop="emit('select-person', person.id)"
                 data-clickable="true"
-                class="w-[212px] h-[212px] shrink-0 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40 cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:ring-4 hover:ring-indigo-500/50"
+                class="w-[260px] h-[260px] shrink-0 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40 cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:ring-4 hover:ring-indigo-500/50"
                 title="View person details"
             >
                 <img
@@ -89,18 +89,18 @@ const formatPlace = (place?: string | null) => {
                     loading="lazy"
                 />
                 <div v-else class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-slate-500 dark:text-slate-400 pointer-events-none">
-                    <User class="w-16 h-16 stroke-[1.5]" />
-                    <span class="text-[10px] font-serif uppercase tracking-widest mt-1.5 opacity-70">
+                    <User class="w-24 h-24 stroke-[1.5]" />
+                    <span class="text-xs font-serif uppercase tracking-widest mt-2.5 opacity-75">
                         {{ person.sex === 'M' ? 'Male' : (person.sex === 'F' ? 'Female' : 'Individual') }}
                     </span>
                 </div>
             </div>
         </div>
 
-        <!-- 2. Dark Stylized Name Banner (always two line height) -->
-        <div class="relative z-10 w-full px-1">
+        <!-- 2. Dark Stylized Name Banner (moved slightly into portrait picture with larger text) -->
+        <div class="relative z-20 w-full px-0.5">
             <div
-                class="heritage-banner relative h-[46px] flex items-center justify-center px-2.5 rounded-md text-center shadow-lg transition-colors"
+                class="heritage-banner relative h-[52px] flex items-center justify-center px-2.5 rounded-md text-center shadow-xl transition-colors"
                 :class="[
                     isPrimary
                         ? 'bg-gradient-to-b from-slate-900 via-slate-850 to-slate-950 border border-slate-700 text-slate-100'
@@ -108,14 +108,14 @@ const formatPlace = (place?: string | null) => {
                 ]"
             >
                 <!-- 4 Corner Rivet / Metallic Accents -->
-                <span class="absolute top-1 left-1 w-1 h-1 rounded-full bg-slate-400/60 dark:bg-amber-300/40"></span>
-                <span class="absolute top-1 right-1 w-1 h-1 rounded-full bg-slate-400/60 dark:bg-amber-300/40"></span>
-                <span class="absolute bottom-1 left-1 w-1 h-1 rounded-full bg-slate-400/60 dark:bg-amber-300/40"></span>
-                <span class="absolute bottom-1 right-1 w-1 h-1 rounded-full bg-slate-400/60 dark:bg-amber-300/40"></span>
+                <span class="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
+                <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
+                <span class="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
+                <span class="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
 
-                <!-- Name in Stylized Serif Typography (always 2-line height) -->
+                <!-- Name in Stylized Serif Typography (larger, readable font) -->
                 <div
-                    class="heritage-font text-[11px] sm:text-[12px] font-bold tracking-[0.12em] uppercase leading-[1.25] px-1 line-clamp-2 w-full text-center"
+                    class="heritage-font text-[14px] sm:text-[15px] font-bold tracking-[0.07em] uppercase leading-[1.22] px-1.5 line-clamp-2 w-full text-center"
                     :title="displayName"
                 >
                     {{ displayName }}
@@ -123,16 +123,16 @@ const formatPlace = (place?: string | null) => {
             </div>
         </div>
 
-        <!-- 3. Aligned Vital Statistics Table (fixed height for perfect row alignment) -->
-        <div class="w-full h-[170px] pt-2.5 px-1 pb-1 space-y-1.5 text-[11px] font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start">
+        <!-- 3. Aligned Vital Statistics Table (larger text for clear readability & A3 print) -->
+        <div class="w-full h-[184px] pt-3 px-1 pb-1 space-y-1.5 text-[13px] sm:text-[13.5px] font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start">
             <!-- Birth -->
             <div v-if="person.birth_date || person.birth_year || formatPlace(person.birth_place)" class="flex items-start justify-between gap-1.5">
-                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Birth</span>
+                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Birth</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.birth_date || person.birth_year" class="font-medium text-slate-900 dark:text-white">
+                    <div v-if="person.birth_date || person.birth_year" class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
                         {{ formatVal(person.birth_date) || person.birth_year }}
                     </div>
-                    <div v-if="formatPlace(person.birth_place)" class="text-[10px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.birth_place)">
+                    <div v-if="formatPlace(person.birth_place)" class="text-[12px] sm:text-[12.5px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.birth_place)">
                         {{ formatPlace(person.birth_place) }}
                     </div>
                 </div>
@@ -140,11 +140,11 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Marriage / Civil Partnership -->
             <div v-if="person.marriage_date || person.marriage_year || (person.marriage_type && person.marriage_type !== 'Marriage')" class="flex items-start justify-between gap-1.5">
-                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">
+                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">
                     {{ person.marriage_type || person.relationship_type || 'Marriage' }}
                 </span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.marriage_date || person.marriage_year" class="font-medium text-slate-900 dark:text-white">
+                    <div v-if="person.marriage_date || person.marriage_year" class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
                         {{ formatVal(person.marriage_date) || person.marriage_year }}
                     </div>
                 </div>
@@ -152,9 +152,9 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Occupation -->
             <div v-if="person.occupation" class="flex items-start justify-between gap-1.5">
-                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Occupation</span>
+                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Occupation</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div class="font-medium text-slate-900 dark:text-white truncate" :title="person.occupation">
+                    <div class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px] truncate" :title="person.occupation">
                         {{ person.occupation }}
                     </div>
                 </div>
@@ -162,12 +162,12 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Death -->
             <div v-if="person.death_date || person.death_year || formatPlace(person.death_place)" class="flex items-start justify-between gap-1.5">
-                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Death</span>
+                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Death</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.death_date || person.death_year" class="font-medium text-slate-900 dark:text-white">
+                    <div v-if="person.death_date || person.death_year" class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
                         {{ formatVal(person.death_date) || person.death_year }}
                     </div>
-                    <div v-if="formatPlace(person.death_place)" class="text-[10px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.death_place)">
+                    <div v-if="formatPlace(person.death_place)" class="text-[12px] sm:text-[12.5px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.death_place)">
                         {{ formatPlace(person.death_place) }}
                     </div>
                 </div>
@@ -175,9 +175,9 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Burial -->
             <div v-if="person.burial_date" class="flex items-start justify-between gap-1.5">
-                <span class="font-normal text-slate-700 dark:text-slate-300 shrink-0 text-left">Burial</span>
+                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Burial</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div class="font-medium text-slate-900 dark:text-white">
+                    <div class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
                         {{ formatVal(person.burial_date) }}
                     </div>
                 </div>
@@ -191,7 +191,7 @@ const formatPlace = (place?: string | null) => {
 
 .heritage-font {
     font-family: 'Cinzel', 'Marcellus', 'Trajan Pro', 'Papyrus', 'Georgia', serif;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.07em;
 }
 
 .heritage-banner {
