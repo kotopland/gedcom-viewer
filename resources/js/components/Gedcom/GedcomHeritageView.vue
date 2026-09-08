@@ -834,7 +834,7 @@ onUnmounted(() => {
             <!-- Scaled and Panned Canvas Content -->
             <div
                 ref="treeContentRef"
-                class="absolute top-0 left-0 min-w-max p-8 sm:p-16 flex flex-col items-center gap-0 shrink-0 transition-transform duration-75 ease-out"
+                class="absolute top-0 left-0 min-w-max p-4 sm:p-8 flex flex-col items-center gap-0 shrink-0 transition-transform duration-75 ease-out"
                 :style="{
                     transform: `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
                     transformOrigin: '0 0',
@@ -844,13 +844,13 @@ onUnmounted(() => {
                 <!-- ================= ANCESTORS SECTION (RECURSIVE MULTI-GENERATION) ================= -->
                 <div
                     v-if="ancestorLevels >= 1 && (focusParents.length > 0 || spouseParents.length > 0)"
-                    class="flex items-start justify-center gap-6 sm:gap-10 mb-8 sm:mb-12"
+                    class="flex items-start justify-center gap-2 sm:gap-3 mb-3 sm:mb-4"
                 >
                     <!-- Focus Person Ancestor Tree (Recursive Parents/Grandparents/Great-GP) -->
                     <div v-if="focusParents.length > 0" class="flex flex-col items-center">
                         <div class="flex items-start justify-center relative">
                             <!-- Father Side Ancestors Column -->
-                            <div class="flex flex-col items-center relative px-2 sm:px-4">
+                            <div class="flex flex-col items-center relative px-1 sm:px-1.5">
                                 <GedcomHeritageAncestorNode
                                     :person="focusParents[0]"
                                     :level="1"
@@ -873,7 +873,7 @@ onUnmounted(() => {
                             <!-- Mother Side Ancestors Column -->
                             <div
                                 v-if="focusParents.length > 1"
-                                class="flex flex-col items-center relative px-2 sm:px-4"
+                                class="flex flex-col items-center relative px-1 sm:px-1.5"
                             >
                                 <GedcomHeritageAncestorNode
                                     :person="focusParents[1]"
@@ -891,7 +891,7 @@ onUnmounted(() => {
                     <div v-if="spouseParents.length > 0" class="flex flex-col items-center">
                         <div class="flex items-start justify-center relative">
                             <!-- Spouse Father Side Ancestors Column -->
-                            <div class="flex flex-col items-center relative px-2 sm:px-4">
+                            <div class="flex flex-col items-center relative px-1 sm:px-1.5">
                                 <GedcomHeritageAncestorNode
                                     :person="spouseParents[0]"
                                     :level="1"
@@ -914,7 +914,7 @@ onUnmounted(() => {
                             <!-- Spouse Mother Side Ancestors Column -->
                             <div
                                 v-if="spouseParents.length > 1"
-                                class="flex flex-col items-center relative px-2 sm:px-4"
+                                class="flex flex-col items-center relative px-1 sm:px-1.5"
                             >
                                 <GedcomHeritageAncestorNode
                                     :person="spouseParents[1]"
@@ -936,7 +936,7 @@ onUnmounted(() => {
                         <div
                             v-for="(member, sIdx) in siblingGeneration"
                             :key="member.id"
-                            class="flex flex-col items-center relative px-3 sm:px-5"
+                            class="flex flex-col items-center relative px-1.5 sm:px-2.5"
                         >
                             <!-- Horizontal Distribution Bracket across Siblings (when parents exist & multiple siblings) -->
                             <div
@@ -945,12 +945,12 @@ onUnmounted(() => {
                                 :class="[
                                     sIdx === 0
                                         ? (member.is_primary && member.spouses && member.spouses.length > 0
-                                            ? 'left-[calc(50%-138px)] sm:left-[calc(50%-140px)] right-0'
+                                            ? 'left-[calc(50%-136px)] sm:left-[calc(50%-137px)] right-0'
                                             : 'left-1/2 right-0')
                                         : '',
                                     sIdx === siblingGeneration.length - 1
                                         ? (member.is_primary && member.spouses && member.spouses.length > 0
-                                            ? 'left-0 right-[calc(50%-138px)] sm:right-[calc(50%-140px)]'
+                                            ? 'left-0 right-[calc(50%-136px)] sm:right-[calc(50%-137px)]'
                                             : 'left-0 right-1/2')
                                         : '',
                                     sIdx > 0 && sIdx < siblingGeneration.length - 1 ? 'left-0 right-0' : ''
@@ -960,17 +960,17 @@ onUnmounted(() => {
                             <!-- Horizontal Bar above Focused Person with Spouse -->
                             <div
                                 v-if="focusParents.length > 0 && member.is_primary && member.spouses && member.spouses.length > 0"
-                                class="absolute top-0 left-[calc(50%-138px)] right-[calc(50%-138px)] sm:left-[calc(50%-140px)] sm:right-[calc(50%-140px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                class="absolute top-0 left-[calc(50%-136px)] right-[calc(50%-136px)] sm:left-[calc(50%-137px)] sm:right-[calc(50%-137px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                             ></div>
 
                             <!-- Vertical Drop Line from Parents' Bracket into this Sibling/Primary -->
                             <div
                                 v-if="focusParents.length > 0"
-                                class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 z-0 mb-1"
+                                class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0 mb-0.5"
                             ></div>
 
                             <!-- Couple Row: Member + Partner (if any) -->
-                            <div class="flex items-start gap-3 sm:gap-4 relative">
+                            <div class="flex items-start gap-2 sm:gap-2.5 relative">
                                 <!-- Person Node (Primary or Sibling) -->
                                 <div class="relative flex flex-col items-center">
                                     <GedcomHeritageNode
@@ -1004,7 +1004,7 @@ onUnmounted(() => {
                             <!-- Vertical Drop Line from Couple down to Children Bracket (only for primary couple) -->
                             <div
                                 v-if="member.is_primary && descendantLevels >= 1 && member.children && member.children.length > 0"
-                                class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 z-0"
+                                class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0"
                             ></div>
 
                             <!-- Descendants of this Member & Spouse (only for primary couple) -->
@@ -1017,7 +1017,7 @@ onUnmounted(() => {
                                     <div
                                         v-for="(child, cIdx) in member.children"
                                         :key="child.id"
-                                        class="flex flex-col items-center relative px-2 sm:px-3 pt-6"
+                                        class="flex flex-col items-center relative px-1 sm:px-1.5 pt-4 sm:pt-5"
                                     >
                                         <!-- Horizontal Distribution Bracket across Children -->
                                         <div
@@ -1026,12 +1026,12 @@ onUnmounted(() => {
                                             :class="[
                                                 cIdx === 0
                                                     ? (child.spouses && child.spouses.length > 0
-                                                        ? 'left-[calc(50%-137px)] sm:left-[calc(50%-139px)] right-0'
+                                                        ? 'left-[calc(50%-136px)] sm:left-[calc(50%-137px)] right-0'
                                                         : 'left-1/2 right-0')
                                                     : '',
                                                 cIdx === member.children.length - 1
                                                     ? (child.spouses && child.spouses.length > 0
-                                                        ? 'left-0 right-[calc(50%-137px)] sm:right-[calc(50%-139px)]'
+                                                        ? 'left-0 right-[calc(50%-136px)] sm:right-[calc(50%-137px)]'
                                                         : 'left-0 right-1/2')
                                                     : '',
                                                 cIdx > 0 && cIdx < member.children.length - 1 ? 'left-0 right-0' : ''
@@ -1041,7 +1041,7 @@ onUnmounted(() => {
                                         <!-- Horizontal Bar above Single Child with Spouse/Partner -->
                                         <div
                                             v-if="member.children.length === 1 && child.spouses && child.spouses.length > 0"
-                                            class="absolute top-0 left-[calc(50%-137px)] right-[calc(50%-137px)] sm:left-[calc(50%-139px)] sm:right-[calc(50%-139px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                            class="absolute top-0 left-[calc(50%-136px)] right-[calc(50%-136px)] sm:left-[calc(50%-137px)] sm:right-[calc(50%-137px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                                         ></div>
 
                                         <!-- Recursive Descendant Node for Child, Spouses, Grandchildren, etc. -->
