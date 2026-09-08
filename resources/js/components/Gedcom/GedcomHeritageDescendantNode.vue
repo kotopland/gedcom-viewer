@@ -15,7 +15,7 @@ const emit = defineEmits<{
 <template>
     <div class="flex flex-col items-center relative">
         <!-- Person & Spouse(s) Row -->
-        <div class="flex items-start gap-2.5 sm:gap-3.5 relative">
+        <div class="flex items-start gap-2 sm:gap-2.5 relative">
             <!-- Main Person Node -->
             <GedcomHeritageNode
                 :person="person"
@@ -46,14 +46,14 @@ const emit = defineEmits<{
         <!-- Children Section Below (Recursive) -->
         <div v-if="person.children && person.children.length > 0" class="flex flex-col items-center relative mt-[-6px]">
             <!-- Vertical Drop Line from Couple down to Children Bracket -->
-            <div class="w-[3px] h-6 bg-slate-900 dark:bg-slate-300 z-0"></div>
+            <div class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0"></div>
 
             <!-- Row of Children -->
             <div class="flex items-start justify-center">
                 <div
                     v-for="(child, cIdx) in person.children"
                     :key="child.id"
-                    class="flex flex-col items-center relative px-2 sm:px-3 pt-6"
+                    class="flex flex-col items-center relative px-1 sm:px-1.5 pt-4 sm:pt-5"
                 >
                     <!-- Horizontal Distribution Bracket across Children -->
                     <div
@@ -62,12 +62,12 @@ const emit = defineEmits<{
                         :class="[
                             cIdx === 0
                                 ? (child.spouses && child.spouses.length > 0
-                                    ? 'left-[calc(50%-137px)] sm:left-[calc(50%-139px)] right-0'
+                                    ? 'left-[calc(50%-136px)] sm:left-[calc(50%-137px)] right-0'
                                     : 'left-1/2 right-0')
                                 : '',
                             cIdx === person.children.length - 1
                                 ? (child.spouses && child.spouses.length > 0
-                                    ? 'left-0 right-[calc(50%-137px)] sm:right-[calc(50%-139px)]'
+                                    ? 'left-0 right-[calc(50%-136px)] sm:right-[calc(50%-137px)]'
                                     : 'left-0 right-1/2')
                                 : '',
                             cIdx > 0 && cIdx < person.children.length - 1 ? 'left-0 right-0' : ''
@@ -77,7 +77,7 @@ const emit = defineEmits<{
                     <!-- Horizontal Bar above Single Child with Spouse/Partner -->
                     <div
                         v-if="person.children.length === 1 && child.spouses && child.spouses.length > 0"
-                        class="absolute top-0 left-[calc(50%-137px)] right-[calc(50%-137px)] sm:left-[calc(50%-139px)] sm:right-[calc(50%-139px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                        class="absolute top-0 left-[calc(50%-136px)] right-[calc(50%-136px)] sm:left-[calc(50%-137px)] sm:right-[calc(50%-137px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
                     ></div>
 
                     <!-- Recursive Child Descendant Node -->
