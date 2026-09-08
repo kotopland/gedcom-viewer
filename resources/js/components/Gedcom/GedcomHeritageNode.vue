@@ -78,7 +78,8 @@ const formatPlace = (place?: string | null) => {
     <div
         @click="emit('select-person', person.id)"
         data-clickable="true"
-        class="heritage-node-card group relative flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] select-none w-[264px] h-[460px] shrink-0"
+        class="heritage-node-card group relative flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-[1.02] select-none h-[460px] shrink-0"
+        :style="{ width: `${portraitDiameter}px` }"
     >
         <!-- Floating Focus Quick-Button on Hover -->
         <button
@@ -89,8 +90,8 @@ const formatPlace = (place?: string | null) => {
             <RefreshCcw class="w-3.5 h-3.5" />
         </button>
 
-        <!-- 1. Circular Portrait Avatar (matching name box width, 5% smaller per ancestor generation) -->
-        <div class="relative z-10 w-full px-0.5 mb-[-36px] flex items-end justify-center h-[260px]">
+        <!-- 1. Circular Portrait Avatar (matching name box width, 10% smaller per ancestor generation) -->
+        <div class="relative z-10 w-full mb-[-36px] flex items-end justify-center h-[260px]">
             <div
                 @click.stop="emit('select-person', person.id)"
                 data-clickable="true"
@@ -123,10 +124,10 @@ const formatPlace = (place?: string | null) => {
             </div>
         </div>
 
-        <!-- 2. Dark Stylized Name Banner (moved slightly into portrait picture with larger text) -->
-        <div class="relative z-20 w-full px-0.5">
+        <!-- 2. Dark Stylized Name Banner (same width as profile picture) -->
+        <div class="relative z-20 w-full">
             <div
-                class="heritage-banner relative h-[52px] flex items-center justify-center px-2.5 rounded-md text-center shadow-xl transition-colors"
+                class="heritage-banner relative h-[52px] w-full flex items-center justify-center px-2.5 rounded-md text-center shadow-xl transition-colors"
                 :class="[
                     isPrimary
                         ? 'bg-gradient-to-b from-slate-900 via-slate-850 to-slate-950 border border-slate-700 text-slate-100'
@@ -141,7 +142,8 @@ const formatPlace = (place?: string | null) => {
 
                 <!-- Name in Stylized Serif Typography (larger, readable font) -->
                 <div
-                    class="heritage-font text-[14px] sm:text-[15px] font-bold tracking-[0.07em] uppercase leading-[1.22] px-1.5 line-clamp-2 w-full text-center"
+                    class="heritage-font font-bold tracking-[0.07em] uppercase leading-[1.22] px-1.5 line-clamp-2 w-full text-center"
+                    :class="portraitDiameter < 220 ? 'text-[12.5px] sm:text-[13px]' : (portraitDiameter < 240 ? 'text-[13px] sm:text-[14px]' : 'text-[14px] sm:text-[15px]')"
                     :title="displayName"
                 >
                     {{ displayName }}
@@ -149,8 +151,10 @@ const formatPlace = (place?: string | null) => {
             </div>
         </div>
 
-        <!-- 3. Aligned Vital Statistics Table (larger text for clear readability & A3 print) -->
-        <div class="w-full h-[184px] pt-3 px-1 pb-1 space-y-1.5 text-[13px] sm:text-[13.5px] font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start">
+        <!-- 3. Aligned Vital Statistics Table (same width as profile picture) -->
+        <div class="w-full h-[184px] pt-3 px-1 pb-1 space-y-1.5 font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start"
+            :class="portraitDiameter < 220 ? 'text-[11.5px] sm:text-[12px]' : (portraitDiameter < 240 ? 'text-[12px] sm:text-[12.5px]' : 'text-[13px] sm:text-[13.5px]')"
+        >
             <!-- Birth -->
             <div v-if="person.birth_date || person.birth_year || formatPlace(person.birth_place)" class="flex items-start justify-between gap-1.5">
                 <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Birth</span>
