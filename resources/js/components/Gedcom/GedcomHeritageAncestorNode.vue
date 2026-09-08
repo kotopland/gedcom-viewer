@@ -40,7 +40,7 @@ const emit = defineEmits<{
                 <!-- Marriage Bar between Parents if both exist (only when parents have no parents above them) -->
                 <div
                     v-if="person.parents.length > 1 && (!person.parents[0].parents || person.parents[0].parents.length === 0) && (!person.parents[1].parents || person.parents[1].parents.length === 0)"
-                    class="absolute top-[250px] left-[254px] right-[254px] h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                    class="absolute top-[250px] left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
                 >
                     <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
                     <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
