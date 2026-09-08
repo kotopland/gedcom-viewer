@@ -16,11 +16,11 @@ const emit = defineEmits<{
     (e: 'change-root', id: string): void;
 }>();
 
-// Calculate portrait size based on ancestor generation (5% smaller per generation)
+// Calculate portrait size based on ancestor generation (10% smaller per generation)
 const portraitScale = computed(() => {
     const lvl = Math.max(0, props.ancestorLevel || 0);
-    // 5% reduction per generation, clamped to minimum 0.65
-    return Math.max(0.65, 1 - lvl * 0.05);
+    // 10% reduction per generation (additional 5%), clamped to minimum 0.50
+    return Math.max(0.50, 1 - lvl * 0.10);
 });
 
 const portraitDiameter = computed(() => {
