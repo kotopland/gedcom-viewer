@@ -6,6 +6,7 @@ const props = defineProps<{
     person: any;
     isPrimary?: boolean;
     spouse?: any;
+    ancestorLevel?: number;
     hasMarriageConnectorRight?: boolean;
     hasMarriageConnectorLeft?: boolean;
 }>();
@@ -14,6 +15,21 @@ const emit = defineEmits<{
     (e: 'select-person', id: string): void;
     (e: 'change-root', id: string): void;
 }>();
+
+// Calculate portrait size based on ancestor generation (5% smaller per generation)
+const portraitScale = computed(() => {
+    const lvl = Math.max(0, props.ancestorLevel || 0);
+    // 5% reduction per generation, clamped to minimum 0.65
+    return Math.max(0.65, 1 - lvl * 0.05);
+});
+
+const portraitDiameter = computed(() => {
+    return Math.round(260 * portraitScale.value);
+});
+
+const placeholderIconSize = computed(() => {
+    return Math.round(96 * portraitScale.value);
+});
 
 // Compute stylized display name (e.g. "BODIL HOLVIK (TOPLAND)")
 const displayName = computed(() => {
@@ -73,12 +89,16 @@ const formatPlace = (place?: string | null) => {
             <RefreshCcw class="w-3.5 h-3.5" />
         </button>
 
-        <!-- 1. Circular Portrait Avatar (matching name box width) -->
-        <div class="relative z-10 w-full px-0.5 mb-[-36px] flex justify-center">
+        <!-- 1. Circular Portrait Avatar (matching name box width, 5% smaller per ancestor generation) -->
+        <div class="relative z-10 w-full px-0.5 mb-[-36px] flex items-end justify-center h-[260px]">
             <div
                 @click.stop="emit('select-person', person.id)"
                 data-clickable="true"
-                class="w-[260px] h-[260px] shrink-0 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40 cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:ring-4 hover:ring-indigo-500/50"
+                class="shrink-0 rounded-full overflow-hidden border-[3px] border-slate-400/80 dark:border-slate-500 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-2 ring-slate-900/20 dark:ring-black/40 cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:ring-4 hover:ring-indigo-500/50"
+                :style="{
+                    width: `${portraitDiameter}px`,
+                    height: `${portraitDiameter}px`
+                }"
                 title="View person details"
             >
                 <img
@@ -89,8 +109,14 @@ const formatPlace = (place?: string | null) => {
                     loading="lazy"
                 />
                 <div v-else class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-slate-500 dark:text-slate-400 pointer-events-none">
-                    <User class="w-24 h-24 stroke-[1.5]" />
-                    <span class="text-xs font-serif uppercase tracking-widest mt-2.5 opacity-75">
+                    <User
+                        :style="{ width: `${placeholderIconSize}px`, height: `${placeholderIconSize}px` }"
+                        class="stroke-[1.5]"
+                    />
+                    <span
+                        class="font-serif uppercase tracking-widest opacity-75"
+                        :class="portraitDiameter < 230 ? 'text-[10px] mt-1' : 'text-xs mt-2.5'"
+                    >
                         {{ person.sex === 'M' ? 'Male' : (person.sex === 'F' ? 'Female' : 'Individual') }}
                     </span>
                 </div>
