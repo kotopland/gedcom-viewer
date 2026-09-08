@@ -844,13 +844,13 @@ onUnmounted(() => {
                 <!-- ================= ANCESTORS SECTION (RECURSIVE MULTI-GENERATION) ================= -->
                 <div
                     v-if="ancestorLevels >= 1 && (focusParents.length > 0 || spouseParents.length > 0)"
-                    class="flex items-start justify-center gap-2 sm:gap-3 mb-3 sm:mb-4"
+                    class="flex items-start justify-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2"
                 >
                     <!-- Focus Person Ancestor Tree (Recursive Parents/Grandparents/Great-GP) -->
                     <div v-if="focusParents.length > 0" class="flex flex-col items-center">
                         <div class="flex items-start justify-center relative">
                             <!-- Father Side Ancestors Column -->
-                            <div class="flex flex-col items-center relative px-1 sm:px-1.5">
+                            <div class="flex flex-col items-center relative px-0.5">
                                 <GedcomHeritageAncestorNode
                                     :person="focusParents[0]"
                                     :level="1"
@@ -873,7 +873,7 @@ onUnmounted(() => {
                             <!-- Mother Side Ancestors Column -->
                             <div
                                 v-if="focusParents.length > 1"
-                                class="flex flex-col items-center relative px-1 sm:px-1.5"
+                                class="flex flex-col items-center relative px-0.5"
                             >
                                 <GedcomHeritageAncestorNode
                                     :person="focusParents[1]"
@@ -891,7 +891,7 @@ onUnmounted(() => {
                     <div v-if="spouseParents.length > 0" class="flex flex-col items-center">
                         <div class="flex items-start justify-center relative">
                             <!-- Spouse Father Side Ancestors Column -->
-                            <div class="flex flex-col items-center relative px-1 sm:px-1.5">
+                            <div class="flex flex-col items-center relative px-0.5">
                                 <GedcomHeritageAncestorNode
                                     :person="spouseParents[0]"
                                     :level="1"
@@ -914,7 +914,7 @@ onUnmounted(() => {
                             <!-- Spouse Mother Side Ancestors Column -->
                             <div
                                 v-if="spouseParents.length > 1"
-                                class="flex flex-col items-center relative px-1 sm:px-1.5"
+                                class="flex flex-col items-center relative px-0.5"
                             >
                                 <GedcomHeritageAncestorNode
                                     :person="spouseParents[1]"

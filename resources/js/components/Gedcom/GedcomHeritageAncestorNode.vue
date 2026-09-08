@@ -21,7 +21,7 @@ const emit = defineEmits<{
             <!-- Row of Parent Nodes -->
             <div class="flex items-start justify-center relative">
                 <!-- Parent 1 (e.g. Father) -->
-                <div class="flex flex-col items-center relative px-1 sm:px-1.5">
+                <div class="flex flex-col items-center relative px-0.5">
                     <GedcomHeritageAncestorNode
                         :person="person.parents[0]"
                         :level="level + 1"
@@ -49,7 +49,7 @@ const emit = defineEmits<{
                 <!-- Parent 2 (e.g. Mother) -->
                 <div
                     v-if="person.parents.length > 1"
-                    class="flex flex-col items-center relative px-1 sm:px-1.5"
+                    class="flex flex-col items-center relative px-0.5"
                 >
                     <GedcomHeritageAncestorNode
                         :person="person.parents[1]"
@@ -67,7 +67,7 @@ const emit = defineEmits<{
             </div>
 
             <!-- Vertical Drop Line from Parents down to This Person -->
-            <div class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0"></div>
+            <div class="w-[3px] h-2.5 sm:h-3 bg-slate-900 dark:bg-slate-300 z-0"></div>
         </div>
 
         <!-- This Individual Node Card -->
