@@ -74,6 +74,7 @@ const emit = defineEmits<{
         <GedcomHeritageNode
             :person="person"
             :spouse="spouse"
+            :ancestor-level="level"
             @select-person="emit('select-person', $event)"
             @change-root="emit('change-root', $event)"
         />
