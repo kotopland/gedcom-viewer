@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import {
     ZoomIn, ZoomOut, Maximize2, RefreshCcw, SlidersHorizontal,
     Expand, Shrink, ChevronRight, ChevronLeft, Search, Plus, Minus,
-    ArrowUp, ArrowDown, Sparkles, Users, Download
+    ArrowUp, ArrowDown, Sparkles, Users, Download, Image, ImageOff, ChevronDown
 } from '@lucide/vue';
 import GedcomHeritageNode from './GedcomHeritageNode.vue';
 import GedcomHeritageAncestorNode from './GedcomHeritageAncestorNode.vue';
@@ -22,6 +22,52 @@ const emit = defineEmits<{
 const page = usePage();
 const isVerified = computed(() => !!(page.props.auth?.user?.is_verified || page.props.auth?.user?.is_superuser));
 const exportPdfLoading = ref(false);
+
+// Discrete PDF export and portrait disabling state
+const showPdfExportMenu = ref(false);
+const includePdfPortraits = ref(
+    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_pdf_portraits') !== null
+        ? sessionStorage.getItem('gedcom_heritage_pdf_portraits') === 'true'
+        : true
+);
+const excludedPortraitIds = ref<Set<string>>(new Set());
+const isPdfExporting = ref(false);
+const pdfMenuRef = ref<HTMLElement | null>(null);
+const pdfCollapsedMenuRef = ref<HTMLElement | null>(null);
+
+watch(includePdfPortraits, (val) => {
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem('gedcom_heritage_pdf_portraits', String(val));
+    }
+});
+
+const clearAllExcluded = () => {
+    excludedPortraitIds.value = new Set();
+};
+
+provide('heritagePortraitState', {
+    includePdfPortraits,
+    excludedPortraitIds,
+    isPdfExporting,
+    isExportingPdf: () => isPdfExporting.value,
+    toggleExcludePortrait: (id: string) => {
+        const next = new Set(excludedPortraitIds.value);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        excludedPortraitIds.value = next;
+    },
+    isPortraitExcluded: (id: string) => {
+        return excludedPortraitIds.value.has(id);
+    },
+    isPortraitHiddenForPerson: (id: string) => {
+        if (isPdfExporting.value && !includePdfPortraits.value) return true;
+        return excludedPortraitIds.value.has(id);
+    },
+    clearAllExcluded
+});
 
 const loading = ref(false);
 const treeData = ref<any>(null);
@@ -431,9 +477,22 @@ watch(
     { immediate: true }
 );
 
+const handleGlobalClick = (e: MouseEvent) => {
+    if (!showPdfExportMenu.value) return;
+    const target = e.target as Node;
+    if (
+        (pdfMenuRef.value && pdfMenuRef.value.contains(target)) ||
+        (pdfCollapsedMenuRef.value && pdfCollapsedMenuRef.value.contains(target))
+    ) {
+        return;
+    }
+    showPdfExportMenu.value = false;
+};
+
 onMounted(() => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    window.addEventListener('click', handleGlobalClick);
 });
 
 // Helper to load external scripts dynamically on-demand
@@ -457,19 +516,34 @@ const loadExternalScript = (src: string, globalName: string): Promise<any> => {
     });
 };
 
-const exportToPdf = async () => {
+const exportToPdf = async (withPortraits?: boolean) => {
     if (!isVerified.value || exportPdfLoading.value) return;
     if (!treeContentRef.value) {
         alert('Heritage tree is not available to export.');
         return;
     }
 
+    showPdfExportMenu.value = false;
+    const previousGlobalSetting = includePdfPortraits.value;
+    if (typeof withPortraits === 'boolean') {
+        includePdfPortraits.value = withPortraits;
+    }
+
     exportPdfLoading.value = true;
+    isPdfExporting.value = true;
     const el = treeContentRef.value;
     const originalTransform = el.style.transform;
     const originalTransition = el.style.transition;
 
     try {
+        // Temporarily reset CSS transform to unscaled 1:1 state to capture full chart without clipping
+        el.style.transition = 'none';
+        el.style.transform = 'none';
+
+        // Wait for Vue to update DOM with portrait visibility changes
+        await nextTick();
+        await new Promise((r) => setTimeout(r, 80));
+
         // Load html-to-image and jspdf dynamically from CDN
         await Promise.all([
             loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js', 'htmlToImage'),
@@ -482,13 +556,6 @@ const exportToPdf = async () => {
         if (!htmlToImage || !jsPDF) {
             throw new Error('PDF export libraries could not be initialized.');
         }
-
-        // Temporarily reset CSS transform to unscaled 1:1 state to capture full chart without clipping
-        el.style.transition = 'none';
-        el.style.transform = 'none';
-
-        await nextTick();
-        await new Promise((r) => setTimeout(r, 60));
 
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#020617' : '#f8fafc';
@@ -520,18 +587,25 @@ const exportToPdf = async () => {
         const personName = primary.value?.name
             ? primary.value.name.replace(/[^a-zA-Z0-9_-]/g, '_')
             : 'heritage_chart';
-        pdf.save(`${personName}_heritage_chart.pdf`);
+        const suffix = !includePdfPortraits.value ? '_no_portraits' : '';
+        pdf.save(`${personName}_heritage_chart${suffix}.pdf`);
     } catch (err: any) {
         console.error('PDF export failed:', err);
         alert('Failed to generate PDF: ' + (err?.message || 'Unknown error'));
         el.style.transform = originalTransform;
         el.style.transition = originalTransition;
     } finally {
+        isPdfExporting.value = false;
+        if (typeof withPortraits === 'boolean') {
+            includePdfPortraits.value = previousGlobalSetting;
+        }
+        await nextTick();
         exportPdfLoading.value = false;
     }
 };
 
 onUnmounted(() => {
+    window.removeEventListener('click', handleGlobalClick);
     window.removeEventListener('resize', checkMobile);
     document.body.style.overflow = '';
 });
@@ -596,16 +670,28 @@ onUnmounted(() => {
                     <Expand v-else class="w-3.5 h-3.5" />
                 </button>
 
-                <button
-                    v-if="isVerified"
-                    @click="exportToPdf"
-                    :disabled="exportPdfLoading"
-                    class="p-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50"
-                    title="Export High-Resolution PDF Chart"
-                >
-                    <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
-                    <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
-                </button>
+                <!-- PDF Export Split Button (Collapsed) -->
+                <div ref="pdfCollapsedMenuRef" class="relative inline-flex items-center">
+                    <button
+                        v-if="isVerified"
+                        @click="exportToPdf()"
+                        :disabled="exportPdfLoading"
+                        class="p-1.5 rounded-l-xl bg-red-600/90 hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50"
+                        :title="includePdfPortraits ? 'Export High-Resolution PDF Chart' : 'Export PDF Chart (without portraits)'"
+                    >
+                        <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
+                        <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
+                    </button>
+                    <button
+                        v-if="isVerified"
+                        @click.stop="showPdfExportMenu = !showPdfExportMenu"
+                        :disabled="exportPdfLoading"
+                        class="px-1 py-1.5 rounded-r-xl bg-red-700 hover:bg-red-800 border-l border-red-500/50 text-white transition-colors cursor-pointer"
+                        title="PDF Export Options (Portraits on/off)"
+                    >
+                        <ChevronDown class="w-3 h-3 transition-transform" :class="showPdfExportMenu ? 'rotate-180' : ''" />
+                    </button>
+                </div>
             </div>
 
             <!-- Expanded Controls Bar -->
@@ -623,17 +709,102 @@ onUnmounted(() => {
                         <span>{{ isFullscreen ? 'Exit' : 'Full Screen' }}</span>
                     </button>
 
-                    <button
-                        v-if="isVerified"
-                        @click="exportToPdf"
-                        :disabled="exportPdfLoading"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-                        title="Export High-Resolution PDF Chart"
-                    >
-                        <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
-                        <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
-                        <span>{{ exportPdfLoading ? 'Exporting...' : 'PDF' }}</span>
-                    </button>
+                    <!-- PDF Export Split Button (Expanded) -->
+                    <div ref="pdfMenuRef" class="relative inline-flex items-center">
+                        <button
+                            v-if="isVerified"
+                            @click="exportToPdf()"
+                            :disabled="exportPdfLoading"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-l-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                            :title="includePdfPortraits ? 'Export High-Resolution PDF Chart' : 'Export High-Resolution PDF Chart (without portraits)'"
+                        >
+                            <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
+                            <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
+                            <span>{{ exportPdfLoading ? 'Exporting...' : 'PDF' }}</span>
+                            <span
+                                v-if="!includePdfPortraits"
+                                class="px-1 py-0.2 rounded text-[9px] font-bold bg-black/30 text-amber-200 border border-amber-400/40"
+                                title="Portraits disabled for PDF"
+                            >
+                                No Photos
+                            </span>
+                        </button>
+                        <button
+                            v-if="isVerified"
+                            @click.stop="showPdfExportMenu = !showPdfExportMenu"
+                            :disabled="exportPdfLoading"
+                            class="px-1.5 py-1.5 rounded-r-xl bg-red-700 hover:bg-red-800 border-l border-red-500/50 text-white text-xs transition-colors cursor-pointer"
+                            :class="showPdfExportMenu ? 'bg-red-800' : ''"
+                            title="PDF Export Options (Portraits on/off)"
+                        >
+                            <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="showPdfExportMenu ? 'rotate-180' : ''" />
+                        </button>
+
+                        <!-- Discrete PDF Options Popover Menu -->
+                        <div
+                            v-if="showPdfExportMenu"
+                            @click.stop
+                            class="absolute top-full left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs text-slate-800 dark:text-slate-200"
+                        >
+                            <div class="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center justify-between">
+                                <span>PDF Export Options</span>
+                                <span v-if="!includePdfPortraits" class="text-amber-500 dark:text-amber-400 font-semibold normal-case">Portraits Off</span>
+                            </div>
+
+                            <!-- Toggle: Include portrait pictures in PDF export -->
+                            <label class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/70 cursor-pointer select-none transition-colors">
+                                <input
+                                    type="checkbox"
+                                    v-model="includePdfPortraits"
+                                    class="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-red-600 focus:ring-red-500 cursor-pointer"
+                                />
+                                <div class="flex-1">
+                                    <div class="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                                        <Image v-if="includePdfPortraits" class="w-3.5 h-3.5 text-emerald-500" />
+                                        <ImageOff v-else class="w-3.5 h-3.5 text-amber-500" />
+                                        <span>Include portraits</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                        {{ includePdfPortraits ? 'Export with portrait photos included' : 'Disable portrait photos in PDF export (clean silhouette)' }}
+                                    </p>
+                                </div>
+                            </label>
+
+                            <!-- Individual exclusions summary if any -->
+                            <div
+                                v-if="excludedPortraitIds.size > 0"
+                                class="mt-1 px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11px] flex items-center justify-between text-amber-800 dark:text-amber-300"
+                            >
+                                <span>{{ excludedPortraitIds.size }} individual photo(s) disabled</span>
+                                <button
+                                    @click="clearAllExcluded"
+                                    class="text-[10px] font-bold underline hover:text-amber-950 dark:hover:text-amber-100 cursor-pointer"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+
+                            <div class="my-1.5 border-t border-slate-200 dark:border-slate-800"></div>
+
+                            <!-- Direct Actions -->
+                            <div class="space-y-1">
+                                <button
+                                    @click="exportToPdf(true)"
+                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer font-medium"
+                                >
+                                    <Image class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                    <span class="flex-1 truncate">Export with portraits</span>
+                                </button>
+                                <button
+                                    @click="exportToPdf(false)"
+                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors text-left cursor-pointer font-medium text-amber-700 dark:text-amber-300"
+                                >
+                                    <ImageOff class="w-3.5 h-3.5 shrink-0" />
+                                    <span class="flex-1 truncate">Export without portraits</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Zoom Controls -->
                     <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">

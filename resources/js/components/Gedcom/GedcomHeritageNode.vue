@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { User, RefreshCcw } from '@lucide/vue';
+import { computed, inject } from 'vue';
+import { User, RefreshCcw, Image, ImageOff } from '@lucide/vue';
+
+const portraitState = inject<any>('heritagePortraitState', null);
 
 const props = defineProps<{
     person: any;
@@ -15,6 +17,11 @@ const emit = defineEmits<{
     (e: 'select-person', id: string): void;
     (e: 'change-root', id: string): void;
 }>();
+
+const isPortraitHidden = computed(() => {
+    if (!props.person?.id || !portraitState) return false;
+    return portraitState.isPortraitHiddenForPerson(props.person.id);
+});
 
 // Calculate portrait size based on ancestor generation (5% smaller per generation)
 const portraitScale = computed(() => {
@@ -83,11 +90,28 @@ const formatPlace = (place?: string | null) => {
     >
         <!-- Floating Focus Quick-Button on Hover -->
         <button
+            v-if="!portraitState?.isExportingPdf?.()"
             @click.stop="emit('change-root', person.id)"
             class="absolute top-1 right-2 z-20 p-1.5 rounded-full bg-slate-900/90 hover:bg-indigo-600 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer border border-slate-700 hover:scale-110"
             title="Focus tree on this person"
         >
             <RefreshCcw class="w-3.5 h-3.5" />
+        </button>
+
+        <!-- Floating Quick-Button to Exclude/Include Portrait on Hover (Discrete) -->
+        <button
+            v-if="person.primary_media && portraitState && !portraitState?.isExportingPdf?.()"
+            @click.stop="portraitState.toggleExcludePortrait(person.id)"
+            class="absolute top-1 left-2 z-20 p-1.5 rounded-full text-white shadow-lg transition-all cursor-pointer border hover:scale-110"
+            :class="[
+                portraitState.isPortraitExcluded(person.id)
+                    ? 'bg-amber-600/95 hover:bg-amber-500 border-amber-400 opacity-90'
+                    : 'bg-slate-900/90 hover:bg-slate-700 border-slate-700 opacity-0 group-hover:opacity-100'
+            ]"
+            :title="portraitState.isPortraitExcluded(person.id) ? 'Enable portrait picture for PDF export' : 'Disable portrait picture for PDF export'"
+        >
+            <ImageOff v-if="portraitState.isPortraitExcluded(person.id)" class="w-3.5 h-3.5 text-amber-200" />
+            <Image v-else class="w-3.5 h-3.5 text-slate-200" />
         </button>
 
         <!-- 1. Circular Portrait Avatar (matching name box width, 10% smaller per ancestor generation) -->
@@ -103,7 +127,7 @@ const formatPlace = (place?: string | null) => {
                 title="View person details"
             >
                 <img
-                    v-if="person.primary_media"
+                    v-if="person.primary_media && !isPortraitHidden"
                     :src="person.portrait_url || person.primary_media.portrait_url || person.primary_media.url"
                     :alt="person.name"
                     class="w-full h-full object-cover pointer-events-none"
