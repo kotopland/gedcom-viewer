@@ -79,6 +79,24 @@ const formatPlace = (place?: string | null) => {
         .filter((p) => p.length > 0)
         .join(', ');
 };
+
+// Responsive font sizes for person details (prominently larger fonts on Heritage Chart while keeping place names compact)
+const labelTextClass = computed(() => {
+    if (portraitDiameter.value < 220) return 'text-[14px] sm:text-[14.5px]';
+    if (portraitDiameter.value < 240) return 'text-[15px] sm:text-[15.5px]';
+    return 'text-[16px] sm:text-[16.5px]';
+});
+
+const valueTextClass = computed(() => {
+    if (portraitDiameter.value < 220) return 'text-[14.5px] sm:text-[15px]';
+    if (portraitDiameter.value < 240) return 'text-[15.5px] sm:text-[16px]';
+    return 'text-[16.5px] sm:text-[17px]';
+});
+
+const placeTextClass = computed(() => {
+    if (portraitDiameter.value < 220) return 'text-[11px] sm:text-[11.5px]';
+    return 'text-[11.5px] sm:text-[12px]';
+});
 </script>
 
 <template>
@@ -176,17 +194,15 @@ const formatPlace = (place?: string | null) => {
         </div>
 
         <!-- 3. Aligned Vital Statistics Table (same width as profile picture) -->
-        <div class="w-full h-[184px] pt-3 px-1 pb-1 space-y-1.5 font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start"
-            :class="portraitDiameter < 220 ? 'text-[11.5px] sm:text-[12px]' : (portraitDiameter < 240 ? 'text-[12px] sm:text-[12.5px]' : 'text-[13px] sm:text-[13.5px]')"
-        >
+        <div class="w-full h-[184px] pt-3 px-1 pb-1 space-y-1.5 font-sans leading-tight text-slate-800 dark:text-slate-200 overflow-hidden flex flex-col justify-start">
             <!-- Birth -->
             <div v-if="person.birth_date || person.birth_year || formatPlace(person.birth_place)" class="flex items-start justify-between gap-1.5">
-                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Birth</span>
+                <span class="font-semibold text-slate-700 dark:text-slate-300 shrink-0 text-left" :class="labelTextClass">Birth</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.birth_date || person.birth_year" class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
+                    <div v-if="person.birth_date || person.birth_year" class="font-bold text-slate-950 dark:text-white" :class="valueTextClass">
                         {{ formatVal(person.birth_date) || person.birth_year }}
                     </div>
-                    <div v-if="formatPlace(person.birth_place)" class="text-[12px] sm:text-[12.5px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.birth_place)">
+                    <div v-if="formatPlace(person.birth_place)" class="text-slate-600 dark:text-slate-400 truncate" :class="placeTextClass" :title="formatPlace(person.birth_place)">
                         {{ formatPlace(person.birth_place) }}
                     </div>
                 </div>
@@ -194,11 +210,11 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Marriage / Civil Partnership -->
             <div v-if="person.marriage_date || person.marriage_year || (person.marriage_type && person.marriage_type !== 'Marriage')" class="flex items-start justify-between gap-1.5">
-                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">
+                <span class="font-semibold text-slate-700 dark:text-slate-300 shrink-0 text-left" :class="labelTextClass">
                     {{ person.marriage_type || person.relationship_type || 'Marriage' }}
                 </span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.marriage_date || person.marriage_year" class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
+                    <div v-if="person.marriage_date || person.marriage_year" class="font-bold text-slate-950 dark:text-white" :class="valueTextClass">
                         {{ formatVal(person.marriage_date) || person.marriage_year }}
                     </div>
                 </div>
@@ -206,9 +222,9 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Occupation -->
             <div v-if="person.occupation" class="flex items-start justify-between gap-1.5">
-                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Occupation</span>
+                <span class="font-semibold text-slate-700 dark:text-slate-300 shrink-0 text-left" :class="labelTextClass">Occupation</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px] truncate" :title="person.occupation">
+                    <div class="font-bold text-slate-950 dark:text-white truncate" :class="valueTextClass" :title="person.occupation">
                         {{ person.occupation }}
                     </div>
                 </div>
@@ -216,12 +232,12 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Death -->
             <div v-if="person.death_date || person.death_year || formatPlace(person.death_place)" class="flex items-start justify-between gap-1.5">
-                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Death</span>
+                <span class="font-semibold text-slate-700 dark:text-slate-300 shrink-0 text-left" :class="labelTextClass">Death</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div v-if="person.death_date || person.death_year" class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
+                    <div v-if="person.death_date || person.death_year" class="font-bold text-slate-950 dark:text-white" :class="valueTextClass">
                         {{ formatVal(person.death_date) || person.death_year }}
                     </div>
-                    <div v-if="formatPlace(person.death_place)" class="text-[12px] sm:text-[12.5px] text-slate-600 dark:text-slate-400 truncate" :title="formatPlace(person.death_place)">
+                    <div v-if="formatPlace(person.death_place)" class="text-slate-600 dark:text-slate-400 truncate" :class="placeTextClass" :title="formatPlace(person.death_place)">
                         {{ formatPlace(person.death_place) }}
                     </div>
                 </div>
@@ -229,9 +245,9 @@ const formatPlace = (place?: string | null) => {
 
             <!-- Burial -->
             <div v-if="person.burial_date" class="flex items-start justify-between gap-1.5">
-                <span class="font-medium text-slate-600 dark:text-slate-300 shrink-0 text-left text-[13px] sm:text-[13.5px]">Burial</span>
+                <span class="font-semibold text-slate-700 dark:text-slate-300 shrink-0 text-left" :class="labelTextClass">Burial</span>
                 <div class="text-right flex-1 min-w-0">
-                    <div class="font-bold text-slate-900 dark:text-white text-[13.5px] sm:text-[14px]">
+                    <div class="font-bold text-slate-950 dark:text-white" :class="valueTextClass">
                         {{ formatVal(person.burial_date) }}
                     </div>
                 </div>
