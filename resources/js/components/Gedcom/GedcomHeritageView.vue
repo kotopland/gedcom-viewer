@@ -531,19 +531,8 @@ const exportToPdf = async (withPortraits?: boolean) => {
 
     exportPdfLoading.value = true;
     isPdfExporting.value = true;
-    const el = treeContentRef.value;
-    const originalTransform = el.style.transform;
-    const originalTransition = el.style.transition;
 
     try {
-        // Temporarily reset CSS transform to unscaled 1:1 state to capture full chart without clipping
-        el.style.transition = 'none';
-        el.style.transform = 'none';
-
-        // Wait for Vue to update DOM with portrait visibility changes
-        await nextTick();
-        await new Promise((r) => setTimeout(r, 80));
-
         // Load html-to-image and jspdf dynamically from CDN
         await Promise.all([
             loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js', 'htmlToImage'),
@@ -557,43 +546,73 @@ const exportToPdf = async (withPortraits?: boolean) => {
             throw new Error('PDF export libraries could not be initialized.');
         }
 
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#020617' : '#f8fafc';
+        // Wait for Vue to update DOM with isPdfExporting=true (transform: none, no hover buttons, portrait visibility updated)
+        await nextTick();
+        await new Promise((r) => setTimeout(r, 100));
 
-        // Measure natural dimensions
-        const width = Math.max(el.scrollWidth, el.offsetWidth) + 40;
-        const height = Math.max(el.scrollHeight, el.offsetHeight) + 40;
+        const el = treeContentRef.value;
+        // Pure white background for crisp paper printing without any gray tint
+        const bgColor = '#ffffff';
+
+        // Measure natural full dimensions of the unscaled tree
+        const contentWidth = Math.ceil(Math.max(el.scrollWidth, el.offsetWidth, el.clientWidth));
+        const contentHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight, el.clientHeight));
 
         const dataUrl = await htmlToImage.toJpeg(el, {
             backgroundColor: bgColor,
-            quality: 0.95,
+            quality: 0.96,
             pixelRatio: 2,
             cacheBust: true,
+            width: contentWidth,
+            height: contentHeight,
+            style: {
+                transform: 'none',
+                transformOrigin: '0 0',
+                left: '0',
+                top: '0',
+                position: 'static',
+                margin: '0',
+                padding: '0',
+                backgroundColor: '#ffffff',
+            },
         });
 
-        // Restore view transform immediately after capture
-        el.style.transform = originalTransform;
-        el.style.transition = originalTransition;
-
-        const orientation = width >= height ? 'landscape' : 'portrait';
+        // Initialize standard ISO A3 PDF document (landscape or portrait based on chart aspect ratio)
+        const orientation = contentWidth >= contentHeight ? 'landscape' : 'portrait';
         const pdf = new jsPDF({
             orientation,
-            unit: 'pt',
-            format: [width, height],
+            unit: 'mm',
+            format: 'a3',
         });
 
-        pdf.addImage(dataUrl, 'JPEG', 20, 20, width - 40, height - 40);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        // 0% margin to stretch edge-to-edge on constraining dimension
+        const marginPercent = 0;
+        const maxContentWidth = pageWidth * (1 - 2 * marginPercent);
+        const maxContentHeight = pageHeight * (1 - 2 * marginPercent);
+
+        // Stretch chart to fill A3 page while preserving proportions
+        const scale = Math.min(maxContentWidth / contentWidth, maxContentHeight / contentHeight);
+
+        const renderWidth = contentWidth * scale;
+        const renderHeight = contentHeight * scale;
+
+        // Center on the A3 page
+        const posX = (pageWidth - renderWidth) / 2;
+        const posY = (pageHeight - renderHeight) / 2;
+
+        pdf.addImage(dataUrl, 'JPEG', posX, posY, renderWidth, renderHeight, undefined, 'FAST');
 
         const personName = primary.value?.name
             ? primary.value.name.replace(/[^a-zA-Z0-9_-]/g, '_')
             : 'heritage_chart';
         const suffix = !includePdfPortraits.value ? '_no_portraits' : '';
-        pdf.save(`${personName}_heritage_chart${suffix}.pdf`);
+        pdf.save(`${personName}_heritage_chart_A3${suffix}.pdf`);
     } catch (err: any) {
         console.error('PDF export failed:', err);
         alert('Failed to generate PDF: ' + (err?.message || 'Unknown error'));
-        el.style.transform = originalTransform;
-        el.style.transition = originalTransition;
     } finally {
         isPdfExporting.value = false;
         if (typeof withPortraits === 'boolean') {
@@ -677,7 +696,7 @@ onUnmounted(() => {
                         @click="exportToPdf()"
                         :disabled="exportPdfLoading"
                         class="p-1.5 rounded-l-xl bg-red-600/90 hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50"
-                        :title="includePdfPortraits ? 'Export High-Resolution PDF Chart' : 'Export PDF Chart (without portraits)'"
+                        :title="includePdfPortraits ? 'Export High-Resolution A3 PDF Chart' : 'Export A3 PDF Chart (without portraits)'"
                     >
                         <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
                         <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
@@ -687,7 +706,7 @@ onUnmounted(() => {
                         @click.stop="showPdfExportMenu = !showPdfExportMenu"
                         :disabled="exportPdfLoading"
                         class="px-1 py-1.5 rounded-r-xl bg-red-700 hover:bg-red-800 border-l border-red-500/50 text-white transition-colors cursor-pointer"
-                        title="PDF Export Options (Portraits on/off)"
+                        title="A3 PDF Export Options (Portraits on/off)"
                     >
                         <ChevronDown class="w-3 h-3 transition-transform" :class="showPdfExportMenu ? 'rotate-180' : ''" />
                     </button>
@@ -716,11 +735,11 @@ onUnmounted(() => {
                             @click="exportToPdf()"
                             :disabled="exportPdfLoading"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-l-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-                            :title="includePdfPortraits ? 'Export High-Resolution PDF Chart' : 'Export High-Resolution PDF Chart (without portraits)'"
+                            :title="includePdfPortraits ? 'Export High-Resolution A3 PDF Chart' : 'Export A3 PDF Chart (without portraits)'"
                         >
                             <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
                             <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
-                            <span>{{ exportPdfLoading ? 'Exporting...' : 'PDF' }}</span>
+                            <span>{{ exportPdfLoading ? 'Exporting...' : 'PDF (A3)' }}</span>
                             <span
                                 v-if="!includePdfPortraits"
                                 class="px-1 py-0.2 rounded text-[9px] font-bold bg-black/30 text-amber-200 border border-amber-400/40"
@@ -735,7 +754,7 @@ onUnmounted(() => {
                             :disabled="exportPdfLoading"
                             class="px-1.5 py-1.5 rounded-r-xl bg-red-700 hover:bg-red-800 border-l border-red-500/50 text-white text-xs transition-colors cursor-pointer"
                             :class="showPdfExportMenu ? 'bg-red-800' : ''"
-                            title="PDF Export Options (Portraits on/off)"
+                            title="A3 PDF Export Options (Portraits on/off)"
                         >
                             <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="showPdfExportMenu ? 'rotate-180' : ''" />
                         </button>
@@ -747,7 +766,7 @@ onUnmounted(() => {
                             class="absolute top-full left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs text-slate-800 dark:text-slate-200"
                         >
                             <div class="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center justify-between">
-                                <span>PDF Export Options</span>
+                                <span>A3 PDF Export Options</span>
                                 <span v-if="!includePdfPortraits" class="text-amber-500 dark:text-amber-400 font-semibold normal-case">Portraits Off</span>
                             </div>
 
@@ -793,14 +812,14 @@ onUnmounted(() => {
                                     class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer font-medium"
                                 >
                                     <Image class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                    <span class="flex-1 truncate">Export with portraits</span>
+                                    <span class="flex-1 truncate">Export A3 with portraits</span>
                                 </button>
                                 <button
                                     @click="exportToPdf(false)"
                                     class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors text-left cursor-pointer font-medium text-amber-700 dark:text-amber-300"
                                 >
                                     <ImageOff class="w-3.5 h-3.5 shrink-0" />
-                                    <span class="flex-1 truncate">Export without portraits</span>
+                                    <span class="flex-1 truncate">Export A3 without portraits</span>
                                 </button>
                             </div>
                         </div>
@@ -1005,11 +1024,13 @@ onUnmounted(() => {
             <!-- Scaled and Panned Canvas Content -->
             <div
                 ref="treeContentRef"
-                class="absolute top-0 left-0 min-w-max p-4 sm:p-8 flex flex-col items-center gap-0 shrink-0 transition-transform duration-75 ease-out"
+                class="absolute top-0 left-0 min-w-max flex flex-col items-center gap-0 shrink-0 transition-transform duration-75 ease-out"
+                :class="isPdfExporting ? 'p-0' : 'p-4 sm:p-8'"
                 :style="{
-                    transform: `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
+                    transform: isPdfExporting ? 'none' : `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
                     transformOrigin: '0 0',
-                    willChange: 'transform'
+                    willChange: isPdfExporting ? 'auto' : 'transform',
+                    transition: isPdfExporting ? 'none' : undefined
                 }"
             >
                 <!-- ================= ANCESTORS SECTION (RECURSIVE MULTI-GENERATION) ================= -->
