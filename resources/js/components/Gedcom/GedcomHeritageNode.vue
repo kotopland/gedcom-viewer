@@ -38,30 +38,38 @@ const placeholderIconSize = computed(() => {
     return Math.round(96 * portraitScale.value);
 });
 
-// Compute stylized display name (e.g. "BODIL HOLVIK (TOPLAND)")
+// Helper to capitalize only the first letter of each name part (Title Case, e.g. "Bodil Holvik (Topland)")
+const formatNameTitleCase = (str?: string | null): string => {
+    if (!str) return '';
+    return str
+        .toLowerCase()
+        .replace(/(?:^|[\s\-(['"])\p{L}/gu, (char) => char.toUpperCase());
+};
+
+// Compute stylized display name (e.g. "Bodil Holvik (Topland)")
 const displayName = computed(() => {
     if (!props.person) return '';
     const p = props.person;
 
     // Check if name already has parentheses
     if (p.name && p.name.includes('(') && p.name.includes(')')) {
-        return p.name.toUpperCase();
+        return formatNameTitleCase(p.name);
     }
 
     // Check all_names for married name / maiden name
     if (p.all_names && Array.isArray(p.all_names)) {
         const marriedName = p.all_names.find((n: any) => n.type === 'married' || (n.surname && n.surname !== p.surname));
         if (marriedName && marriedName.surname && p.surname) {
-            return `${p.given_name || ''} ${p.surname} (${marriedName.surname})`.trim().toUpperCase();
+            return formatNameTitleCase(`${p.given_name || ''} ${p.surname} (${marriedName.surname})`.trim());
         }
     }
 
     // Check if spouse surname differs and person is female with marriage
     if (props.spouse && props.spouse.surname && p.surname && p.sex === 'F' && props.spouse.surname !== p.surname) {
-        return `${p.name} (${props.spouse.surname})`.toUpperCase();
+        return formatNameTitleCase(`${p.name} (${props.spouse.surname})`);
     }
 
-    return (p.name || '').toUpperCase();
+    return formatNameTitleCase(p.name || '');
 });
 
 // Format date strings neatly
@@ -166,26 +174,26 @@ const placeTextClass = computed(() => {
             </div>
         </div>
 
-        <!-- 2. Dark Stylized Name Banner (same width as profile picture) -->
+        <!-- 2. Stylized Name Banner (same width as profile picture) -->
         <div class="relative z-20 w-full">
             <div
-                class="heritage-banner relative h-[52px] w-full flex items-center justify-center px-2.5 rounded-md text-center shadow-xl transition-colors"
+                class="heritage-banner relative h-[52px] w-full flex items-center justify-center px-2.5 rounded-md text-center shadow-md transition-colors"
                 :class="[
                     isPrimary
-                        ? 'bg-gradient-to-b from-slate-900 via-slate-850 to-slate-950 border border-slate-700 text-slate-100'
-                        : 'bg-gradient-to-b from-slate-850 via-slate-900 to-slate-950 border border-slate-700/90 text-slate-200'
+                        ? 'bg-white border-2 border-black text-black'
+                        : 'bg-white border border-black text-black'
                 ]"
             >
                 <!-- 4 Corner Rivet / Metallic Accents -->
-                <span class="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
-                <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
-                <span class="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
-                <span class="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-300/70 dark:bg-amber-300/50"></span>
+                <span class="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-300 border border-slate-400/60"></span>
+                <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-300 border border-slate-400/60"></span>
+                <span class="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-300 border border-slate-400/60"></span>
+                <span class="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-300 border border-slate-400/60"></span>
 
-                <!-- Name in Stylized Serif Typography (larger, readable font) -->
+                <!-- Name in Stylized Serif Typography (increased by 20%) -->
                 <div
-                    class="heritage-font font-bold tracking-[0.07em] uppercase leading-[1.22] px-1.5 line-clamp-2 w-full text-center"
-                    :class="portraitDiameter < 220 ? 'text-[12.5px] sm:text-[13px]' : (portraitDiameter < 240 ? 'text-[13px] sm:text-[14px]' : 'text-[14px] sm:text-[15px]')"
+                    class="heritage-font font-bold tracking-[0.02em] leading-[1.18] px-1.5 line-clamp-2 w-full text-center"
+                    :class="portraitDiameter < 220 ? 'text-[15px] sm:text-[15.5px]' : (portraitDiameter < 240 ? 'text-[15.5px] sm:text-[17px]' : 'text-[17px] sm:text-[18px]')"
                     :title="displayName"
                 >
                     {{ displayName }}
@@ -242,16 +250,6 @@ const placeTextClass = computed(() => {
                     </div>
                 </div>
             </div>
-
-            <!-- Burial -->
-            <div v-if="person.burial_date" class="flex items-start justify-between gap-1.5">
-                <span class="font-semibold text-slate-700 dark:text-slate-300 shrink-0 text-left" :class="labelTextClass">Burial</span>
-                <div class="text-right flex-1 min-w-0">
-                    <div class="font-bold text-slate-950 dark:text-white" :class="valueTextClass">
-                        {{ formatVal(person.burial_date) }}
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </template>
@@ -260,12 +258,12 @@ const placeTextClass = computed(() => {
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Marcellus&display=swap');
 
 .heritage-font {
-    font-family: 'Cinzel', 'Marcellus', 'Trajan Pro', 'Papyrus', 'Georgia', serif;
-    letter-spacing: 0.07em;
+    font-family: 'Marcellus', 'Cinzel', 'Trajan Pro', 'Papyrus', 'Georgia', serif;
+    letter-spacing: 0.02em;
 }
 
 .heritage-banner {
-    background-color: #1e293b;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    background-color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 </style>
