@@ -39,7 +39,7 @@ class MagicLinkNotification extends Notification
         $name = ($notifiable instanceof User) ? $notifiable->name : 'there';
 
         return (new MailMessage)
-            ->subject('Topland Family Archive')
+            ->subject((string) config('app.name', 'Family Archive'))
             ->greeting('Hello '.$name.'!')
             ->line('You can access the Family Genealogy Archive by clicking the button below')
             ->action('Access Family Archive', $this->url)

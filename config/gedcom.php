@@ -18,4 +18,15 @@ return [
         env('GEDCOM_PERSON_ID') ?:
         env('GEDCOM_PERSON_NAME') ?:
         env('GEDCOM_PERSON') ?: '',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Civil Partnership Families
+    |--------------------------------------------------------------------------
+    |
+    | Optional list of family IDs designated as civil/registered partnerships
+    | when not explicitly typed in standard GEDCOM tags.
+    |
+    */
+    'civil_partnerships' => array_filter(explode(',', (string) env('GEDCOM_CIVIL_PARTNERSHIP_FAMILIES', '33325904'))),
 ];

@@ -25,13 +25,13 @@ class GedcomPersonMarriageTest extends TestCase
                 '10275328' => [
                     'id' => '10275328',
                     'name' => 'Jane Doe',
-                    'given_name' => 'Erika',
-                    'surname' => 'Kalra',
+                    'given_name' => 'Jane',
+                    'surname' => 'Doe',
                     'all_names' => [
                         [
                             'name' => 'Jane Doe',
-                            'given_name' => 'Erika',
-                            'surname' => 'Kalra',
+                            'given_name' => 'Jane',
+                            'surname' => 'Doe',
                             'type' => '',
                         ],
                         [
@@ -42,9 +42,9 @@ class GedcomPersonMarriageTest extends TestCase
                         ],
                     ],
                     'sex' => 'F',
-                    'birth_date' => '31 Oct 1997',
+                    'birth_date' => '15 May 1995',
                     'birth_place' => '',
-                    'birth_year' => 1997,
+                    'birth_year' => 1995,
                     'death_date' => '',
                     'death_place' => '',
                     'death_year' => null,
@@ -59,9 +59,9 @@ class GedcomPersonMarriageTest extends TestCase
                             'tag' => 'BIRT',
                             'value' => '',
                             'type' => '',
-                            'date' => '31 Oct 1997',
+                            'date' => '15 May 1995',
                             'place' => '',
-                            'year' => 1997,
+                            'year' => 1995,
                             'note' => '',
                             'age' => '',
                             'cause' => '',
@@ -76,20 +76,20 @@ class GedcomPersonMarriageTest extends TestCase
                 'I500262' => [
                     'id' => 'I500262',
                     'name' => 'John Doe',
-                    'given_name' => 'Even',
-                    'surname' => 'Topland',
+                    'given_name' => 'John',
+                    'surname' => 'Doe',
                     'all_names' => [
                         [
                             'name' => 'John Doe',
-                            'given_name' => 'Even',
-                            'surname' => 'Topland',
+                            'given_name' => 'John',
+                            'surname' => 'Doe',
                             'type' => '',
                         ],
                     ],
                     'sex' => 'M',
-                    'birth_date' => '09 Nov 1997',
+                    'birth_date' => '20 Aug 1993',
                     'birth_place' => 'Oslo, Norway',
-                    'birth_year' => 1997,
+                    'birth_year' => 1993,
                     'death_date' => '',
                     'death_place' => '',
                     'death_year' => null,
@@ -104,9 +104,9 @@ class GedcomPersonMarriageTest extends TestCase
                             'tag' => 'BIRT',
                             'value' => '',
                             'type' => '',
-                            'date' => '09 Nov 1997',
+                            'date' => '20 Aug 1993',
                             'place' => 'Oslo, Norway',
-                            'year' => 1997,
+                            'year' => 1993,
                             'note' => '',
                             'age' => '',
                             'cause' => '',
@@ -150,14 +150,14 @@ class GedcomPersonMarriageTest extends TestCase
         File::put($cacheFile, json_encode($synthData));
 
         try {
-            // 1. Verify Erika's overview has marriage event and spouse John Doe
-            $erikaRes = $this->get('/api/gedcom/person/10275328');
-            $erikaRes->assertOk();
-            $erikaJson = $erikaRes->json();
+            // 1. Verify wife overview has marriage event and spouse John Doe
+            $wifeRes = $this->get('/api/gedcom/person/10275328');
+            $wifeRes->assertOk();
+            $wifeJson = $wifeRes->json();
 
-            $erikaEvents = $erikaJson['person']['events'];
-            $marrEvents = array_values(array_filter($erikaEvents, fn ($e) => ($e['tag'] ?? '') === 'MARR' || ($e['title'] ?? '') === 'Marriage'));
-            $this->assertCount(1, $marrEvents, 'Erika should have exactly one marriage event in timeline');
+            $wifeEvents = $wifeJson['person']['events'];
+            $marrEvents = array_values(array_filter($wifeEvents, fn ($e) => ($e['tag'] ?? '') === 'MARR' || ($e['title'] ?? '') === 'Marriage'));
+            $this->assertCount(1, $marrEvents, 'Wife should have exactly one marriage event in timeline');
             $this->assertEquals('Marriage', $marrEvents[0]['title']);
             $this->assertEquals(2026, $marrEvents[0]['year']);
             $this->assertNotNull($marrEvents[0]['spouse'], 'Marriage event must have spouse object');
@@ -165,23 +165,23 @@ class GedcomPersonMarriageTest extends TestCase
             $this->assertEquals('John Doe', $marrEvents[0]['spouse']['name']);
 
             // Spouses relation list
-            $this->assertCount(1, $erikaJson['relations']['spouses']);
-            $this->assertEquals('I500262', $erikaJson['relations']['spouses'][0]['id']);
-            $this->assertEquals(2026, $erikaJson['relations']['spouses'][0]['marriage_year']);
+            $this->assertCount(1, $wifeJson['relations']['spouses']);
+            $this->assertEquals('I500262', $wifeJson['relations']['spouses'][0]['id']);
+            $this->assertEquals(2026, $wifeJson['relations']['spouses'][0]['marriage_year']);
 
-            // 2. Verify Even's overview has marriage event and spouse Jane Doe without duplicates
-            $evenRes = $this->get('/api/gedcom/person/I500262');
-            $evenRes->assertOk();
-            $evenJson = $evenRes->json();
+            // 2. Verify husband overview has marriage event and spouse Jane Doe without duplicates
+            $husbandRes = $this->get('/api/gedcom/person/I500262');
+            $husbandRes->assertOk();
+            $husbandJson = $husbandRes->json();
 
-            $evenEvents = $evenJson['person']['events'];
-            $evenMarrEvents = array_values(array_filter($evenEvents, fn ($e) => ($e['tag'] ?? '') === 'MARR' || ($e['title'] ?? '') === 'Marriage'));
-            $this->assertCount(1, $evenMarrEvents, 'Even should have exactly one marriage event in timeline');
-            $this->assertEquals('Marriage', $evenMarrEvents[0]['title']);
-            $this->assertEquals(2026, $evenMarrEvents[0]['year']);
-            $this->assertNotNull($evenMarrEvents[0]['spouse'], 'Even marriage event must have spouse object');
-            $this->assertEquals('10275328', $evenMarrEvents[0]['spouse']['id']);
-            $this->assertEquals('Jane Doe', $evenMarrEvents[0]['spouse']['name']);
+            $husbandEvents = $husbandJson['person']['events'];
+            $husbandMarrEvents = array_values(array_filter($husbandEvents, fn ($e) => ($e['tag'] ?? '') === 'MARR' || ($e['title'] ?? '') === 'Marriage'));
+            $this->assertCount(1, $husbandMarrEvents, 'Husband should have exactly one marriage event in timeline');
+            $this->assertEquals('Marriage', $husbandMarrEvents[0]['title']);
+            $this->assertEquals(2026, $husbandMarrEvents[0]['year']);
+            $this->assertNotNull($husbandMarrEvents[0]['spouse'], 'Husband marriage event must have spouse object');
+            $this->assertEquals('10275328', $husbandMarrEvents[0]['spouse']['id']);
+            $this->assertEquals('Jane Doe', $husbandMarrEvents[0]['spouse']['name']);
         } finally {
             if ($backupCache !== null) {
                 File::put($cacheFile, $backupCache);
@@ -272,7 +272,7 @@ class GedcomPersonMarriageTest extends TestCase
         }
     }
 
-    public function test_active_dataset_erika_and_even_marriage()
+    public function test_active_dataset_couple_marriage()
     {
         $superuser = User::factory()->superuser()->create(['is_verified' => true]);
         $this->actingAs($superuser);
@@ -282,17 +282,17 @@ class GedcomPersonMarriageTest extends TestCase
             $this->markTestSkipped('No cached gedcom data');
         }
 
-        // Test Erika directly from current dataset
+        // Test couple directly from current dataset if present
         $res = $this->get('/api/gedcom/person/10275328');
         if ($res->status() === 404) {
-            $this->markTestSkipped('Erika not in current dataset');
+            $this->markTestSkipped('Person not in current dataset');
         }
 
         $res->assertOk();
         $json = $res->json();
         $events = $json['person']['events'];
         $marrEvents = array_values(array_filter($events, fn ($e) => ($e['tag'] ?? '') === 'MARR' || ($e['title'] ?? '') === 'Marriage'));
-        $this->assertNotEmpty($marrEvents, 'Erika must have marriage event in overview');
+        $this->assertNotEmpty($marrEvents, 'Person must have marriage event in overview');
         $this->assertEquals('I500262', $marrEvents[0]['spouse']['id']);
         $this->assertEquals(2026, $marrEvents[0]['year']);
     }

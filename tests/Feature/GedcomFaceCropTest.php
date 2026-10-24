@@ -118,14 +118,14 @@ GEDCOM;
             $parser = app(GedcomParserService::class);
             $data = $parser->parseAndCache();
 
-            // Check Olav Topland (I500194) who has crop on 57305632
+            // Check individual (I500194) who has crop on 57305632
             if (isset($data['individuals']['I500194'])) {
-                $olav = $data['individuals']['I500194'];
-                $this->assertNotNull($olav['primary_media']);
-                $this->assertContains($olav['primary_media']['id'], ['44088268', '57305632']);
-                $this->assertNotNull($olav['primary_media']['crop']);
+                $person = $data['individuals']['I500194'];
+                $this->assertNotNull($person['primary_media']);
+                $this->assertContains($person['primary_media']['id'], ['44088268', '57305632']);
+                $this->assertNotNull($person['primary_media']['crop']);
 
-                $mediaName = basename($olav['primary_media']['file'] ?? ($olav['primary_media']['id'].'.jpg'));
+                $mediaName = basename($person['primary_media']['file'] ?? ($person['primary_media']['id'].'.jpg'));
                 $sourcePath = storage_path('app/public/gedcom/media/'.$mediaName);
                 $createdDummy = false;
                 if (! File::exists($sourcePath) && ! File::exists(storage_path('app/private/'.$mediaName))) {

@@ -127,7 +127,7 @@ class GedcomZipReimportTest extends TestCase
 0 HEAD
 1 CHAR UTF-8
 0 @I100@ INDI
-1 NAME Alice /Topland/
+1 NAME Alice /Example/
 1 SEX F
 1 OBJE @M1@
 0 @M1@ OBJE
@@ -172,7 +172,7 @@ GEDCOM;
         // 6. Verify gedcom.ged and faces.json were imported to storage/app/private
         $this->assertFileExists(storage_path('app/private/gedcom.ged'));
         $this->assertFileExists(storage_path('app/private/faces.json'));
-        $this->assertStringContainsString('Alice /Topland/', File::get(storage_path('app/private/gedcom.ged')));
+        $this->assertStringContainsString('Alice /Example/', File::get(storage_path('app/private/gedcom.ged')));
         $this->assertStringContainsString('alice_portrait.jpg', File::get(storage_path('app/private/faces.json')));
 
         // 7. Verify media was extracted to public storage

@@ -77,8 +77,12 @@ class GedcomParserService
             $content = File::get($this->cachePath);
             $decoded = json_decode($content, true);
             if ($decoded && is_array($decoded) && ! empty($decoded['individuals'])) {
-                if (isset($decoded['families']['33325904']) && empty($decoded['families']['33325904']['relationship_type'])) {
-                    $decoded['families']['33325904']['relationship_type'] = 'Civil Partnership';
+                /** @var list<string> $civilFamIds */
+                $civilFamIds = (array) config('gedcom.civil_partnerships', ['33325904']);
+                foreach ($civilFamIds as $cId) {
+                    if (isset($decoded['families'][$cId]) && empty($decoded['families'][$cId]['relationship_type'])) {
+                        $decoded['families'][$cId]['relationship_type'] = 'Civil Partnership';
+                    }
                 }
                 if (! empty($decoded['families'])) {
                     $this->reconcileFamilyMarriages($decoded['families'], $decoded['individuals']);
@@ -1096,7 +1100,7 @@ class GedcomParserService
                 'marriage_date' => $marrDate,
                 'marriage_year' => $marrYear,
                 'marriage_place' => $marrPlace,
-                'relationship_type' => $relationshipType ?: ($id === '33325904' ? 'Civil Partnership' : ''),
+                'relationship_type' => $relationshipType ?: (in_array($id, (array) config('gedcom.civil_partnerships', ['33325904']), true) ? 'Civil Partnership' : ''),
                 'media_ids' => array_values(array_unique($mediaIds)),
                 'events' => $famEvents,
             ];
