@@ -29,16 +29,8 @@ class GedcomController extends Controller
             }
         }
 
-        $envPerson = trim((string) (
-            env('GEDCOM_START_PERSON') ?:
-            env('GEDCOM_ROOT_PERSON') ?:
-            env('GEDCOM_DEFAULT_PERSON') ?:
-            env('GEDCOM_DEFAULT_PERSON_ID') ?:
-            env('GEDCOM_DEFAULT_PERSON_NAME') ?:
-            env('GEDCOM_PERSON_ID') ?:
-            env('GEDCOM_PERSON_NAME') ?:
-            env('GEDCOM_PERSON') ?: ''
-        ));
+        $envPerson = trim((string) config('gedcom.start_person', ''));
+
 
         if ($rootPersonId === null && $envPerson !== '') {
             $cleanEnvId = trim($envPerson, '@');

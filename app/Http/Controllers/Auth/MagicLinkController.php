@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\MagicLinkNotification;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
@@ -14,7 +15,7 @@ class MagicLinkController extends Controller
     /**
      * Send a magic login link to the user's email.
      */
-    public function send(Request $request)
+    public function send(Request $request): RedirectResponse
     {
         $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
@@ -50,7 +51,7 @@ class MagicLinkController extends Controller
     /**
      * Verify the signed magic login link and log in the user.
      */
-    public function verify(Request $request, User $user)
+    public function verify(Request $request, User $user): RedirectResponse
     {
         if (! $request->hasValidSignature()) {
             return redirect()->route('login')->withErrors([
