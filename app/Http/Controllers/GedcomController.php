@@ -1170,11 +1170,10 @@ class GedcomController extends Controller
     {
         $data = $parser->getOrParseData();
 
-        if (! isset($data['individuals'][$id])) {
-            return response()->json(['error' => 'Person not found'], 404);
-        }
-
-        $ind = $data['individuals'][$id];
+        $ind = $data['individuals'][$id] ?? [
+            'id' => $id,
+            'name' => "Individual ({$id})",
+        ];
         $user = $request->user();
 
         $request->validate([
