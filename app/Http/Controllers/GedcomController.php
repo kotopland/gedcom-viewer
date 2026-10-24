@@ -812,6 +812,18 @@ class GedcomController extends Controller
             ];
         };
 
+        /** @var \Closure(array<int, string>, bool=): array<int, array<string, mixed>> $formatMiniSpouses */
+        $formatMiniSpouses = fn (array $spouseIds, bool $includeDetails = false): array => [];
+
+        /** @var \Closure(string, int=): (array<string, mixed>|null) $buildAncestorTree */
+        $buildAncestorTree = fn (string $personId, int $depth = 0): ?array => null;
+
+        /** @var \Closure(string, int=): (array<string, mixed>|null) $buildDescendantTree */
+        $buildDescendantTree = fn (string $personId, int $depth = 0): ?array => null;
+
+        /** @var \Closure(string): array<int, array<string, mixed>> $getSiblingsForPerson */
+        $getSiblingsForPerson = fn (string $personId): array => [];
+
         $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, &$formatMiniSpouses, $data, $ancestorMaxDepth, $allowedMap, $formatPersonData) {
             if ($depth >= $ancestorMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
                 return null;
@@ -870,7 +882,7 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $formatPersonData, &$formatMiniSpouses, &$buildDescendantTree, $descendantLevels) {
+        $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $formatPersonData, &$formatMiniSpouses, &$buildDescendantTree, $descendantLevels): array {
             $siblingsList = [];
             $ind = $data['individuals'][$personId] ?? null;
             if (! $ind) return [];
@@ -909,13 +921,13 @@ class GedcomController extends Controller
                 }
             }
 
-            usort($siblingsList, function ($a, $b) {
+            usort($siblingsList, function (array $a, array $b): int {
                 $yA = $a['birth_year'] ?? 9999;
                 $yB = $b['birth_year'] ?? 9999;
                 if ($yA !== $yB) {
                     return $yA <=> $yB;
                 }
-                return strcmp($a['name'] ?? '', $b['name'] ?? '');
+                return strcmp((string) $a['name'], (string) $b['name']);
             });
 
             return $siblingsList;

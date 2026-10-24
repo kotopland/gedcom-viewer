@@ -23,11 +23,9 @@ class HandleInertiaRequests extends Middleware
     {
         $response = parent::handle($request, $next);
 
-        if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
-            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-            $response->headers->set('Pragma', 'no-cache');
-            $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
-        }
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
 
         return $response;
     }
@@ -40,9 +38,16 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): ?string
     {
+        if (app()->environment('testing')) {
+            return parent::version($request);
+        }
+
         $manifestPath = public_path('build/manifest.json');
         if (file_exists($manifestPath)) {
-            return md5_file($manifestPath);
+            $hash = md5_file($manifestPath);
+            if ($hash !== false) {
+                return $hash;
+            }
         }
 
         return parent::version($request);

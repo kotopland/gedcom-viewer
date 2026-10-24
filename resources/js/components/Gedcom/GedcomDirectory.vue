@@ -46,12 +46,31 @@ const fetchPeople = async (page = 1) => {
 
     try {
         const params = new URLSearchParams();
-        if (searchInput.value) params.append('q', searchInput.value);
-        if (surnameFilter.value) params.append('surname', surnameFilter.value);
-        if (genderFilter.value) params.append('gender', genderFilter.value);
-        if (mediaFilter.value) params.append('has_media', '1');
-        if (minYear.value) params.append('min_year', minYear.value.toString());
-        if (maxYear.value) params.append('max_year', maxYear.value.toString());
+
+        if (searchInput.value) {
+            params.append('q', searchInput.value);
+        }
+
+        if (surnameFilter.value) {
+            params.append('surname', surnameFilter.value);
+        }
+
+        if (genderFilter.value) {
+            params.append('gender', genderFilter.value);
+        }
+
+        if (mediaFilter.value) {
+            params.append('has_media', '1');
+        }
+
+        if (minYear.value) {
+            params.append('min_year', minYear.value.toString());
+        }
+
+        if (maxYear.value) {
+            params.append('max_year', maxYear.value.toString());
+        }
+
         params.append('page', page.toString());
         params.append('limit', '24');
 

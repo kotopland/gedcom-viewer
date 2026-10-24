@@ -14,11 +14,19 @@ class PersonContributionSubmittedMail extends Mailable
     use Queueable, SerializesModels;
 
     public User $sender;
+
+    /**
+     * @var array<string, mixed>
+     */
     public array $person;
+
     public ?string $note;
     public ?string $mediaUrl;
     public ?string $mediaOriginalName;
 
+    /**
+     * @param array<string, mixed> $person
+     */
     public function __construct(
         User $sender,
         array $person,

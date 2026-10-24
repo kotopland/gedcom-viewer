@@ -248,6 +248,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          mkdir -p storage/app/private storage/app/public/gedcom/media storage/app/public/gedcom/crops storage/framework/{sessions,views,cache}
           touch database/database.sqlite
           chmod -R 777 storage bootstrap/cache
 
