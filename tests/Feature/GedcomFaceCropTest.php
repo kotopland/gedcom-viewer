@@ -206,6 +206,8 @@ GEDCOM;
         } finally {
             if ($backupFaces !== null) {
                 File::put($realFaces, $backupFaces);
+            } else {
+                File::delete($realFaces);
             }
         }
     }

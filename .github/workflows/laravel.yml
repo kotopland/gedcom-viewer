@@ -99,7 +99,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
-          php artisan wayfinder:generate || true
+          php artisan wayfinder:generate --with-form || true
 
       - name: Run Laravel Pint (PHP code style)
         run: vendor/bin/pint --test || true
@@ -152,7 +152,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
-          php artisan wayfinder:generate || true
+          php artisan wayfinder:generate --with-form || true
 
       - name: Run PHPStan / Larastan
         run: vendor/bin/phpstan analyse --verbose --memory-limit=2G
@@ -202,6 +202,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          php artisan wayfinder:generate --with-form || true
 
       - name: Compile frontend assets (Vite)
         run: npm run build
@@ -265,6 +266,10 @@ jobs:
           mkdir -p storage/app/private storage/app/public/gedcom/media storage/app/public/gedcom/crops storage/framework/{sessions,views,cache}
           touch database/database.sqlite
           chmod -R 777 storage bootstrap/cache
+          if [ ! -f storage/app/private/gedcom.ged ]; then
+            printf "0 HEAD\n1 CHAR UTF-8\n0 TLR\n" > storage/app/private/gedcom.ged
+          fi
+          php artisan wayfinder:generate --with-form || true
 
       - name: Build frontend assets
         run: npm run build

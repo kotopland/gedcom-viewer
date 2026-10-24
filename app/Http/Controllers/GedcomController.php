@@ -166,7 +166,11 @@ class GedcomController extends Controller
         File::put($privateDir.'/faces.json', $content);
 
         // Re-parse and cache data to regenerate crops while preserving media
-        $data = $parser->parseAndCache(false);
+        try {
+            $data = $parser->parseAndCache(false);
+        } catch (\Throwable) {
+            $data = ['stats' => []];
+        }
 
         $faceCount = count($decoded['all_tags'] ?? []);
         if ($faceCount === 0 && isset($decoded['by_person'])) {
