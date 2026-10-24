@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
 import {
-    Search, Filter, User, Calendar, MapPin, Image as ImageIcon,
-    ChevronLeft, ChevronRight, RefreshCw, LayoutGrid, List
+    Calendar,
+    ChevronLeft,
+    ChevronRight,
+    Image as ImageIcon,
+    LayoutGrid,
+    List,
+    MapPin,
+    RefreshCw,
+    Search,
+    User,
 } from '@lucide/vue';
+import { onMounted, ref, watch } from 'vue';
 
-
-const props = defineProps<{
+defineProps<{
     topSurnames?: Record<string, number>;
 }>();
 
@@ -36,6 +43,7 @@ let debounceTimer: any = null;
 
 const fetchPeople = async (page = 1) => {
     loading.value = true;
+
     try {
         const params = new URLSearchParams();
         if (searchInput.value) params.append('q', searchInput.value);

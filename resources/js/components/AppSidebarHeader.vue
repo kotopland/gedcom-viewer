@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { Moon, Sun } from '@lucide/vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppearance } from '@/composables/useAppearance';
-import { Sun, Moon } from '@lucide/vue';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(

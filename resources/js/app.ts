@@ -42,6 +42,7 @@ router.on('invalid', () => {
 router.on('navigate', (event: any) => {
     const newVersion = event.detail.page.version;
     const cachedVersion = localStorage.getItem('app_asset_version');
+
     if (newVersion && cachedVersion && cachedVersion !== newVersion) {
         localStorage.setItem('app_asset_version', newVersion);
         window.location.reload();

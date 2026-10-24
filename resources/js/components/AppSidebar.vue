@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Link, usePage } from '@inertiajs/vue3';
+import { BookOpen, FolderArchive, FolderGit2, LayoutGrid, Users } from '@lucide/vue';
 import { computed } from 'vue';
-import { usePage, Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, Users, FolderArchive } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,9 +15,9 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import type { User } from '@/types/auth';
+import { dashboard } from '@/routes';
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user as User | undefined);

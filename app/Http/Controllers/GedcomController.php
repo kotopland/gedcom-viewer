@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\GedcomParserService;
 use App\Services\LineagePermissionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
@@ -81,7 +82,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function reimport(GedcomParserService $parser)
+    public function reimport(GedcomParserService $parser): JsonResponse
     {
         try {
             $data = $parser->parseAndCache(true);
@@ -97,7 +98,7 @@ class GedcomController extends Controller
         }
     }
 
-    public function uploadGedcom(Request $request, GedcomParserService $parser)
+    public function uploadGedcom(Request $request, GedcomParserService $parser): JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', function ($attribute, $value, $fail) {
@@ -131,7 +132,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function uploadFaces(Request $request, GedcomParserService $parser)
+    public function uploadFaces(Request $request, GedcomParserService $parser): JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', function ($attribute, $value, $fail) {
@@ -144,6 +145,11 @@ class GedcomController extends Controller
 
         $uploadedFile = $request->file('file');
         $content = file_get_contents($uploadedFile->getRealPath());
+        if ($content === false) {
+            return response()->json([
+                'error' => 'Unable to read uploaded faces file contents.',
+            ], 422);
+        }
 
         $decoded = json_decode($content, true);
         if (!is_array($decoded) || (!isset($decoded['by_person']) && !isset($decoded['all_tags']))) {
@@ -173,7 +179,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function downloadFaceScript()
+    public function downloadFaceScript(): BinaryFileResponse
     {
         $path = base_path('scripts/mft11_export_faces.py');
         if (!File::exists($path)) {
@@ -185,9 +191,7 @@ class GedcomController extends Controller
         ]);
     }
 
-
-
-    public function search(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
+    public function search(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
     {
         $data = $parser->getOrParseData($request->boolean('refresh'));
 
@@ -288,7 +292,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function person(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService)
+    public function person(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
     {
         $data = $parser->getOrParseData();
 
@@ -640,12 +644,20 @@ class GedcomController extends Controller
                 if ($aYear !== $bYear) {
                     return $aYear <=> $bYear;
                 }
-            } elseif ($aYear !== null && $bYear === null) {
-                if ($b['tag'] === 'BIRT') return 1;
-                if ($b['tag'] === 'DEAT' || $b['tag'] === 'BURI') return -1;
-            } elseif ($aYear === null && $bYear !== null) {
-                if ($a['tag'] === 'BIRT') return -1;
-                if ($a['tag'] === 'DEAT' || $a['tag'] === 'BURI') return 1;
+            } elseif ($aYear !== null) {
+                if ($b['tag'] === 'BIRT') {
+                    return 1;
+                }
+                if ($b['tag'] === 'DEAT' || $b['tag'] === 'BURI') {
+                    return -1;
+                }
+            } elseif ($bYear !== null) {
+                if ($a['tag'] === 'BIRT') {
+                    return -1;
+                }
+                if ($a['tag'] === 'DEAT' || $a['tag'] === 'BURI') {
+                    return 1;
+                }
             }
 
             $aWeight = $tagWeights[$a['tag']] ?? 50;
@@ -680,7 +692,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function tree(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService)
+    public function tree(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
     {
         $data = $parser->getOrParseData();
 
@@ -929,7 +941,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function media(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
+    public function media(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
     {
         $data = $parser->getOrParseData();
 
@@ -1031,7 +1043,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function servePortrait(Request $request, string $id, GedcomParserService $parser)
+    public function servePortrait(Request $request, string $id, GedcomParserService $parser): BinaryFileResponse
     {
         $data = $parser->getOrParseData();
         $targetId = trim($id, '@');
@@ -1097,7 +1109,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function submitContribution(Request $request, string $id, GedcomParserService $parser)
+    public function submitContribution(Request $request, string $id, GedcomParserService $parser): JsonResponse
     {
         $data = $parser->getOrParseData();
 
@@ -1197,7 +1209,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function stats(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService)
+    public function stats(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
     {
         $data = $parser->getOrParseData();
 
@@ -1431,7 +1443,7 @@ class GedcomController extends Controller
         ]);
     }
 
-    public function lineage(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService)
+    public function lineage(Request $request, string $id, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
     {
         $data = $parser->getOrParseData();
 
