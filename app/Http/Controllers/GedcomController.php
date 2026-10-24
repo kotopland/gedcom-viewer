@@ -812,30 +812,26 @@ class GedcomController extends Controller
             ];
         };
 
-        /** @var \Closure(array<int, string>, bool=): array<int, array<string, mixed>> $formatMiniSpouses */
-        $formatMiniSpouses = fn (array $spouseIds, bool $includeDetails = false): array => [];
+        $formatMiniSpouses = null;
+        $buildAncestorTree = null;
+        $buildDescendantTree = null;
+        $getSiblingsForPerson = null;
 
-        /** @var \Closure(string, int=): (array<string, mixed>|null) $buildAncestorTree */
-        $buildAncestorTree = fn (string $personId, int $depth = 0): ?array => null;
-
-        /** @var \Closure(string, int=): (array<string, mixed>|null) $buildDescendantTree */
-        $buildDescendantTree = fn (string $personId, int $depth = 0): ?array => null;
-
-        /** @var \Closure(string): array<int, array<string, mixed>> $getSiblingsForPerson */
-        $getSiblingsForPerson = fn (string $personId): array => [];
-
-        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, &$formatMiniSpouses, $data, $ancestorMaxDepth, $allowedMap, $formatPersonData) {
-            if ($depth >= $ancestorMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
+        /**
+         * @return array<string, mixed>|null
+         */
+        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, &$formatMiniSpouses, $data, $ancestorMaxDepth, $allowedMap, $formatPersonData): ?array {
+            if ($depth >= $ancestorMaxDepth || ! isset($data['individuals'][$personId]) || ($allowedMap !== null && ! isset($allowedMap[$personId]))) {
                 return null;
             }
 
             $ind = $data['individuals'][$personId];
             $node = $formatPersonData($ind);
-            $node['spouses'] = $formatMiniSpouses($ind['spouses'] ?? [], false);
+            $node['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($ind['spouses'] ?? [], false) : [];
             $node['parents'] = [];
 
             foreach ($ind['parents'] as $pId) {
-                $pNode = $buildAncestorTree($pId, $depth + 1);
+                $pNode = is_callable($buildAncestorTree) ? $buildAncestorTree($pId, $depth + 1) : null;
                 if ($pNode) {
                     $node['parents'][] = $pNode;
                 }
@@ -844,36 +840,48 @@ class GedcomController extends Controller
             return $node;
         };
 
-        $formatMiniSpouses = function (array $spouseIds, bool $includeDetails = false) use ($data, $allowedMap, $formatPersonData, $buildAncestorTree, &$getSiblingsForPerson) {
+        /**
+         * @param array<int, string> $spouseIds
+         * @return array<int, array<string, mixed>>
+         */
+        $formatMiniSpouses = function (array $spouseIds, bool $includeDetails = false) use ($data, $allowedMap, $formatPersonData, &$buildAncestorTree, &$getSiblingsForPerson): array {
             $result = [];
             foreach ($spouseIds as $sId) {
-                if ($allowedMap !== null && !isset($allowedMap[$sId])) continue;
-                if (!isset($data['individuals'][$sId])) continue;
+                if ($allowedMap !== null && ! isset($allowedMap[$sId])) {
+                    continue;
+                }
+                if (! isset($data['individuals'][$sId])) {
+                    continue;
+                }
                 $s = $data['individuals'][$sId];
                 $spouseData = $formatPersonData($s);
 
                 if ($includeDetails) {
-                    $spouseData['ancestors'] = $buildAncestorTree($sId);
-                    $spouseData['siblings'] = $getSiblingsForPerson($sId);
+                    $spouseData['ancestors'] = is_callable($buildAncestorTree) ? $buildAncestorTree($sId) : null;
+                    $spouseData['siblings'] = is_callable($getSiblingsForPerson) ? $getSiblingsForPerson($sId) : [];
                 }
 
                 $result[] = $spouseData;
             }
+
             return $result;
         };
 
-        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap, $formatMiniSpouses, $formatPersonData) {
-            if ($depth >= $descendantMaxDepth || !isset($data['individuals'][$personId]) || ($allowedMap !== null && !isset($allowedMap[$personId]))) {
+        /**
+         * @return array<string, mixed>|null
+         */
+        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap, &$formatMiniSpouses, $formatPersonData): ?array {
+            if ($depth >= $descendantMaxDepth || ! isset($data['individuals'][$personId]) || ($allowedMap !== null && ! isset($allowedMap[$personId]))) {
                 return null;
             }
 
             $ind = $data['individuals'][$personId];
             $node = $formatPersonData($ind);
-            $node['spouses'] = $formatMiniSpouses($ind['spouses'] ?? []);
+            $node['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($ind['spouses'] ?? []) : [];
             $node['children'] = [];
 
             foreach ($ind['children'] as $cId) {
-                $cNode = $buildDescendantTree($cId, $depth + 1);
+                $cNode = is_callable($buildDescendantTree) ? $buildDescendantTree($cId, $depth + 1) : null;
                 if ($cNode) {
                     $node['children'][] = $cNode;
                 }
@@ -882,10 +890,15 @@ class GedcomController extends Controller
             return $node;
         };
 
+        /**
+         * @return array<int, array<string, mixed>>
+         */
         $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $formatPersonData, &$formatMiniSpouses, &$buildDescendantTree, $descendantLevels): array {
             $siblingsList = [];
             $ind = $data['individuals'][$personId] ?? null;
-            if (! $ind) return [];
+            if (! $ind) {
+                return [];
+            }
 
             $parentIds = $ind['parents'] ?? [];
             $siblingIdsSet = [];
@@ -908,10 +921,10 @@ class GedcomController extends Controller
                 if (isset($data['individuals'][$sibId])) {
                     $sib = $data['individuals'][$sibId];
                     $sibData = $formatPersonData($sib);
-                    $sibData['spouses'] = $formatMiniSpouses($sib['spouses'] ?? []);
+                    $sibData['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($sib['spouses'] ?? []) : [];
 
                     if ($descendantLevels > 0) {
-                        $sibTree = $buildDescendantTree($sibId, 0);
+                        $sibTree = is_callable($buildDescendantTree) ? $buildDescendantTree($sibId, 0) : null;
                         $sibData['children'] = $sibTree['children'] ?? [];
                     } else {
                         $sibData['children'] = [];
@@ -927,6 +940,7 @@ class GedcomController extends Controller
                 if ($yA !== $yB) {
                     return $yA <=> $yB;
                 }
+
                 return strcmp((string) $a['name'], (string) $b['name']);
             });
 
@@ -937,19 +951,19 @@ class GedcomController extends Controller
         $primaryData = null;
         if ($focusInd) {
             $primaryData = $formatPersonData($focusInd);
-            $primaryData['spouses'] = $formatMiniSpouses($focusInd['spouses'] ?? [], includeDetails: true);
+            $primaryData['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($focusInd['spouses'] ?? [], includeDetails: true) : [];
         }
-        $descendantsTree = $descendantLevels > 0 ? $buildDescendantTree($id) : null;
+        $descendantsTree = ($descendantLevels > 0 && is_callable($buildDescendantTree)) ? $buildDescendantTree($id) : null;
         if ($primaryData && $descendantsTree) {
             $primaryData['children'] = $descendantsTree['children'] ?? [];
         }
-        $siblingsList = $focusInd ? $getSiblingsForPerson($id) : [];
+        $siblingsList = ($focusInd && is_callable($getSiblingsForPerson)) ? $getSiblingsForPerson($id) : [];
 
         return response()->json([
             'primary' => $primaryData,
             'siblings' => $siblingsList,
-            'ancestors' => $ancestorLevels > 0 ? $buildAncestorTree($id) : null,
-            'descendants' => $descendantLevels > 0 ? $buildDescendantTree($id) : null,
+            'ancestors' => ($ancestorLevels > 0 && is_callable($buildAncestorTree)) ? $buildAncestorTree($id) : null,
+            'descendants' => ($descendantLevels > 0 && is_callable($buildDescendantTree)) ? $buildDescendantTree($id) : null,
         ]);
     }
 

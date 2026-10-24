@@ -36,9 +36,11 @@ class MagicLinkNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $name = ($notifiable instanceof \App\Models\User) ? $notifiable->name : 'there';
+
         return (new MailMessage)
             ->subject('Topland Family Archive')
-            ->greeting('Hello ' . $notifiable->name . '!')
+            ->greeting('Hello ' . $name . '!')
             ->line('You can access the Family Genealogy Archive by clicking the button below')
             ->action('Access Family Archive', $this->url)
             ->line('This login link will expire in 15 minutes for your security.')

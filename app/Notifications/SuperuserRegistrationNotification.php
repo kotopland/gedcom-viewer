@@ -15,6 +15,11 @@ class SuperuserRegistrationNotification extends Notification
     {
     }
 
+    /**
+     * Get the notification's delivery channels.
+     *
+     * @return array<int, string>
+     */
     public function via(object $notifiable): array
     {
         return ['mail'];

@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
 import {
-    PieChart, ZoomIn, ZoomOut, Maximize2, Shrink, Expand,
-    User, SlidersHorizontal, ChevronRight, ChevronLeft, RefreshCcw, Layers, Heart, Search, Move
+    ChevronLeft,
+    ChevronRight,
+    Expand,
+    Layers,
+    Maximize2,
+    Shrink,
+    SlidersHorizontal,
+    User,
+    ZoomIn,
+    ZoomOut,
 } from '@lucide/vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
     rootPersonId: string | null;
@@ -33,8 +41,12 @@ const showAncestorList = ref<boolean>(true);
 const hoveredPerson = ref<any>(null);
 
 const fetchAncestors = async (id: string) => {
-    if (!id) return;
+    if (!id) {
+        return;
+    }
+
     loading.value = true;
+
     try {
         const res = await fetch(`/api/gedcom/tree/${id}?ancestors=${generationDepth.value}&descendants=0`);
         if (res.ok) {

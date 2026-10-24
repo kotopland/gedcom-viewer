@@ -62,6 +62,9 @@ class GedcomParserService
         return $dir;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getOrParseData(bool $forceRefresh = false): array
     {
         if (!$forceRefresh && File::exists($this->cachePath)) {
@@ -81,6 +84,9 @@ class GedcomParserService
         return $this->parseAndCache($forceRefresh);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function parseAndCache(bool $clearMedia = false, ?string $sourcePath = null): array
     {
         $this->zipPath = $sourcePath ?: $this->findActiveZipPath();
@@ -135,7 +141,7 @@ class GedcomParserService
             $gedEntry = null;
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $entryName = $zip->getNameIndex($i);
-                if (preg_match('/(^|\/)gedcom\.ged$/i', $entryName) || preg_match('/\.ged$/i', $entryName)) {
+                if ($entryName !== false && (preg_match('/(^|\/)gedcom\.ged$/i', $entryName) || preg_match('/\.ged$/i', $entryName))) {
                     $gedEntry = $entryName;
                     break;
                 }

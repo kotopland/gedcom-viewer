@@ -75,6 +75,7 @@ const fetchPeople = async (page = 1) => {
         params.append('limit', '24');
 
         const res = await fetch(`/api/gedcom/search?${params.toString()}`);
+
         if (res.ok) {
             const data = await res.json();
             people.value = data.data;
