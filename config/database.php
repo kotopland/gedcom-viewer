@@ -84,7 +84,7 @@ return [
             ]) : [],
         ],
 
-         'mysql_deployments' => [
+        'mysql_deployments' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),

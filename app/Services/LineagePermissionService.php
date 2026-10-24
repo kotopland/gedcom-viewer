@@ -10,13 +10,12 @@ class LineagePermissionService
      * Get the array of allowed person IDs for the user based on their start_person_id.
      * Returns null if the user has unrestricted access (e.g. Superuser or no start_person_id set).
      *
-     * @param User|null $user
-     * @param array<string, array> $allIndividuals
-     * @return array<string>|null
+     * @param  array<string, array<string, mixed>>  $allIndividuals
+     * @return array<int, string>|null
      */
     public function getAllowedPersonIds(?User $user, array $allIndividuals): ?array
     {
-        if (!$user || $user->isSuperuser()) {
+        if (! $user || $user->isSuperuser()) {
             return null; // Unlimited access for superusers
         }
 
@@ -26,7 +25,7 @@ class LineagePermissionService
         }
 
         $cleanStartId = trim($startPersonId, '@');
-        if (!isset($allIndividuals[$cleanStartId])) {
+        if (! isset($allIndividuals[$cleanStartId])) {
             // Case-insensitive ID lookup fallback
             foreach (array_keys($allIndividuals) as $id) {
                 if (strcasecmp($id, $cleanStartId) === 0) {
@@ -36,7 +35,7 @@ class LineagePermissionService
             }
         }
 
-        if (!isset($allIndividuals[$cleanStartId])) {
+        if (! isset($allIndividuals[$cleanStartId])) {
             // Name lookup fallback
             foreach ($allIndividuals as $id => $ind) {
                 if (strcasecmp($ind['name'] ?? '', $startPersonId) === 0) {
@@ -46,10 +45,11 @@ class LineagePermissionService
             }
         }
 
-        if (!isset($allIndividuals[$cleanStartId])) {
+        if (! isset($allIndividuals[$cleanStartId])) {
             return null;
         }
 
+        /** @var array<array-key, bool> $allowed */
         $allowed = [];
         $allowed[$cleanStartId] = true;
 
@@ -83,7 +83,7 @@ class LineagePermissionService
         $startPersonSpouseIds = array_unique($startPersonSpouseIds);
 
         foreach ($startPersonSpouseIds as $spouseId) {
-            if (!isset($allIndividuals[$spouseId])) {
+            if (! isset($allIndividuals[$spouseId])) {
                 continue;
             }
 
@@ -102,7 +102,7 @@ class LineagePermissionService
         // 6. Spouses & Co-parents of EVERY person in the allowed set
         $visibleSet = array_keys($allowed);
         foreach ($visibleSet as $personId) {
-            if (!isset($allIndividuals[$personId])) {
+            if (! isset($allIndividuals[$personId])) {
                 continue;
             }
 
@@ -130,21 +130,24 @@ class LineagePermissionService
 
     /**
      * Traverse up the tree to collect all ancestors.
+     *
+     * @param  array<string, array<string, mixed>>  $allIndividuals
+     * @param  array<array-key, bool>  $allowed
      */
     private function collectAncestors(string $startId, array $allIndividuals, array &$allowed): void
     {
         $queue = [$startId];
         $visited = [$startId => true];
 
-        while (!empty($queue)) {
+        while (! empty($queue)) {
             $currId = array_shift($queue);
-            if (!isset($allIndividuals[$currId])) {
+            if (! isset($allIndividuals[$currId])) {
                 continue;
             }
 
             $parents = $allIndividuals[$currId]['parents'] ?? [];
             foreach ($parents as $pId) {
-                if (!isset($visited[$pId])) {
+                if (! isset($visited[$pId])) {
                     $visited[$pId] = true;
                     $allowed[$pId] = true;
                     $queue[] = $pId;
@@ -155,21 +158,24 @@ class LineagePermissionService
 
     /**
      * Traverse down the tree to collect all descendants.
+     *
+     * @param  array<string, array<string, mixed>>  $allIndividuals
+     * @param  array<array-key, bool>  $allowed
      */
     private function collectDescendants(string $startId, array $allIndividuals, array &$allowed): void
     {
         $queue = [$startId];
         $visited = [$startId => true];
 
-        while (!empty($queue)) {
+        while (! empty($queue)) {
             $currId = array_shift($queue);
-            if (!isset($allIndividuals[$currId])) {
+            if (! isset($allIndividuals[$currId])) {
                 continue;
             }
 
             $children = $allIndividuals[$currId]['children'] ?? [];
             foreach ($children as $cId) {
-                if (!isset($visited[$cId])) {
+                if (! isset($visited[$cId])) {
                     $visited[$cId] = true;
                     $allowed[$cId] = true;
                     $queue[] = $cId;
@@ -180,10 +186,13 @@ class LineagePermissionService
 
     /**
      * Collect all siblings of a person, their spouses, and all of their descendants.
+     *
+     * @param  array<string, array<string, mixed>>  $allIndividuals
+     * @param  array<array-key, bool>  $allowed
      */
     private function collectSiblingsAndDescendants(string $personId, array $allIndividuals, array &$allowed): void
     {
-        if (!isset($allIndividuals[$personId])) {
+        if (! isset($allIndividuals[$personId])) {
             return;
         }
 
@@ -194,5 +203,3 @@ class LineagePermissionService
         }
     }
 }
-
-

@@ -13,9 +13,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-    <div class="flex flex-col items-center relative">
+    <div class="relative flex flex-col items-center">
         <!-- Person & Spouse(s) Row -->
-        <div class="flex items-start gap-2 sm:gap-2.5 relative">
+        <div class="relative flex items-start gap-2 sm:gap-2.5">
             <!-- Main Person Node -->
             <GedcomHeritageNode
                 :person="person"
@@ -27,10 +27,14 @@ const emit = defineEmits<{
             <!-- Marriage Horizontal Bar with Anchor Pins -->
             <div
                 v-if="person.spouses && person.spouses.length > 0"
-                class="absolute top-[250px] left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                class="pointer-events-none absolute top-[250px] left-1/2 z-0 flex h-[3px] w-10 -translate-x-1/2 items-center justify-between bg-slate-900 dark:bg-slate-300"
             >
-                <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
-                <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
+                <span
+                    class="-ml-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                ></span>
+                <span
+                    class="-mr-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                ></span>
             </div>
 
             <!-- Spouse Node -->
@@ -44,40 +48,51 @@ const emit = defineEmits<{
         </div>
 
         <!-- Children Section Below (Recursive) -->
-        <div v-if="person.children && person.children.length > 0" class="flex flex-col items-center relative mt-[-6px]">
+        <div
+            v-if="person.children && person.children.length > 0"
+            class="relative mt-[-6px] flex flex-col items-center"
+        >
             <!-- Vertical Drop Line from Couple down to Children Bracket -->
-            <div class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0"></div>
+            <div
+                class="z-0 h-4 w-[3px] bg-slate-900 sm:h-5 dark:bg-slate-300"
+            ></div>
 
             <!-- Row of Children -->
             <div class="flex items-start justify-center">
                 <div
                     v-for="(child, cIdx) in person.children"
                     :key="child.id"
-                    class="flex flex-col items-center relative px-1 sm:px-1.5 pt-4 sm:pt-5"
+                    class="relative flex flex-col items-center px-1 pt-4 sm:px-1.5 sm:pt-5"
                 >
                     <!-- Horizontal Distribution Bracket across Children -->
                     <div
                         v-if="person.children.length > 1"
-                        class="absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                        class="pointer-events-none absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300"
                         :class="[
                             cIdx === 0
-                                ? (child.spouses && child.spouses.length > 0
-                                    ? 'left-[calc(50%-134px)] sm:left-[calc(50%-135px)] right-0'
-                                    : 'left-1/2 right-0')
+                                ? child.spouses && child.spouses.length > 0
+                                    ? 'right-0 left-[calc(50%-134px)] sm:left-[calc(50%-135px)]'
+                                    : 'right-0 left-1/2'
                                 : '',
                             cIdx === person.children.length - 1
-                                ? (child.spouses && child.spouses.length > 0
-                                    ? 'left-0 right-[calc(50%-134px)] sm:right-[calc(50%-135px)]'
-                                    : 'left-0 right-1/2')
+                                ? child.spouses && child.spouses.length > 0
+                                    ? 'right-[calc(50%-134px)] left-0 sm:right-[calc(50%-135px)]'
+                                    : 'right-1/2 left-0'
                                 : '',
-                            cIdx > 0 && cIdx < person.children.length - 1 ? 'left-0 right-0' : ''
+                            cIdx > 0 && cIdx < person.children.length - 1
+                                ? 'right-0 left-0'
+                                : '',
                         ]"
                     ></div>
 
                     <!-- Horizontal Bar above Single Child with Spouse/Partner -->
                     <div
-                        v-if="person.children.length === 1 && child.spouses && child.spouses.length > 0"
-                        class="absolute top-0 left-[calc(50%-134px)] right-[calc(50%-134px)] sm:left-[calc(50%-135px)] sm:right-[calc(50%-135px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                        v-if="
+                            person.children.length === 1 &&
+                            child.spouses &&
+                            child.spouses.length > 0
+                        "
+                        class="pointer-events-none absolute top-0 right-[calc(50%-134px)] left-[calc(50%-134px)] h-[3px] bg-slate-900 sm:right-[calc(50%-135px)] sm:left-[calc(50%-135px)] dark:bg-slate-300"
                     ></div>
 
                     <!-- Recursive Child Descendant Node -->

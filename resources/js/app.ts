@@ -21,7 +21,6 @@ createInertiaApp({
             default:
                 return AppLayout;
         }
-
     },
     progress: {
         color: '#4B5563',

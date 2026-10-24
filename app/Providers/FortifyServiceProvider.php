@@ -4,13 +4,18 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -21,8 +26,9 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(\Laravel\Fortify\Contracts\LoginResponse::class, function () {
-            return new class implements \Laravel\Fortify\Contracts\LoginResponse {
+        $this->app->singleton(LoginResponse::class, function () {
+            return new class implements LoginResponse
+            {
                 public function toResponse($request)
                 {
                     $user = $request->user();
@@ -33,8 +39,9 @@ class FortifyServiceProvider extends ServiceProvider
             };
         });
 
-        $this->app->singleton(\Laravel\Fortify\Contracts\TwoFactorLoginResponse::class, function () {
-            return new class implements \Laravel\Fortify\Contracts\TwoFactorLoginResponse {
+        $this->app->singleton(TwoFactorLoginResponse::class, function () {
+            return new class implements TwoFactorLoginResponse
+            {
                 public function toResponse($request)
                 {
                     $user = $request->user();
@@ -65,15 +72,15 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::createUsersUsing(CreateNewUser::class);
 
         Fortify::authenticateUsing(function (Request $request) {
-            $user = \App\Models\User::where('email', $request->email)->first();
+            $user = User::where('email', $request->email)->first();
 
             if ($user && ! $user->isSuperuser()) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'email' => ['Password login is restricted to Superusers. Please use Magic Link login.'],
                 ]);
             }
 
-            if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            if ($user && Hash::check($request->password, $user->password)) {
                 return $user;
             }
 

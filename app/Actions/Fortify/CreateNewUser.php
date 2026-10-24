@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Notifications\SuperuserRegistrationNotification;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -34,7 +35,7 @@ class CreateNewUser implements CreatesNewUsers
 
         $superusers = User::where('is_superuser', true)->get();
         foreach ($superusers as $superuser) {
-            $superuser->notify(new \App\Notifications\SuperuserRegistrationNotification($user));
+            $superuser->notify(new SuperuserRegistrationNotification($user));
         }
 
         return $user;

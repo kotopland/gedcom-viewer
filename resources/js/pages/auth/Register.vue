@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { Sparkles, Mail } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { Sparkles, Mail } from '@lucide/vue';
 
 defineOptions({
     layout: {
         title: 'Create an account',
-        description: 'Enter your name and email below to register. No password required.',
+        description:
+            'Enter your name and email below to register. No password required.',
     },
 });
 </script>
@@ -28,10 +29,13 @@ defineOptions({
     >
         <div class="grid gap-6">
             <!-- Informational Banner -->
-            <div class="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold flex items-start gap-2.5">
-                <Sparkles class="w-4 h-4 shrink-0 mt-0.5 text-indigo-500" />
+            <div
+                class="flex items-start gap-2.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400"
+            >
+                <Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
                 <span class="leading-relaxed">
-                    Passwordless registration! You will log in using Magic Links sent to your email.
+                    Passwordless registration! You will log in using Magic Links
+                    sent to your email.
                 </span>
             </div>
 
@@ -66,18 +70,20 @@ defineOptions({
 
             <Button
                 type="submit"
-                class="mt-2 w-full font-bold cursor-pointer"
+                class="mt-2 w-full cursor-pointer font-bold"
                 tabindex="3"
                 :disabled="processing"
                 data-test="register-user-button"
             >
                 <Spinner v-if="processing" />
-                <Mail class="w-4 h-4 mr-2" />
+                <Mail class="mr-2 h-4 w-4" />
                 Create Passwordless Account
             </Button>
         </div>
 
-        <div class="text-center text-sm text-muted-foreground border-t border-slate-200 dark:border-slate-800 pt-4">
+        <div
+            class="border-t border-slate-200 pt-4 text-center text-sm text-muted-foreground dark:border-slate-800"
+        >
             Already registered?
             <TextLink
                 :href="login()"

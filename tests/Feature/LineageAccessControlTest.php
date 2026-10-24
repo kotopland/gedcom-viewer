@@ -14,7 +14,7 @@ class LineageAccessControlTest extends TestCase
     public function test_lineage_permission_service_computes_direct_lineage_and_siblings(): void
     {
 
-        $service = new LineagePermissionService();
+        $service = new LineagePermissionService;
 
         // Sample GEDCOM individuals graph:
         // I1 (Start Person)
@@ -132,7 +132,7 @@ class LineageAccessControlTest extends TestCase
 
     public function test_superuser_has_unrestricted_access(): void
     {
-        $service = new LineagePermissionService();
+        $service = new LineagePermissionService;
 
         $superuser = User::factory()->create([
             'is_superuser' => true,
@@ -168,7 +168,7 @@ class LineageAccessControlTest extends TestCase
 
     public function test_lineage_permission_service_includes_spouse_ancestors_descendants_siblings_and_their_descendants(): void
     {
-        $service = new LineagePermissionService();
+        $service = new LineagePermissionService;
 
         $mockData = [
             'I1' => [
@@ -262,5 +262,3 @@ class LineageAccessControlTest extends TestCase
         $this->assertNotContains('U1', $allowedIds);       // Unrelated Person
     }
 }
-
-

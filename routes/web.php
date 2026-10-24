@@ -6,6 +6,7 @@ use App\Http\Controllers\GedcomController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Spatie\MailPreview\MailPreviewServiceProvider;
 
 Route::middleware(['throttle:6,1'])->group(function () {
     Route::post('/login/magic-link', [MagicLinkController::class, 'send'])->name('magic-link.send');
@@ -17,6 +18,7 @@ Route::middleware(['throttle:6,1'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/pending-verification', function (Request $request) {
         $user = $request->user();
+
         return Inertia::render('auth/AwaitingVerification', [
             'isVerified' => (bool) $user->is_verified,
             'hasStartPerson' => ! empty($user->start_person_id),
@@ -30,6 +32,7 @@ Route::middleware(['auth', 'superuser.verified'])->group(function () {
         if ($request->user()->isSuperuser()) {
             return redirect()->route('dashboard');
         }
+
         return redirect()->route('gedcom.index');
     })->name('home');
 
@@ -72,6 +75,6 @@ Route::middleware(['auth', 'superuser.verified', 'superuser'])->group(function (
 
 require __DIR__.'/settings.php';
 
-if (class_exists(\Spatie\MailPreview\MailPreviewServiceProvider::class)) {
+if (class_exists(MailPreviewServiceProvider::class)) {
     Route::mailPreview();
 }

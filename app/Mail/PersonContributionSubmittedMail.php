@@ -21,11 +21,13 @@ class PersonContributionSubmittedMail extends Mailable
     public array $person;
 
     public ?string $note;
+
     public ?string $mediaUrl;
+
     public ?string $mediaOriginalName;
 
     /**
-     * @param array<string, mixed> $person
+     * @param  array<string, mixed>  $person
      */
     public function __construct(
         User $sender,

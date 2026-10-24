@@ -13,10 +13,15 @@ class GedcomZipReimportTest extends TestCase
     use RefreshDatabase;
 
     protected string $testZipPath;
+
     protected string $staleMedia;
+
     protected string $staleCrop;
+
     protected ?string $backupGed = null;
+
     protected ?string $backupFaces = null;
+
     protected ?string $backupCache = null;
 
     protected function setUp(): void
@@ -145,7 +150,7 @@ GEDCOM;
             ],
         ]);
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $this->assertTrue($zip->open($this->testZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE));
         $zip->addFromString('gedcom.ged', $gedcomContent);
         $zip->addFromString('faces.json', $facesJsonContent);

@@ -278,7 +278,7 @@ class GedcomPersonMarriageTest extends TestCase
         $this->actingAs($superuser);
 
         $cacheFile = storage_path('app/gedcom_parsed.json');
-        if (!File::exists($cacheFile)) {
+        if (! File::exists($cacheFile)) {
             $this->markTestSkipped('No cached gedcom data');
         }
 

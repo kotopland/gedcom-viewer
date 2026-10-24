@@ -15,13 +15,16 @@ const emit = defineEmits<{
 </script>
 
 <template>
-    <div class="flex flex-col items-center relative">
+    <div class="relative flex flex-col items-center">
         <!-- Render Parents Above Recursively -->
-        <div v-if="person.parents && person.parents.length > 0" class="flex flex-col items-center">
+        <div
+            v-if="person.parents && person.parents.length > 0"
+            class="flex flex-col items-center"
+        >
             <!-- Row of Parent Nodes -->
-            <div class="flex items-start justify-center relative">
+            <div class="relative flex items-start justify-center">
                 <!-- Parent 1 (e.g. Father) -->
-                <div class="flex flex-col items-center relative px-0.5">
+                <div class="relative flex flex-col items-center px-0.5">
                     <GedcomHeritageAncestorNode
                         :person="person.parents[0]"
                         :level="level + 1"
@@ -33,23 +36,33 @@ const emit = defineEmits<{
                     <!-- Horizontal Bracket from Parent 1 center to seam -->
                     <div
                         v-if="person.parents.length > 1"
-                        class="absolute bottom-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none left-1/2 right-0"
+                        class="pointer-events-none absolute right-0 bottom-0 left-1/2 h-[3px] bg-slate-900 dark:bg-slate-300"
                     ></div>
                 </div>
 
                 <!-- Marriage Bar between Parents if both exist (only when parents have no parents above them) -->
                 <div
-                    v-if="person.parents.length > 1 && (!person.parents[0].parents || person.parents[0].parents.length === 0) && (!person.parents[1].parents || person.parents[1].parents.length === 0)"
-                    class="absolute top-[250px] left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                    v-if="
+                        person.parents.length > 1 &&
+                        (!person.parents[0].parents ||
+                            person.parents[0].parents.length === 0) &&
+                        (!person.parents[1].parents ||
+                            person.parents[1].parents.length === 0)
+                    "
+                    class="pointer-events-none absolute top-[250px] left-1/2 z-0 flex h-[3px] w-10 -translate-x-1/2 items-center justify-between bg-slate-900 dark:bg-slate-300"
                 >
-                    <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
-                    <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
+                    <span
+                        class="-ml-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                    ></span>
+                    <span
+                        class="-mr-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                    ></span>
                 </div>
 
                 <!-- Parent 2 (e.g. Mother) -->
                 <div
                     v-if="person.parents.length > 1"
-                    class="flex flex-col items-center relative px-0.5"
+                    class="relative flex flex-col items-center px-0.5"
                 >
                     <GedcomHeritageAncestorNode
                         :person="person.parents[1]"
@@ -61,13 +74,15 @@ const emit = defineEmits<{
                     />
                     <!-- Horizontal Bracket from seam to Parent 2 center -->
                     <div
-                        class="absolute bottom-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none left-0 right-1/2"
+                        class="pointer-events-none absolute right-1/2 bottom-0 left-0 h-[3px] bg-slate-900 dark:bg-slate-300"
                     ></div>
                 </div>
             </div>
 
             <!-- Vertical Drop Line from Parents down to This Person -->
-            <div class="w-[3px] h-2.5 sm:h-3 bg-slate-900 dark:bg-slate-300 z-0"></div>
+            <div
+                class="z-0 h-2.5 w-[3px] bg-slate-900 sm:h-3 dark:bg-slate-300"
+            ></div>
         </div>
 
         <!-- This Individual Node Card -->

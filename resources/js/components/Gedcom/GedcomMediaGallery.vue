@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
 import {
-    Search, Image as ImageIcon, FileCode, Music, Volume2, FileText,
-    ExternalLink, X, ChevronLeft, ChevronRight, Users
+    Search,
+    Image as ImageIcon,
+    FileCode,
+    Music,
+    Volume2,
+    FileText,
+    ExternalLink,
+    X,
+    ChevronLeft,
+    ChevronRight,
+    Users,
 } from '@lucide/vue';
-
+import { ref, watch, onMounted } from 'vue';
 
 const emit = defineEmits<{
     (e: 'select-person', id: string): void;
@@ -27,14 +35,23 @@ let debounceTimer: any = null;
 
 const fetchMedia = async (page = 1) => {
     loading.value = true;
+
     try {
         const params = new URLSearchParams();
-        if (activeCategory.value !== 'all') params.append('type', activeCategory.value);
-        if (searchInput.value) params.append('q', searchInput.value);
+
+        if (activeCategory.value !== 'all') {
+            params.append('type', activeCategory.value);
+        }
+
+        if (searchInput.value) {
+            params.append('q', searchInput.value);
+        }
+
         params.append('page', page.toString());
         params.append('limit', '24');
 
         const res = await fetch(`/api/gedcom/media?${params.toString()}`);
+
         if (res.ok) {
             const data = await res.json();
             mediaItems.value = data.data;
@@ -66,122 +83,191 @@ onMounted(() => {
 <template>
     <div class="space-y-6">
         <!-- Search & Filter Bar -->
-        <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-between">
+        <div
+            class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+        >
+            <div
+                class="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center"
+            >
                 <!-- Category Tabs -->
-                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-semibold">
+                <div
+                    class="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 p-1.5 text-xs font-semibold dark:border-slate-700/80 dark:bg-slate-800/80"
+                >
                     <button
                         @click="activeCategory = 'all'"
-                        class="px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-                        :class="activeCategory === 'all' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                        class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-colors"
+                        :class="
+                            activeCategory === 'all'
+                                ? 'bg-white text-indigo-600 shadow-2xs dark:bg-slate-700 dark:text-indigo-400'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                        "
                     >
-                        <ImageIcon class="w-3.5 h-3.5" />
+                        <ImageIcon class="h-3.5 w-3.5" />
                         All Assets
                     </button>
                     <button
                         @click="activeCategory = 'photo'"
-                        class="px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-                        :class="activeCategory === 'photo' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                        class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-colors"
+                        :class="
+                            activeCategory === 'photo'
+                                ? 'bg-white text-indigo-600 shadow-2xs dark:bg-slate-700 dark:text-indigo-400'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                        "
                     >
-                        <ImageIcon class="w-3.5 h-3.5" />
+                        <ImageIcon class="h-3.5 w-3.5" />
                         Photos
                     </button>
                     <button
                         @click="activeCategory = 'document'"
-                        class="px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-                        :class="activeCategory === 'document' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                        class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-colors"
+                        :class="
+                            activeCategory === 'document'
+                                ? 'bg-white text-indigo-600 shadow-2xs dark:bg-slate-700 dark:text-indigo-400'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                        "
                     >
-                        <FileCode class="w-3.5 h-3.5" />
+                        <FileCode class="h-3.5 w-3.5" />
                         Documents (PDFs)
                     </button>
                     <button
                         @click="activeCategory = 'audio'"
-                        class="px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-                        :class="activeCategory === 'audio' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                        class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-colors"
+                        :class="
+                            activeCategory === 'audio'
+                                ? 'bg-white text-indigo-600 shadow-2xs dark:bg-slate-700 dark:text-indigo-400'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                        "
                     >
-                        <Music class="w-3.5 h-3.5" />
+                        <Music class="h-3.5 w-3.5" />
                         Audio Clips
                     </button>
                 </div>
 
                 <!-- Search Input -->
                 <div class="relative min-w-[240px]">
-                    <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search
+                        class="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    />
                     <input
                         v-model="searchInput"
                         @input="onSearchInput"
                         type="text"
                         placeholder="Search media titles..."
-                        class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50"
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-4 pl-10 text-xs text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/50 focus:outline-hidden dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-white"
                     />
                 </div>
             </div>
         </div>
 
         <!-- Meta info -->
-        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
-            <span>Showing {{ mediaItems.length }} of {{ meta.total }} media items</span>
+        <div
+            class="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400"
+        >
+            <span
+                >Showing {{ mediaItems.length }} of {{ meta.total }} media
+                items</span
+            >
             <span>Page {{ meta.page }} of {{ meta.last_page }}</span>
         </div>
 
         <!-- Loading -->
-        <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <div v-for="i in 12" :key="i" class="h-48 bg-slate-100 dark:bg-slate-800/60 rounded-2xl animate-pulse"></div>
+        <div
+            v-if="loading"
+            class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+        >
+            <div
+                v-for="i in 12"
+                :key="i"
+                class="h-48 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800/60"
+            ></div>
         </div>
 
         <!-- Empty -->
-        <div v-else-if="mediaItems.length === 0" class="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-800">
-            <ImageIcon class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-            <h3 class="text-base font-semibold text-slate-900 dark:text-white">No media items found</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Try switching categories or clearing search keywords.</p>
+        <div
+            v-else-if="mediaItems.length === 0"
+            class="rounded-2xl border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900"
+        >
+            <ImageIcon
+                class="mx-auto mb-3 h-12 w-12 text-slate-300 dark:text-slate-600"
+            />
+            <h3 class="text-base font-semibold text-slate-900 dark:text-white">
+                No media items found
+            </h3>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Try switching categories or clearing search keywords.
+            </p>
         </div>
 
         <!-- Media Grid -->
-        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div
+            v-else
+            class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+        >
             <div
                 v-for="item in mediaItems"
                 :key="item.id"
                 @click="activePreviewItem = item"
-                class="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between"
+                class="group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition-all hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
             >
-                <div class="relative aspect-square w-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                <div
+                    class="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-slate-950"
+                >
                     <img
                         v-if="item.category === 'photo'"
                         :src="item.url"
                         :alt="item.title"
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         loading="lazy"
                     />
 
-                    <div v-else-if="item.category === 'document'" class="w-full h-full flex flex-col items-center justify-center bg-red-950/30 text-red-400 p-4">
-                        <FileCode class="w-10 h-10 mb-2" />
-                        <span class="text-[10px] font-semibold uppercase tracking-wider bg-red-500/20 px-2 py-0.5 rounded-sm">PDF</span>
+                    <div
+                        v-else-if="item.category === 'document'"
+                        class="flex h-full w-full flex-col items-center justify-center bg-red-950/30 p-4 text-red-400"
+                    >
+                        <FileCode class="mb-2 h-10 w-10" />
+                        <span
+                            class="rounded-sm bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase"
+                            >PDF</span
+                        >
                     </div>
 
-                    <div v-else-if="item.category === 'audio'" class="w-full h-full flex flex-col items-center justify-center bg-amber-950/30 text-amber-400 p-4">
-                        <Volume2 class="w-10 h-10 mb-2" />
-                        <span class="text-[10px] font-semibold uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded-sm">Audio</span>
+                    <div
+                        v-else-if="item.category === 'audio'"
+                        class="flex h-full w-full flex-col items-center justify-center bg-amber-950/30 p-4 text-amber-400"
+                    >
+                        <Volume2 class="mb-2 h-10 w-10" />
+                        <span
+                            class="rounded-sm bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase"
+                            >Audio</span
+                        >
                     </div>
 
-                    <div v-else class="w-full h-full flex flex-col items-center justify-center bg-slate-800 text-slate-400 p-4">
-                        <FileText class="w-10 h-10 mb-2" />
+                    <div
+                        v-else
+                        class="flex h-full w-full flex-col items-center justify-center bg-slate-800 p-4 text-slate-400"
+                    >
+                        <FileText class="mb-2 h-10 w-10" />
                     </div>
 
                     <!-- Linked people count badge -->
                     <span
                         v-if="item.people && item.people.length > 0"
-                        class="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-xs text-white rounded-full text-[10px] font-semibold flex items-center gap-1 shadow-xs"
+                        class="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white shadow-xs backdrop-blur-xs"
                     >
-                        <Users class="w-2.5 h-2.5" />
+                        <Users class="h-2.5 w-2.5" />
                         {{ item.people.length }}
                     </span>
                 </div>
 
-                <div class="p-3 border-t border-slate-100 dark:border-slate-800/80">
-                    <div class="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                <div
+                    class="border-t border-slate-100 p-3 dark:border-slate-800/80"
+                >
+                    <div
+                        class="truncate text-xs font-bold text-slate-900 group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400"
+                    >
                         {{ item.title }}
                     </div>
-                    <div class="text-[10px] text-slate-400 truncate mt-0.5">
+                    <div class="mt-0.5 truncate text-[10px] text-slate-400">
                         {{ item.file }}
                     </div>
                 </div>
@@ -189,52 +275,67 @@ onMounted(() => {
         </div>
 
         <!-- Pagination -->
-        <div v-if="meta.last_page > 1" class="flex items-center justify-center gap-2 pt-4">
+        <div
+            v-if="meta.last_page > 1"
+            class="flex items-center justify-center gap-2 pt-4"
+        >
             <button
                 @click="fetchMedia(meta.page - 1)"
                 :disabled="meta.page <= 1"
-                class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
+                class="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-                <ChevronLeft class="w-4 h-4" />
+                <ChevronLeft class="h-4 w-4" />
             </button>
-            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 px-3">
+            <span
+                class="px-3 text-xs font-semibold text-slate-700 dark:text-slate-300"
+            >
                 Page {{ meta.page }} of {{ meta.last_page }}
             </span>
             <button
                 @click="fetchMedia(meta.page + 1)"
                 :disabled="meta.page >= meta.last_page"
-                class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
+                class="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-                <ChevronRight class="w-4 h-4" />
+                <ChevronRight class="h-4 w-4" />
             </button>
         </div>
 
         <!-- Preview Modal -->
-        <div v-if="activePreviewItem" class="fixed inset-0 z-60 bg-black/90 flex flex-col items-center justify-center p-6 animate-in fade-in">
+        <div
+            v-if="activePreviewItem"
+            class="fixed inset-0 z-60 flex animate-in flex-col items-center justify-center bg-black/90 p-6 fade-in"
+        >
             <button
                 @click="activePreviewItem = null"
-                class="absolute top-6 right-6 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                class="absolute top-6 right-6 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20"
             >
-                <X class="w-6 h-6" />
+                <X class="h-6 w-6" />
             </button>
 
-            <div class="max-w-4xl max-h-[85vh] flex flex-col items-center justify-center w-full">
+            <div
+                class="flex max-h-[85vh] w-full max-w-4xl flex-col items-center justify-center"
+            >
                 <img
                     v-if="activePreviewItem.category === 'photo'"
                     :src="activePreviewItem.url"
                     :alt="activePreviewItem.title"
-                    class="max-w-full max-h-[65vh] rounded-xl object-contain shadow-2xl"
+                    class="max-h-[65vh] max-w-full rounded-xl object-contain shadow-2xl"
                 />
 
                 <iframe
                     v-else-if="activePreviewItem.category === 'document'"
                     :src="activePreviewItem.url"
-                    class="w-full h-[65vh] rounded-xl border border-slate-800 shadow-2xl"
+                    class="h-[65vh] w-full rounded-xl border border-slate-800 shadow-2xl"
                 ></iframe>
 
-                <div v-else-if="activePreviewItem.category === 'audio'" class="bg-slate-900 p-8 rounded-2xl border border-slate-800 flex flex-col items-center gap-4 w-full max-w-md">
-                    <Music class="w-16 h-16 text-amber-400" />
-                    <span class="text-white font-medium text-center">{{ activePreviewItem.title }}</span>
+                <div
+                    v-else-if="activePreviewItem.category === 'audio'"
+                    class="flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-8"
+                >
+                    <Music class="h-16 w-16 text-amber-400" />
+                    <span class="text-center font-medium text-white">{{
+                        activePreviewItem.title
+                    }}</span>
                     <audio controls class="w-full">
                         <source :src="activePreviewItem.url" type="audio/mp4" />
                         Your browser does not support audio playback.
@@ -242,31 +343,46 @@ onMounted(() => {
                 </div>
 
                 <!-- Linked People Pill Bar -->
-                <div v-if="activePreviewItem.people && activePreviewItem.people.length > 0" class="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-2xl">
-                    <span class="text-xs text-slate-400 font-medium">Tagged People:</span>
+                <div
+                    v-if="
+                        activePreviewItem.people &&
+                        activePreviewItem.people.length > 0
+                    "
+                    class="mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-2"
+                >
+                    <span class="text-xs font-medium text-slate-400"
+                        >Tagged People:</span
+                    >
                     <button
                         v-for="p in activePreviewItem.people"
                         :key="p.id"
-                        @click="activePreviewItem = null; emit('select-person', p.id)"
-                        class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-600/30 border border-indigo-500/50 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded-full text-xs font-semibold transition-colors"
+                        @click="
+                            activePreviewItem = null;
+                            emit('select-person', p.id);
+                        "
+                        class="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/50 bg-indigo-600/30 px-3 py-1 text-xs font-semibold text-indigo-200 transition-colors hover:bg-indigo-600 hover:text-white"
                     >
                         <img
                             v-if="p.portrait_url"
                             :src="p.portrait_url"
-                            class="w-4 h-4 rounded-full object-cover border border-white/30"
+                            class="h-4 w-4 rounded-full border border-white/30 object-cover"
                         />
                         <span>{{ p.name }}</span>
                     </button>
                 </div>
 
-                <div class="mt-4 flex items-center justify-between w-full text-slate-300 text-sm border-t border-white/10 pt-4">
-                    <span class="font-medium truncate max-w-lg">{{ activePreviewItem.title }}</span>
+                <div
+                    class="mt-4 flex w-full items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-300"
+                >
+                    <span class="max-w-lg truncate font-medium">{{
+                        activePreviewItem.title
+                    }}</span>
                     <a
                         :href="activePreviewItem.url"
                         target="_blank"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
                     >
-                        <ExternalLink class="w-4 h-4" />
+                        <ExternalLink class="h-4 w-4" />
                         Open Original File
                     </a>
                 </div>

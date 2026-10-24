@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\GedcomParserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -60,7 +61,7 @@ GEDCOM;
         $tempGed = storage_path('app/private/test_crop.ged');
         File::put($tempGed, $gedcomContent);
 
-        $parser = new GedcomParserService();
+        $parser = new GedcomParserService;
         $reflector = new \ReflectionClass($parser);
         $method = $reflector->getMethod('parseRawGedcomLines');
         $method->setAccessible(true);
@@ -124,10 +125,10 @@ GEDCOM;
                 $this->assertContains($olav['primary_media']['id'], ['44088268', '57305632']);
                 $this->assertNotNull($olav['primary_media']['crop']);
 
-                $mediaName = basename($olav['primary_media']['file'] ?? ($olav['primary_media']['id'] . '.jpg'));
-                $sourcePath = storage_path('app/public/gedcom/media/' . $mediaName);
+                $mediaName = basename($olav['primary_media']['file'] ?? ($olav['primary_media']['id'].'.jpg'));
+                $sourcePath = storage_path('app/public/gedcom/media/'.$mediaName);
                 $createdDummy = false;
-                if (!File::exists($sourcePath) && !File::exists(storage_path('app/private/' . $mediaName))) {
+                if (! File::exists($sourcePath) && ! File::exists(storage_path('app/private/'.$mediaName))) {
                     if (extension_loaded('gd')) {
                         $img = imagecreatetruecolor(1000, 1000);
                         imagejpeg($img, $sourcePath);
@@ -156,7 +157,7 @@ GEDCOM;
 
         $response = $this->get(route('gedcom.api.download-face-script'));
         $response->assertOk();
-        $this->assertStringContainsString('mft11_export_faces.py', (string)$response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('mft11_export_faces.py', (string) $response->headers->get('Content-Disposition'));
     }
 
     public function test_superuser_can_upload_faces_json()
@@ -189,7 +190,7 @@ GEDCOM;
                 ],
             ]);
 
-            $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('faces.json', $sampleJson);
+            $file = UploadedFile::fake()->createWithContent('faces.json', $sampleJson);
 
             $response = $this->postJson(route('gedcom.api.upload-faces'), [
                 'file' => $file,
@@ -238,7 +239,7 @@ GEDCOM;
         $superuser = User::factory()->superuser()->create(['is_verified' => true]);
         $this->actingAs($superuser);
 
-        $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('faces.txt', 'not json');
+        $file = UploadedFile::fake()->createWithContent('faces.txt', 'not json');
 
         $response = $this->postJson(route('gedcom.api.upload-faces'), [
             'file' => $file,
@@ -254,7 +255,7 @@ GEDCOM;
         $this->actingAs($superuser);
 
         $invalidJson = json_encode(['foo' => 'bar', 'some_other_key' => 123]);
-        $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('faces.json', $invalidJson);
+        $file = UploadedFile::fake()->createWithContent('faces.json', $invalidJson);
 
         $response = $this->postJson(route('gedcom.api.upload-faces'), [
             'file' => $file,
@@ -309,7 +310,7 @@ GEDCOM;
 0 TLR
 GEDCOM;
 
-        $parser = new GedcomParserService();
+        $parser = new GedcomParserService;
         $reflector = new \ReflectionClass($parser);
         $method = $reflector->getMethod('parseRawGedcomLines');
         $method->setAccessible(true);
@@ -376,7 +377,7 @@ GEDCOM;
 0 TLR
 GEDCOM;
 
-        $parser = new GedcomParserService();
+        $parser = new GedcomParserService;
         $reflector = new \ReflectionClass($parser);
         $method = $reflector->getMethod('parseRawGedcomLines');
         $method->setAccessible(true);
@@ -563,9 +564,9 @@ GEDCOM;
         $response->assertNotFound();
     }
 
-    public function test_cropFaceImage_preserves_aspect_ratio_without_distortion()
+    public function test_crop_face_image_preserves_aspect_ratio_without_distortion()
     {
-        if (!extension_loaded('gd')) {
+        if (! extension_loaded('gd')) {
             $this->markTestSkipped('GD extension not loaded.');
         }
 
@@ -580,7 +581,7 @@ GEDCOM;
         imagejpeg($src, $sourceFile);
         imagedestroy($src);
 
-        $parser = new GedcomParserService();
+        $parser = new GedcomParserService;
 
         // 1. Test whole image crop
         $success = $parser->cropFaceImage($sourceFile, ['x' => 0.0, 'y' => 0.0, 'width' => 1.0, 'height' => 1.0], $destFile);

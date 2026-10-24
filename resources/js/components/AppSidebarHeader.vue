@@ -34,11 +34,18 @@ const toggleTheme = () => {
 
         <button
             @click="toggleTheme"
-            class="p-2 rounded-xl bg-sidebar-accent/60 hover:bg-sidebar-accent text-sidebar-foreground transition-colors cursor-pointer border border-sidebar-border/60"
-            :title="resolvedAppearance === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+            class="cursor-pointer rounded-xl border border-sidebar-border/60 bg-sidebar-accent/60 p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            :title="
+                resolvedAppearance === 'dark'
+                    ? 'Switch to Light Mode'
+                    : 'Switch to Dark Mode'
+            "
         >
-            <Sun v-if="resolvedAppearance === 'dark'" class="w-4 h-4 text-amber-400" />
-            <Moon v-else class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <Sun
+                v-if="resolvedAppearance === 'dark'"
+                class="h-4 w-4 text-amber-400"
+            />
+            <Moon v-else class="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
         </button>
     </header>
 </template>

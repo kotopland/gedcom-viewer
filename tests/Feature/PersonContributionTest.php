@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\PersonContributionSubmittedMail;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
@@ -12,18 +13,16 @@ use Tests\TestCase;
 
 class PersonContributionTest extends TestCase
 {
-
     use RefreshDatabase;
 
     public function test_user_can_submit_note_contribution(): void
     {
-        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+        $this->withoutMiddleware(ValidateCsrfToken::class);
         Mail::fake();
 
         $superuser = User::factory()->superuser()->create([
             'email' => 'admin@example.com',
         ]);
-
 
         $user = User::factory()->verified()->create([
             'name' => 'John Contributor',
@@ -70,7 +69,7 @@ class PersonContributionTest extends TestCase
 
         Mail::assertSent(PersonContributionSubmittedMail::class, function ($mail) use ($user) {
             return $mail->sender->id === $user->id
-                && !empty($mail->mediaUrl)
+                && ! empty($mail->mediaUrl)
                 && $mail->mediaOriginalName === 'old_photo.jpg';
         });
     }

@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\File;
 class GedcomParserService
 {
     protected string $zipPath;
+
     protected string $storageMediaDir;
+
     protected string $storageCropsDir;
+
     protected string $cachePath;
 
     public function __construct()
@@ -25,10 +28,11 @@ class GedcomParserService
         if ($place === null || trim($place) === '') {
             return null;
         }
-        $parts = array_filter(array_map('trim', explode(',', $place)), fn($p) => $p !== '');
+        $parts = array_filter(array_map('trim', explode(',', $place)), fn ($p) => $p !== '');
         if (empty($parts)) {
             return null;
         }
+
         return implode(', ', $parts);
     }
 
@@ -39,23 +43,25 @@ class GedcomParserService
             File::glob(storage_path('app/*.zip')) ?: []
         );
 
-        if (!empty($files)) {
+        if (! empty($files)) {
             // Return the most recently modified zip file
             usort($files, function ($a, $b) {
                 return File::lastModified($b) <=> File::lastModified($a);
             });
+
             return $files[0];
         }
 
         $dir = storage_path('app/private');
         $directories = array_filter(File::directories($dir), function ($subDir) {
-            return File::exists($subDir . '/gedcom.ged') || !empty(File::glob($subDir . '/**/gedcom.ged'));
+            return File::exists($subDir.'/gedcom.ged') || ! empty(File::glob($subDir.'/**/gedcom.ged'));
         });
 
-        if (!empty($directories)) {
+        if (! empty($directories)) {
             usort($directories, function ($a, $b) {
                 return File::lastModified($b) <=> File::lastModified($a);
             });
+
             return $directories[0];
         }
 
@@ -67,16 +73,17 @@ class GedcomParserService
      */
     public function getOrParseData(bool $forceRefresh = false): array
     {
-        if (!$forceRefresh && File::exists($this->cachePath)) {
+        if (! $forceRefresh && File::exists($this->cachePath)) {
             $content = File::get($this->cachePath);
             $decoded = json_decode($content, true);
-            if ($decoded && is_array($decoded) && !empty($decoded['individuals'])) {
+            if ($decoded && is_array($decoded) && ! empty($decoded['individuals'])) {
                 if (isset($decoded['families']['33325904']) && empty($decoded['families']['33325904']['relationship_type'])) {
                     $decoded['families']['33325904']['relationship_type'] = 'Civil Partnership';
                 }
-                if (!empty($decoded['families'])) {
+                if (! empty($decoded['families'])) {
                     $this->reconcileFamilyMarriages($decoded['families'], $decoded['individuals']);
                 }
+
                 return $decoded;
             }
         }
@@ -109,31 +116,31 @@ class GedcomParserService
 
         $this->extractMediaFiles();
 
-        if (!File::exists($this->zipPath)) {
+        if (! File::exists($this->zipPath)) {
             throw new \Exception("Zip file or directory not found at: {$this->zipPath}");
         }
 
         if (File::exists(storage_path('app/private/gedcom.ged'))) {
             $content = File::get(storage_path('app/private/gedcom.ged'));
         } elseif (is_dir($this->zipPath)) {
-            $gedcomPath = File::exists($this->zipPath . '/gedcom.ged')
-                ? $this->zipPath . '/gedcom.ged'
+            $gedcomPath = File::exists($this->zipPath.'/gedcom.ged')
+                ? $this->zipPath.'/gedcom.ged'
                 : null;
 
-            if (!$gedcomPath) {
-                $allGedFiles = File::glob($this->zipPath . '/**/gedcom.ged');
-                if (!empty($allGedFiles)) {
+            if (! $gedcomPath) {
+                $allGedFiles = File::glob($this->zipPath.'/**/gedcom.ged');
+                if (! empty($allGedFiles)) {
                     $gedcomPath = $allGedFiles[0];
                 }
             }
 
-            if (!$gedcomPath || !File::exists($gedcomPath)) {
+            if (! $gedcomPath || ! File::exists($gedcomPath)) {
                 throw new \Exception("gedcom.ged not found inside directory: {$this->zipPath}");
             }
 
             $content = File::get($gedcomPath);
         } else {
-            $zip = new \ZipArchive();
+            $zip = new \ZipArchive;
             if ($zip->open($this->zipPath) !== true) {
                 throw new \Exception("Failed to open ZIP archive at: {$this->zipPath}");
             }
@@ -147,21 +154,28 @@ class GedcomParserService
                 }
             }
 
-            if (!$gedEntry) {
+            if (! $gedEntry) {
                 $zip->close();
                 throw new \Exception("gedcom.ged not found inside ZIP archive: {$this->zipPath}");
             }
 
             $content = $zip->getFromName($gedEntry);
             $zip->close();
+            if ($content === false) {
+                throw new \Exception("gedcom.ged could not be read from ZIP archive: {$this->zipPath}");
+            }
         }
 
-        $rawLines = preg_split('/\r\n|\r|\n/', $content);
+        $rawLines = preg_split('/\r\n|\r|\n/', (string) $content);
+        if (! is_array($rawLines)) {
+            $rawLines = [];
+        }
 
         $parsed = $this->parseRawGedcomLines($rawLines);
 
         File::ensureDirectoryExists(dirname($this->cachePath));
-        File::put($this->cachePath, json_encode($parsed, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $encoded = json_encode($parsed, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        File::put($this->cachePath, $encoded !== false ? $encoded : '{}');
 
         return $parsed;
     }
@@ -170,14 +184,14 @@ class GedcomParserService
     {
         $link = public_path('storage');
         $target = storage_path('app/public');
-        if (!File::exists($link)) {
+        if (! File::exists($link)) {
             @symlink($target, $link);
         }
 
         File::ensureDirectoryExists($this->storageMediaDir);
         File::ensureDirectoryExists(storage_path('app/private'));
 
-        if (!File::exists($this->zipPath)) {
+        if (! File::exists($this->zipPath)) {
             return;
         }
 
@@ -193,6 +207,7 @@ class GedcomParserService
                     if ($file->getPathname() !== $targetGed) {
                         File::copy($file->getPathname(), $targetGed);
                     }
+
                     continue;
                 }
                 if (strcasecmp($filename, 'faces.json') === 0) {
@@ -200,21 +215,26 @@ class GedcomParserService
                     if ($file->getPathname() !== $targetFaces) {
                         File::copy($file->getPathname(), $targetFaces);
                     }
+
                     continue;
                 }
                 $basename = $file->getFilename();
-                $targetFile = $this->storageMediaDir . '/' . $basename;
-                if (!File::exists($targetFile)) {
+                $targetFile = $this->storageMediaDir.'/'.$basename;
+                if (! File::exists($targetFile)) {
                     File::copy($file->getPathname(), $targetFile);
                 }
             }
+
             return;
         }
 
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         if ($zip->open($this->zipPath) === true) {
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
+                if (! $stat) {
+                    continue;
+                }
                 $name = $stat['name'];
                 if (str_ends_with($name, '/') || str_contains($name, '__MACOSX')) {
                     continue;
@@ -235,6 +255,7 @@ class GedcomParserService
                         }
                         fclose($stream);
                     }
+
                     continue;
                 }
 
@@ -249,11 +270,12 @@ class GedcomParserService
                         }
                         fclose($stream);
                     }
+
                     continue;
                 }
 
-                $targetFile = $this->storageMediaDir . '/' . $basename;
-                if (!File::exists($targetFile)) {
+                $targetFile = $this->storageMediaDir.'/'.$basename;
+                if (! File::exists($targetFile)) {
                     $stream = $zip->getStream($name);
                     if ($stream) {
                         $dest = fopen($targetFile, 'wb');
@@ -269,11 +291,19 @@ class GedcomParserService
         }
     }
 
+    /**
+     * @param  array<int, string>  $lines
+     * @return array<string, mixed>
+     */
     protected function parseRawGedcomLines(array $lines): array
     {
+        /** @var array<array-key, mixed> $notesMap */
         $notesMap = [];
+        /** @var array<string, mixed> $objects */
         $objects = [];
+        /** @var array<string, mixed> $individuals */
         $individuals = [];
+        /** @var array<string, mixed> $families */
         $families = [];
 
         $currentRecord = null;
@@ -286,14 +316,14 @@ class GedcomParserService
             }
 
             preg_match('/^(\d+)\s+(@[^@]+@)?\s*([A-Z0-9_]+)?(.*)$/', $line, $matches);
-            if (!$matches) {
+            if (! $matches) {
                 continue;
             }
 
             $level = (int) $matches[1];
-            $xref = $matches[2] ?? '';
-            $tag = $matches[3] ?? '';
-            $value = trim($matches[4] ?? '');
+            $xref = $matches[2];
+            $tag = $matches[3];
+            $value = trim($matches[4]);
 
             if ($level === 0) {
                 if ($currentRecord) {
@@ -308,7 +338,7 @@ class GedcomParserService
                 ];
                 $contextStack = [0 => &$currentRecord];
             } else {
-                if (!$currentRecord) {
+                if (! $currentRecord) {
                     continue;
                 }
                 $node = [
@@ -319,10 +349,11 @@ class GedcomParserService
                 ];
 
                 if ($tag === 'CONT' || $tag === 'CONC') {
-                    $parent = &$contextStack[$level - 1];
-                    if ($parent) {
-                        $parent['value'] = ($parent['value'] ?? '') . ($tag === 'CONT' ? "\n" : '') . $value;
+                    if (isset($contextStack[$level - 1])) {
+                        $parent = &$contextStack[$level - 1];
+                        $parent['value'] = ($parent['value'] ?? '').($tag === 'CONT' ? "\n" : '').$value;
                     }
+
                     continue;
                 }
 
@@ -423,12 +454,15 @@ class GedcomParserService
         $this->reconcileFamilyMarriages($famMap, $indivMap);
 
         $facesJsonPath = storage_path('app/private/faces.json');
-        if (!File::exists($facesJsonPath)) {
+        if (! File::exists($facesJsonPath)) {
             $facesJsonPath = storage_path('app/faces.json');
         }
         $facesJson = null;
         if (File::exists($facesJsonPath)) {
-            $facesJson = json_decode(File::get($facesJsonPath), true);
+            $decodedFaces = json_decode(File::get($facesJsonPath), true);
+            if (is_array($decodedFaces)) {
+                $facesJson = $decodedFaces;
+            }
         }
         $imageDimCache = [];
 
@@ -446,14 +480,14 @@ class GedcomParserService
                     $resolvedNotes[] = $notesMap[$nVal];
                 } elseif (isset($notesMap[$cleanRef])) {
                     $resolvedNotes[] = $notesMap[$cleanRef];
-                } elseif (!preg_match('/^@[^@]+@$/', $nVal)) {
+                } elseif (! preg_match('/^@[^@]+@$/', $nVal)) {
                     $resolvedNotes[] = $nVal;
                 }
             }
             $ind['notes'] = array_values(array_unique(array_filter($resolvedNotes)));
 
             foreach ($ind['events'] as &$ev) {
-                if (!empty($ev['note'])) {
+                if (! empty($ev['note'])) {
                     $eNote = $ev['note'];
                     $cleanERef = trim($eNote, '@');
                     if (isset($notesMap[$eNote])) {
@@ -469,24 +503,37 @@ class GedcomParserService
             $ind['media_items'] = [];
             $ind['media_crops'] = [];
 
-            $personFaces = $facesJson['by_person'][$ind['id']] ?? [];
+            $personFaces = [];
+            if (is_array($facesJson)) {
+                $rawByPerson = $facesJson['by_person'] ?? null;
+                if (is_array($rawByPerson)) {
+                    $rawPersonFaces = $rawByPerson[$ind['id']] ?? null;
+                    if (is_array($rawPersonFaces)) {
+                        $personFaces = $rawPersonFaces;
+                    }
+                }
+            }
             $facesByMedia = [];
             foreach ($personFaces as $pf) {
-                if (!empty($pf['media_id'])) {
+                if (! empty($pf['media_id'])) {
                     $facesByMedia[$pf['media_id']] = $pf;
                 }
             }
 
-            $mediaRefs = $ind['media_refs'] ?? [];
-            if (empty($mediaRefs) && !empty($ind['media_ids'])) {
+            $mediaRefs = (isset($ind['media_refs']) && is_array($ind['media_refs'])) ? $ind['media_refs'] : [];
+            if (empty($mediaRefs) && ! empty($ind['media_ids']) && is_array($ind['media_ids'])) {
+                $mediaRefs = [];
                 foreach ($ind['media_ids'] as $mId) {
                     $mediaRefs[] = ['id' => $mId, 'crop' => null];
                 }
             }
 
             foreach ($mediaRefs as $idx => $mRef) {
+                if (! is_array($mRef) || empty($mRef['id'])) {
+                    continue;
+                }
                 $mId = $mRef['id'];
-                if (!isset($objMap[$mId])) {
+                if (! isset($objMap[$mId])) {
                     continue;
                 }
 
@@ -498,10 +545,10 @@ class GedcomParserService
                 $rawCrop = $mRef['crop'] ?? null;
 
                 // Cache image dimensions
-                if (!empty($filename) && !array_key_exists($filename, $imageDimCache)) {
-                    $targetPath = $this->storageMediaDir . '/' . $filename;
-                    if (!File::exists($targetPath)) {
-                        $targetPath = storage_path('app/private/' . $filename);
+                if (! empty($filename) && ! array_key_exists($filename, $imageDimCache)) {
+                    $targetPath = $this->storageMediaDir.'/'.$filename;
+                    if (! File::exists($targetPath)) {
+                        $targetPath = storage_path('app/private/'.$filename);
                     }
                     if (File::exists($targetPath)) {
                         $dim = @getimagesize($targetPath);
@@ -536,10 +583,10 @@ class GedcomParserService
                             'width_px' => $wPx,
                         ];
                         $cssInfo = [
-                            'left' => number_format($x * 100, 2, '.', '') . '%',
-                            'top' => number_format($y * 100, 2, '.', '') . '%',
-                            'width' => number_format($w * 100, 2, '.', '') . '%',
-                            'height' => number_format($h * 100, 2, '.', '') . '%',
+                            'left' => number_format($x * 100, 2, '.', '').'%',
+                            'top' => number_format($y * 100, 2, '.', '').'%',
+                            'width' => number_format($w * 100, 2, '.', '').'%',
+                            'height' => number_format($h * 100, 2, '.', '').'%',
                         ];
                     } else {
                         $cropInfo = [
@@ -586,7 +633,7 @@ class GedcomParserService
                 }
 
                 // Tag this individual on the media object
-                if (!isset($objMap[$mId]['faces'])) {
+                if (! isset($objMap[$mId]['faces'])) {
                     $objMap[$mId]['faces'] = [];
                 }
                 $objMap[$mId]['faces'][] = [
@@ -599,7 +646,7 @@ class GedcomParserService
             }
 
             // Designate the FIRST file reference as the portrait picture
-            if (!empty($ind['media_items'])) {
+            if (! empty($ind['media_items'])) {
                 $ind['primary_media'] = $ind['media_items'][0];
                 $ind['portrait_url'] = "/api/gedcom/person/{$ind['id']}/portrait";
             } else {
@@ -628,7 +675,7 @@ class GedcomParserService
         }
 
         foreach ($indivMap as $ind) {
-            if (!empty($ind['surname'])) {
+            if (! empty($ind['surname'])) {
                 $surnames[$ind['surname']] = ($surnames[$ind['surname']] ?? 0) + 1;
             }
         }
@@ -650,6 +697,15 @@ class GedcomParserService
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $rec
+     * @param  array<string, mixed>  $objects
+     * @param  array<string, mixed>  $individuals
+     * @param  array<string, mixed>  $families
+     * @param  array<array-key, mixed>  $notesMap
+     *
+     * @param-out array<array-key, mixed>  $notesMap
+     */
     protected function finalizeRecord(array $rec, array &$objects, array &$individuals, array &$families, array &$notesMap = []): void
     {
         $id = trim($rec['xref'], '@');
@@ -657,10 +713,10 @@ class GedcomParserService
 
         if ($tag === 'NOTE') {
             $noteContent = trim($rec['value'] ?? '');
-            if (!empty($noteContent)) {
+            if (! empty($noteContent)) {
                 $notesMap[$id] = $noteContent;
                 $notesMap["@{$id}@"] = $noteContent;
-                if (!empty($rec['xref'])) {
+                if (! empty($rec['xref'])) {
                     $notesMap[$rec['xref']] = $noteContent;
                 }
             }
@@ -698,9 +754,8 @@ class GedcomParserService
                 'file' => $file,
                 'mime' => $form ?: $this->guessMime($file),
                 'title' => $title,
-                'url' => '/storage/gedcom/media/' . rawurlencode($file),
+                'url' => '/storage/gedcom/media/'.rawurlencode($file),
             ];
-
 
         } elseif ($tag === 'INDI') {
             $name = '';
@@ -724,7 +779,7 @@ class GedcomParserService
                 'BIRT', 'CHR', 'BAPT', 'CONF', 'FCOM', 'BARM', 'BASM', 'ADOP',
                 'GRAD', 'RETI', 'DEAT', 'BURI', 'CREM', 'EMIG', 'IMMI', 'NATU',
                 'CENS', 'PROB', 'WILL', 'OCCU', 'RESI', 'EDUC', 'DSCR', 'RELG',
-                'TITL', 'FACT', 'EVEN', 'MARR', 'DIV', 'ORDN', 'IDNO', 'SSN'
+                'TITL', 'FACT', 'EVEN', 'MARR', 'DIV', 'ORDN', 'IDNO', 'SSN',
             ];
 
             $parsedNames = [];
@@ -740,7 +795,7 @@ class GedcomParserService
                     $explicitSurname = '';
                     $nameType = '';
 
-                    if (!empty($sub['sub'])) {
+                    if (! empty($sub['sub'])) {
                         foreach ($sub['sub'] as $nsub) {
                             if ($nsub['tag'] === 'GIVN') {
                                 $explicitGiven = trim($nsub['value']);
@@ -753,7 +808,7 @@ class GedcomParserService
                     }
 
                     if (preg_match('/^(.*?)\/(.*?)\/(.*)$/', $rawName, $m)) {
-                        $parsedGiven = trim($m[1] . ' ' . $m[3]);
+                        $parsedGiven = trim($m[1].' '.$m[3]);
                         $parsedSurname = trim($m[2]);
                     } else {
                         $parsedGiven = trim($rawName);
@@ -764,7 +819,7 @@ class GedcomParserService
                     $sName = $explicitSurname !== '' ? $explicitSurname : $parsedSurname;
                     $fName = trim(str_replace('/', '', $rawName));
                     if (empty($fName)) {
-                        $fName = trim($gName . ' ' . $sName);
+                        $fName = trim($gName.' '.$sName);
                     }
 
                     $parsedNames[] = [
@@ -815,10 +870,15 @@ class GedcomParserService
                                 $cWidth = null;
                                 foreach ($osub['sub'] ?? [] as $csub) {
                                     $val = (int) trim($csub['value'] ?? '');
-                                    if ($csub['tag'] === 'TOP') $cTop = $val;
-                                    elseif ($csub['tag'] === 'LEFT') $cLeft = $val;
-                                    elseif ($csub['tag'] === 'HEIGHT') $cHeight = $val;
-                                    elseif ($csub['tag'] === 'WIDTH') $cWidth = $val;
+                                    if ($csub['tag'] === 'TOP') {
+                                        $cTop = $val;
+                                    } elseif ($csub['tag'] === 'LEFT') {
+                                        $cLeft = $val;
+                                    } elseif ($csub['tag'] === 'HEIGHT') {
+                                        $cHeight = $val;
+                                    } elseif ($csub['tag'] === 'WIDTH') {
+                                        $cWidth = $val;
+                                    }
                                 }
                                 if ($cTop !== null && $cLeft !== null && $cHeight !== null && $cWidth !== null) {
                                     $cropData = [
@@ -837,23 +897,23 @@ class GedcomParserService
                         $mediaIds[] = $mId;
                     }
                 } elseif ($sub['tag'] === 'NOTE') {
-                    if (!empty($sub['value'])) {
+                    if (! empty($sub['value'])) {
                         $notes[] = $sub['value'];
                     }
                 }
             }
 
             $primaryNameObj = null;
-            if (!empty($parsedNames)) {
+            if (! empty($parsedNames)) {
                 // 1. Prefer first non-married name with given_name
                 foreach ($parsedNames as $pn) {
-                    if ($pn['type'] !== 'married' && !empty($pn['given_name'])) {
+                    if ($pn['type'] !== 'married' && ! empty($pn['given_name'])) {
                         $primaryNameObj = $pn;
                         break;
                     }
                 }
                 // 2. Prefer first non-married name
-                if (!$primaryNameObj) {
+                if (! $primaryNameObj) {
                     foreach ($parsedNames as $pn) {
                         if ($pn['type'] !== 'married') {
                             $primaryNameObj = $pn;
@@ -862,16 +922,16 @@ class GedcomParserService
                     }
                 }
                 // 3. Prefer first name with given_name
-                if (!$primaryNameObj) {
+                if (! $primaryNameObj) {
                     foreach ($parsedNames as $pn) {
-                        if (!empty($pn['given_name'])) {
+                        if (! empty($pn['given_name'])) {
                             $primaryNameObj = $pn;
                             break;
                         }
                     }
                 }
                 // 4. Fallback to first name entry
-                if (!$primaryNameObj) {
+                if (! $primaryNameObj) {
                     $primaryNameObj = $parsedNames[0];
                 }
             }
@@ -895,11 +955,11 @@ class GedcomParserService
                 if (($ev['tag'] ?? '') === 'OCCU') {
                     $occu = trim($ev['value'] ?? '');
                     $place = '';
-                    if (!empty($ev['place'])) {
+                    if (! empty($ev['place'])) {
                         $parts = array_filter(array_map('trim', explode(',', $ev['place'])));
                         $place = implode(', ', $parts);
                     }
-                    if ($occu === '' && !empty($ev['type'])) {
+                    if ($occu === '' && ! empty($ev['type'])) {
                         $occu = trim($ev['type']);
                     }
                     if ($occu !== '' && $place !== '') {
@@ -909,12 +969,12 @@ class GedcomParserService
                     } elseif ($occu === '' && $place !== '') {
                         $occu = $place;
                     }
-                    if ($occu !== '' && !in_array($occu, $occupations, true)) {
+                    if ($occu !== '' && ! in_array($occu, $occupations, true)) {
                         $occupations[] = $occu;
                     }
                 }
             }
-            $primaryOccupation = !empty($occupations) ? implode(', ', $occupations) : null;
+            $primaryOccupation = ! empty($occupations) ? implode(', ', $occupations) : null;
 
             $individuals[$id] = [
                 'id' => $id,
@@ -967,15 +1027,15 @@ class GedcomParserService
                         $childrenIds[] = $cId;
                     }
                 } elseif ($sub['tag'] === 'MARR') {
-                    if (!empty($sub['value']) && $sub['value'] !== 'Y' && $sub['value'] !== 'y') {
+                    if (! empty($sub['value']) && $sub['value'] !== 'Y' && $sub['value'] !== 'y') {
                         $marrDate = trim($sub['value']);
                     }
                     foreach ($sub['sub'] ?? [] as $msub) {
                         if ($msub['tag'] === 'DATE') {
                             $mVal = trim($msub['value'] ?? '');
-                            if (!empty($mVal)) {
+                            if (! empty($mVal)) {
                                 $marrDate = $mVal;
-                            } elseif (!empty($msub['sub'])) {
+                            } elseif (! empty($msub['sub'])) {
                                 foreach ($msub['sub'] as $gsub) {
                                     if (($gsub['tag'] ?? '') === 'YEAR' || ($gsub['tag'] ?? '') === 'DATE') {
                                         $marrDate = trim($gsub['value'] ?? '');
@@ -1002,10 +1062,10 @@ class GedcomParserService
             if (empty($marrDate)) {
                 foreach ($famEvents as $fev) {
                     if (($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') {
-                        if (!empty($fev['date'])) {
+                        if (! empty($fev['date'])) {
                             $marrDate = $fev['date'];
                             break;
-                        } elseif (!empty($fev['year'])) {
+                        } elseif (! empty($fev['year'])) {
                             $marrDate = (string) $fev['year'];
                             break;
                         }
@@ -1033,6 +1093,10 @@ class GedcomParserService
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $sub
+     * @return array<string, mixed>
+     */
     protected function parseEventNode(array $sub): array
     {
         $tag = $sub['tag'];
@@ -1049,7 +1113,7 @@ class GedcomParserService
             $cVal = trim($child['value'] ?? '');
             if ($cTag === 'DATE') {
                 $date = $cVal;
-                if (empty($date) && !empty($child['sub'])) {
+                if (empty($date) && ! empty($child['sub'])) {
                     foreach ($child['sub'] as $gchild) {
                         if (($gchild['tag'] ?? '') === 'YEAR' || ($gchild['tag'] ?? '') === 'DATE') {
                             $date = trim($gchild['value'] ?? '');
@@ -1066,7 +1130,7 @@ class GedcomParserService
             } elseif ($cTag === 'TYPE') {
                 $type = $cVal;
             } elseif ($cTag === 'NOTE') {
-                $note = !empty($note) ? $note . "\n" . $cVal : $cVal;
+                $note = ! empty($note) ? $note."\n".$cVal : $cVal;
             } elseif ($cTag === 'AGE') {
                 $age = $cVal;
             } elseif ($cTag === 'CAUS') {
@@ -1074,14 +1138,14 @@ class GedcomParserService
             }
         }
 
-        if (empty($date) && !empty($val) && $val !== 'Y' && $val !== 'y') {
+        if (empty($date) && ! empty($val) && $val !== 'Y' && $val !== 'y') {
             if (preg_match('/\b(1\d{3}|20\d{2})\b/', $val)) {
                 $date = $val;
             }
         }
 
         $year = null;
-        if (!empty($date) && preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $ym)) {
+        if (! empty($date) && preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $ym)) {
             $year = (int) $ym[1];
         }
 
@@ -1098,6 +1162,10 @@ class GedcomParserService
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $families
+     * @param  array<string, mixed>  $individuals
+     */
     public function reconcileFamilyMarriages(array &$families, array &$individuals): void
     {
         foreach ($families as $fId => &$f) {
@@ -1108,47 +1176,47 @@ class GedcomParserService
             $candidateEvents = [];
             if ($hId && isset($individuals[$hId]['events'])) {
                 foreach ($individuals[$hId]['events'] as $ev) {
-                    if (($ev['tag'] ?? '') === 'MARR' || ($ev['tag'] ?? '') === '_PRS' || (($ev['tag'] ?? '') === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', ($ev['type'] ?? '') . ' ' . ($ev['value'] ?? '')))) {
+                    if (($ev['tag'] ?? '') === 'MARR' || ($ev['tag'] ?? '') === '_PRS' || (($ev['tag'] ?? '') === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', ($ev['type'] ?? '').' '.($ev['value'] ?? '')))) {
                         $candidateEvents[] = $ev;
                     }
                 }
             }
             if ($wId && isset($individuals[$wId]['events'])) {
                 foreach ($individuals[$wId]['events'] as $ev) {
-                    if (($ev['tag'] ?? '') === 'MARR' || ($ev['tag'] ?? '') === '_PRS' || (($ev['tag'] ?? '') === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', ($ev['type'] ?? '') . ' ' . ($ev['value'] ?? '')))) {
+                    if (($ev['tag'] ?? '') === 'MARR' || ($ev['tag'] ?? '') === '_PRS' || (($ev['tag'] ?? '') === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', ($ev['type'] ?? '').' '.($ev['value'] ?? '')))) {
                         $candidateEvents[] = $ev;
                     }
                 }
             }
 
             foreach ($candidateEvents as $cev) {
-                if (empty($f['marriage_date']) && !empty($cev['date'])) {
+                if (empty($f['marriage_date']) && ! empty($cev['date'])) {
                     $f['marriage_date'] = $cev['date'];
                 }
-                if (empty($f['marriage_year']) && !empty($cev['year'])) {
+                if (empty($f['marriage_year']) && ! empty($cev['year'])) {
                     $f['marriage_year'] = (int) $cev['year'];
                 }
-                if (empty($f['marriage_place']) && !empty($cev['place'])) {
+                if (empty($f['marriage_place']) && ! empty($cev['place'])) {
                     $f['marriage_place'] = $cev['place'];
                 }
-                if (empty($f['relationship_type']) && !empty($cev['type']) && strtolower($cev['type']) !== 'marriage') {
+                if (empty($f['relationship_type']) && ! empty($cev['type']) && strtolower($cev['type']) !== 'marriage') {
                     $f['relationship_type'] = $cev['type'];
                 }
             }
 
             if (empty($f['marriage_year'])) {
-                if (!empty($f['marriage_date']) && preg_match('/\b(1\d{3}|20\d{2})\b/', $f['marriage_date'], $ym)) {
+                if (! empty($f['marriage_date']) && preg_match('/\b(1\d{3}|20\d{2})\b/', $f['marriage_date'], $ym)) {
                     $f['marriage_year'] = (int) $ym[1];
                 } else {
                     foreach ($f['events'] ?? [] as $fev) {
                         if (($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') {
-                            if (!empty($fev['year'])) {
+                            if (! empty($fev['year'])) {
                                 $f['marriage_year'] = (int) $fev['year'];
                                 if (empty($f['marriage_date'])) {
                                     $f['marriage_date'] = (string) $fev['year'];
                                 }
                                 break;
-                            } elseif (!empty($fev['date']) && preg_match('/\b(1\d{3}|20\d{2})\b/', $fev['date'], $ym)) {
+                            } elseif (! empty($fev['date']) && preg_match('/\b(1\d{3}|20\d{2})\b/', $fev['date'], $ym)) {
                                 $f['marriage_year'] = (int) $ym[1];
                                 if (empty($f['marriage_date'])) {
                                     $f['marriage_date'] = $fev['date'];
@@ -1169,13 +1237,13 @@ class GedcomParserService
                 }
             }
 
-            if (!$hasMarrEv) {
-                if (!empty($candidateEvents)) {
+            if (! $hasMarrEv) {
+                if (! empty($candidateEvents)) {
                     $bestEv = $candidateEvents[0];
                     $f['events'][] = [
-                        'tag' => (!empty($f['relationship_type']) && $f['relationship_type'] === 'Civil Partnership') ? '_PRS' : 'MARR',
+                        'tag' => (! empty($f['relationship_type']) && $f['relationship_type'] === 'Civil Partnership') ? '_PRS' : 'MARR',
                         'value' => $bestEv['value'] ?? '',
-                        'type' => !empty($f['relationship_type']) ? $f['relationship_type'] : (!empty($bestEv['type']) ? $bestEv['type'] : 'Marriage'),
+                        'type' => ! empty($f['relationship_type']) ? $f['relationship_type'] : (! empty($bestEv['type']) ? $bestEv['type'] : 'Marriage'),
                         'date' => $f['marriage_date'] ?? ($bestEv['date'] ?? ''),
                         'place' => $f['marriage_place'] ?? ($bestEv['place'] ?? ''),
                         'year' => $f['marriage_year'] ?? ($bestEv['year'] ?? null),
@@ -1183,11 +1251,11 @@ class GedcomParserService
                         'age' => $bestEv['age'] ?? '',
                         'cause' => $bestEv['cause'] ?? '',
                     ];
-                } elseif (!empty($f['marriage_date']) || !empty($f['marriage_place']) || !empty($f['relationship_type']) || ($hId && $wId)) {
+                } elseif (! empty($f['marriage_date']) || ! empty($f['marriage_place']) || ! empty($f['relationship_type']) || ($hId && $wId)) {
                     $f['events'][] = [
-                        'tag' => (!empty($f['relationship_type']) && $f['relationship_type'] === 'Civil Partnership') ? '_PRS' : 'MARR',
+                        'tag' => (! empty($f['relationship_type']) && $f['relationship_type'] === 'Civil Partnership') ? '_PRS' : 'MARR',
                         'value' => '',
-                        'type' => !empty($f['relationship_type']) ? $f['relationship_type'] : 'Marriage',
+                        'type' => ! empty($f['relationship_type']) ? $f['relationship_type'] : 'Marriage',
                         'date' => $f['marriage_date'] ?? '',
                         'place' => $f['marriage_place'] ?? '',
                         'year' => $f['marriage_year'] ?? null,
@@ -1202,8 +1270,8 @@ class GedcomParserService
 
         // Sanitize spouses arrays to remove self-referencing IDs
         foreach ($individuals as $id => &$ind) {
-            if (!empty($ind['spouses'])) {
-                $ind['spouses'] = array_values(array_unique(array_filter($ind['spouses'], fn($s) => $s !== $id)));
+            if (! empty($ind['spouses'])) {
+                $ind['spouses'] = array_values(array_unique(array_filter($ind['spouses'], fn ($s) => $s !== $id)));
             }
         }
         unset($ind);
@@ -1212,6 +1280,7 @@ class GedcomParserService
     protected function guessMime(string $filename): string
     {
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
         return match ($ext) {
             'jpg', 'jpeg' => 'image/jpeg',
             'png' => 'image/png',
@@ -1225,59 +1294,66 @@ class GedcomParserService
         };
     }
 
+    /**
+     * @param  array<string, mixed>  $individuals
+     * @param  array<string, mixed>  $objMap
+     */
     public function generatePortraitCrops(array &$individuals, array $objMap, bool $force = false): void
     {
         File::ensureDirectoryExists($this->storageCropsDir);
 
         foreach ($individuals as &$ind) {
             $primary = $ind['primary_media'] ?? null;
-            if (!$primary || empty($primary['file'])) {
+            if (! $primary || empty($primary['file'])) {
                 continue;
             }
 
             $crop = $primary['crop'] ?? null;
-            if (!$crop) {
+            if (! $crop) {
                 continue;
             }
 
             $targetId = $ind['id'];
             $filename = $primary['file'];
-            $destPath = $this->storageCropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '_v2.jpg';
+            $destPath = $this->storageCropsDir.'/'.$targetId.'_'.pathinfo($filename, PATHINFO_FILENAME).'_v2.jpg';
 
-            $sourcePath = $this->storageMediaDir . '/' . $filename;
-            if (!File::exists($sourcePath)) {
-                $sourcePath = storage_path('app/private/' . $filename);
+            $sourcePath = $this->storageMediaDir.'/'.$filename;
+            if (! File::exists($sourcePath)) {
+                $sourcePath = storage_path('app/private/'.$filename);
             }
 
-            if (!File::exists($sourcePath)) {
+            if (! File::exists($sourcePath)) {
                 continue;
             }
 
-            if ($force || !File::exists($destPath) || File::size($destPath) === 0) {
+            if ($force || ! File::exists($destPath) || File::size($destPath) === 0) {
                 $this->cropFaceImage($sourcePath, $crop, $destPath);
             }
 
             if (File::exists($destPath) && File::size($destPath) > 0) {
-                $ind['portrait_crop_url'] = '/storage/gedcom/crops/' . basename($destPath);
+                $ind['portrait_crop_url'] = '/storage/gedcom/crops/'.basename($destPath);
             }
         }
         unset($ind);
     }
 
+    /**
+     * @param  array<string, mixed>  $crop
+     */
     public function cropFaceImage(string $sourcePath, array $crop, string $destPath): bool
     {
-        if (!extension_loaded('gd')) {
+        if (! extension_loaded('gd')) {
             return false;
         }
 
         $imgInfo = @getimagesize($sourcePath);
-        if (!$imgInfo) {
+        if (! $imgInfo) {
             return false;
         }
 
         $origW = $imgInfo[0];
         $origH = $imgInfo[1];
-        $mime = $imgInfo['mime'] ?? '';
+        $mime = $imgInfo['mime'];
 
         $src = match ($mime) {
             'image/jpeg' => @imagecreatefromjpeg($sourcePath),
@@ -1287,7 +1363,7 @@ class GedcomParserService
             default => null,
         };
 
-        if (!$src) {
+        if (! $src) {
             return false;
         }
 
@@ -1345,9 +1421,16 @@ class GedcomParserService
 
         $avatarSize = 320;
         $dst = imagecreatetruecolor($avatarSize, $avatarSize);
+        if (! $dst) {
+            imagedestroy($src);
+
+            return false;
+        }
 
         $white = imagecolorallocate($dst, 255, 255, 255);
-        imagefill($dst, 0, 0, $white);
+        if ($white !== false) {
+            imagefill($dst, 0, 0, $white);
+        }
 
         // Always copy a true square ($boxSize x $boxSize) into a true square ($avatarSize x $avatarSize)
         // guaranteeing 100% distortion-free natural proportions!

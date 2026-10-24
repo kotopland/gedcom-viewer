@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Form, Head, useForm } from '@inertiajs/vue3';
+import { Key, Mail, ShieldCheck } from '@lucide/vue';
+import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasskeyVerify from '@/components/PasskeyVerify.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
@@ -13,16 +14,16 @@ import { Spinner } from '@/components/ui/spinner';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
-import { Mail, Key, ShieldCheck, Sparkles } from '@lucide/vue';
 
 defineOptions({
     layout: {
         title: 'Log in to your account',
-        description: 'Magic Link login for family members & Password login for Superusers.',
+        description:
+            'Magic Link login for family members & Password login for Superusers.',
     },
 });
 
-const props = defineProps<{
+defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
@@ -50,29 +51,39 @@ const sendMagicLink = () => {
         <!-- Status Flash Banner -->
         <div
             v-if="status"
-            class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold text-center animate-in fade-in"
+            class="animate-in rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-center text-xs font-semibold text-emerald-600 fade-in dark:text-emerald-400"
         >
             {{ status }}
         </div>
 
         <!-- Mode Toggle Pill -->
-        <div class="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold">
+        <div
+            class="flex items-center rounded-2xl border border-slate-200 bg-slate-100 p-1 text-xs font-bold dark:border-slate-700 dark:bg-slate-800"
+        >
             <button
                 type="button"
                 @click="mode = 'magic'"
-                class="flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                :class="mode === 'magic' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl py-2 transition-all"
+                :class="
+                    mode === 'magic'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                "
             >
-                <Mail class="w-4 h-4" />
+                <Mail class="h-4 w-4" />
                 <span>Magic Link Login</span>
             </button>
             <button
                 type="button"
                 @click="mode = 'password'"
-                class="flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                :class="mode === 'password' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+                class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl py-2 transition-all"
+                :class="
+                    mode === 'password'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                "
             >
-                <Key class="w-4 h-4" />
+                <Key class="h-4 w-4" />
                 <span>Superuser Password</span>
             </button>
         </div>
@@ -81,7 +92,7 @@ const sendMagicLink = () => {
         <form
             v-if="mode === 'magic'"
             @submit.prevent="sendMagicLink"
-            class="space-y-4 animate-in fade-in duration-150"
+            class="animate-in space-y-4 duration-150 fade-in"
         >
             <div class="space-y-1.5">
                 <Label for="magic-email">Email address</Label>
@@ -98,29 +109,38 @@ const sendMagicLink = () => {
             </div>
 
             <div class="flex items-center justify-between py-1">
-                <Label for="magic-remember" class="flex items-center space-x-2.5 text-xs font-semibold cursor-pointer text-slate-700 dark:text-slate-300">
-                    <Checkbox id="magic-remember" v-model:checked="magicForm.remember" />
+                <Label
+                    for="magic-remember"
+                    class="flex cursor-pointer items-center space-x-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                >
+                    <Checkbox
+                        id="magic-remember"
+                        v-model:checked="magicForm.remember"
+                    />
                     <span>Remember me</span>
                 </Label>
             </div>
 
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Enter your email address and we'll send you a secure, passwordless magic login link to access the family tree archive.
+            <p
+                class="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400"
+            >
+                Enter your email address and we'll send you a secure,
+                passwordless magic login link to access the family tree archive.
             </p>
 
             <Button
                 type="submit"
-                class="w-full font-bold cursor-pointer"
+                class="w-full cursor-pointer font-bold"
                 :disabled="magicForm.processing"
             >
                 <Spinner v-if="magicForm.processing" />
-                <Mail class="w-4 h-4 mr-2" />
+                <Mail class="mr-2 h-4 w-4" />
                 Send Magic Link
             </Button>
         </form>
 
         <!-- Superuser Password Form -->
-        <div v-else class="space-y-6 animate-in fade-in duration-150">
+        <div v-else class="animate-in space-y-6 duration-150 fade-in">
             <PasskeyVerify />
 
             <Form
@@ -169,8 +189,15 @@ const sendMagicLink = () => {
                     </div>
 
                     <div class="flex items-center justify-between">
-                        <Label for="remember" class="flex items-center space-x-3">
-                            <Checkbox id="remember" name="remember" :tabindex="3" />
+                        <Label
+                            for="remember"
+                            class="flex items-center space-x-3"
+                        >
+                            <Checkbox
+                                id="remember"
+                                name="remember"
+                                :tabindex="3"
+                            />
                             <span>Remember me</span>
                         </Label>
                     </div>
@@ -182,14 +209,16 @@ const sendMagicLink = () => {
                         :disabled="processing"
                     >
                         <Spinner v-if="processing" />
-                        <ShieldCheck class="w-4 h-4 mr-2" />
+                        <ShieldCheck class="mr-2 h-4 w-4" />
                         Log in as Superuser
                     </Button>
                 </div>
             </Form>
         </div>
 
-        <div class="text-center text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-4">
+        <div
+            class="border-t border-slate-200 pt-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400"
+        >
             Don't have an account?
             <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
         </div>

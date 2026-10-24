@@ -1,14 +1,38 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import {
-    ZoomIn, ZoomOut, Maximize2, RefreshCcw, SlidersHorizontal,
-    Expand, Shrink, ChevronRight, ChevronLeft, Search, Plus, Minus,
-    ArrowUp, ArrowDown, Sparkles, Users, Download, Image, ImageOff, ChevronDown
+    ZoomIn,
+    ZoomOut,
+    Maximize2,
+    RefreshCcw,
+    SlidersHorizontal,
+    Expand,
+    Shrink,
+    ChevronRight,
+    ChevronLeft,
+    Search,
+    Plus,
+    Minus,
+    ArrowUp,
+    ArrowDown,
+    Users,
+    Download,
+    Image,
+    ImageOff,
+    ChevronDown,
 } from '@lucide/vue';
-import GedcomHeritageNode from './GedcomHeritageNode.vue';
+import {
+    ref,
+    computed,
+    watch,
+    onMounted,
+    onUnmounted,
+    nextTick,
+    provide,
+} from 'vue';
 import GedcomHeritageAncestorNode from './GedcomHeritageAncestorNode.vue';
 import GedcomHeritageDescendantNode from './GedcomHeritageDescendantNode.vue';
+import GedcomHeritageNode from './GedcomHeritageNode.vue';
 
 const props = defineProps<{
     rootPersonId: string | null;
@@ -20,15 +44,22 @@ const emit = defineEmits<{
 }>();
 
 const page = usePage();
-const isVerified = computed(() => !!(page.props.auth?.user?.is_verified || page.props.auth?.user?.is_superuser));
+const isVerified = computed(
+    () =>
+        !!(
+            page.props.auth?.user?.is_verified ||
+            page.props.auth?.user?.is_superuser
+        ),
+);
 const exportPdfLoading = ref(false);
 
 // Discrete PDF export and portrait disabling state
 const showPdfExportMenu = ref(false);
 const includePdfPortraits = ref(
-    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_pdf_portraits') !== null
+    typeof window !== 'undefined' &&
+        sessionStorage.getItem('gedcom_heritage_pdf_portraits') !== null
         ? sessionStorage.getItem('gedcom_heritage_pdf_portraits') === 'true'
-        : true
+        : true,
 );
 const excludedPortraitIds = ref<Set<string>>(new Set());
 const isPdfExporting = ref(false);
@@ -52,50 +83,73 @@ provide('heritagePortraitState', {
     isExportingPdf: () => isPdfExporting.value,
     toggleExcludePortrait: (id: string) => {
         const next = new Set(excludedPortraitIds.value);
+
         if (next.has(id)) {
             next.delete(id);
         } else {
             next.add(id);
         }
+
         excludedPortraitIds.value = next;
     },
     isPortraitExcluded: (id: string) => {
         return excludedPortraitIds.value.has(id);
     },
     isPortraitHiddenForPerson: (id: string) => {
-        if (isPdfExporting.value && !includePdfPortraits.value) return true;
+        if (isPdfExporting.value && !includePdfPortraits.value) {
+            return true;
+        }
+
         return excludedPortraitIds.value.has(id);
     },
-    clearAllExcluded
+    clearAllExcluded,
 });
 
 const loading = ref(false);
 const treeData = ref<any>(null);
 const focusId = ref<string | null>(props.rootPersonId);
 const ancestorLevels = ref(
-    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_ancestor_levels')
-        ? parseInt(sessionStorage.getItem('gedcom_heritage_ancestor_levels')!, 10) || 3
-        : 3
+    typeof window !== 'undefined' &&
+        sessionStorage.getItem('gedcom_heritage_ancestor_levels')
+        ? parseInt(
+              sessionStorage.getItem('gedcom_heritage_ancestor_levels')!,
+              10,
+          ) || 3
+        : 3,
 );
 const descendantLevels = ref(
-    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_descendant_levels')
-        ? parseInt(sessionStorage.getItem('gedcom_heritage_descendant_levels')!, 10) || 3
-        : 3
+    typeof window !== 'undefined' &&
+        sessionStorage.getItem('gedcom_heritage_descendant_levels')
+        ? parseInt(
+              sessionStorage.getItem('gedcom_heritage_descendant_levels')!,
+              10,
+          ) || 3
+        : 3,
 );
 const showSiblings = ref(
-    typeof window !== 'undefined' && sessionStorage.getItem('gedcom_heritage_show_siblings') !== null
+    typeof window !== 'undefined' &&
+        sessionStorage.getItem('gedcom_heritage_show_siblings') !== null
         ? sessionStorage.getItem('gedcom_heritage_show_siblings') === 'true'
-        : false
+        : false,
 );
 
 watch(ancestorLevels, (val) => {
-    if (typeof window !== 'undefined') sessionStorage.setItem('gedcom_heritage_ancestor_levels', String(val));
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem('gedcom_heritage_ancestor_levels', String(val));
+    }
 });
 watch(descendantLevels, (val) => {
-    if (typeof window !== 'undefined') sessionStorage.setItem('gedcom_heritage_descendant_levels', String(val));
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem(
+            'gedcom_heritage_descendant_levels',
+            String(val),
+        );
+    }
 });
 watch(showSiblings, (val) => {
-    if (typeof window !== 'undefined') sessionStorage.setItem('gedcom_heritage_show_siblings', String(val));
+    if (typeof window !== 'undefined') {
+        sessionStorage.setItem('gedcom_heritage_show_siblings', String(val));
+    }
 });
 
 // Zoom and Pan
@@ -151,9 +205,15 @@ const centerTree = () => {
 };
 
 const onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.button !== 0 && e.pointerType === 'mouse') {
+        return;
+    }
+
     const target = e.target as HTMLElement;
-    if (target.closest('button, select, input, a, [data-clickable]')) return;
+
+    if (target.closest('button, select, input, a, [data-clickable]')) {
+        return;
+    }
 
     isPointerDown.value = true;
     dragMoved = false;
@@ -164,8 +224,13 @@ const onPointerDown = (e: PointerEvent) => {
 };
 
 const onPointerMove = (e: PointerEvent) => {
-    if (!isPointerDown.value) return;
-    if (initialPinchDistance !== null) return;
+    if (!isPointerDown.value) {
+        return;
+    }
+
+    if (initialPinchDistance !== null) {
+        return;
+    }
 
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
@@ -173,9 +238,10 @@ const onPointerMove = (e: PointerEvent) => {
     if (!dragMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
         dragMoved = true;
         isDragging.value = true;
+
         try {
             (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
-        } catch (_) {}
+        } catch {}
     }
 
     if (dragMoved) {
@@ -187,9 +253,12 @@ const onPointerMove = (e: PointerEvent) => {
 const onPointerUp = (e?: PointerEvent) => {
     if (e && e.currentTarget) {
         try {
-            (e.currentTarget as HTMLElement)?.releasePointerCapture?.(e.pointerId);
-        } catch (_) {}
+            (e.currentTarget as HTMLElement)?.releasePointerCapture?.(
+                e.pointerId,
+            );
+        } catch {}
     }
+
     isPointerDown.value = false;
     setTimeout(() => {
         isDragging.value = false;
@@ -200,7 +269,11 @@ const onPointerUp = (e?: PointerEvent) => {
 const onTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 1) {
         const target = e.target as HTMLElement;
-        if (target.closest('button, select, input, a, [data-clickable]')) return;
+
+        if (target.closest('button, select, input, a, [data-clickable]')) {
+            return;
+        }
+
         const t = e.touches[0];
         isPointerDown.value = true;
         dragMoved = false;
@@ -216,7 +289,10 @@ const onTouchStart = (e: TouchEvent) => {
         const focalX = (t1.clientX + t2.clientX) / 2 - rect.left;
         const focalY = (t1.clientY + t2.clientY) / 2 - rect.top;
 
-        initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        initialPinchDistance = Math.hypot(
+            t1.clientX - t2.clientX,
+            t1.clientY - t2.clientY,
+        );
         initialPinchZoom = zoomLevel.value;
         initialPinchFocalX = focalX;
         initialPinchFocalY = focalY;
@@ -226,7 +302,11 @@ const onTouchStart = (e: TouchEvent) => {
 };
 
 const onTouchMove = (e: TouchEvent) => {
-    if (e.touches.length === 1 && isPointerDown.value && initialPinchDistance === null) {
+    if (
+        e.touches.length === 1 &&
+        isPointerDown.value &&
+        initialPinchDistance === null
+    ) {
         const t = e.touches[0];
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
@@ -241,21 +321,33 @@ const onTouchMove = (e: TouchEvent) => {
             panX.value = startPanX + dx;
             panY.value = startPanY + dy;
         }
-    } else if (e.touches.length === 2 && initialPinchDistance && canvasContainerRef.value) {
+    } else if (
+        e.touches.length === 2 &&
+        initialPinchDistance &&
+        canvasContainerRef.value
+    ) {
         e.preventDefault();
         const rect = canvasContainerRef.value.getBoundingClientRect();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
 
-        const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const currentDistance = Math.hypot(
+            t1.clientX - t2.clientX,
+            t1.clientY - t2.clientY,
+        );
         const currentFocalX = (t1.clientX + t2.clientX) / 2 - rect.left;
         const currentFocalY = (t1.clientY + t2.clientY) / 2 - rect.top;
 
         const scaleRatio = currentDistance / initialPinchDistance;
-        const newZoom = Math.min(2.5, Math.max(0.2, initialPinchZoom * scaleRatio));
+        const newZoom = Math.min(
+            2.5,
+            Math.max(0.2, initialPinchZoom * scaleRatio),
+        );
 
-        const contentX = (initialPinchFocalX - initialPinchPanX) / initialPinchZoom;
-        const contentY = (initialPinchFocalY - initialPinchPanY) / initialPinchZoom;
+        const contentX =
+            (initialPinchFocalX - initialPinchPanX) / initialPinchZoom;
+        const contentY =
+            (initialPinchFocalY - initialPinchPanY) / initialPinchZoom;
 
         panX.value = Math.round(currentFocalX - contentX * newZoom);
         panY.value = Math.round(currentFocalY - contentY * newZoom);
@@ -284,14 +376,20 @@ const onTouchEnd = (e: TouchEvent) => {
 const onWheel = (e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        if (!canvasContainerRef.value) return;
+
+        if (!canvasContainerRef.value) {
+            return;
+        }
 
         const rect = canvasContainerRef.value.getBoundingClientRect();
         const cursorX = e.clientX - rect.left;
         const cursorY = e.clientY - rect.top;
 
         const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-        const newZoom = Math.min(2.5, Math.max(0.2, Math.round(zoomLevel.value * zoomFactor * 100) / 100));
+        const newZoom = Math.min(
+            2.5,
+            Math.max(0.2, Math.round(zoomLevel.value * zoomFactor * 100) / 100),
+        );
 
         const contentX = (cursorX - panX.value) / zoomLevel.value;
         const contentY = (cursorY - panY.value) / zoomLevel.value;
@@ -303,7 +401,10 @@ const onWheel = (e: WheelEvent) => {
 };
 
 const applyZoomFromCenter = (newZoom: number) => {
-    if (!canvasContainerRef.value) return;
+    if (!canvasContainerRef.value) {
+        return;
+    }
+
     const rect = canvasContainerRef.value.getBoundingClientRect();
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
@@ -317,53 +418,76 @@ const applyZoomFromCenter = (newZoom: number) => {
 };
 
 const zoomIn = () => {
-    const newZoom = Math.min(2.5, Math.round((zoomLevel.value + 0.15) * 100) / 100);
+    const newZoom = Math.min(
+        2.5,
+        Math.round((zoomLevel.value + 0.15) * 100) / 100,
+    );
     applyZoomFromCenter(newZoom);
 };
 
 const zoomOut = () => {
-    const newZoom = Math.max(0.2, Math.round((zoomLevel.value - 0.15) * 100) / 100);
+    const newZoom = Math.max(
+        0.2,
+        Math.round((zoomLevel.value - 0.15) * 100) / 100,
+    );
     applyZoomFromCenter(newZoom);
 };
 
 const resetZoom = () => {
     const maxGen = Math.max(ancestorLevels.value, descendantLevels.value);
+
     if (maxGen >= 4) {
         zoomLevel.value = 0.55;
     } else if (maxGen === 3) {
-        zoomLevel.value = 0.70;
+        zoomLevel.value = 0.7;
     } else {
         zoomLevel.value = isMobile.value ? 0.65 : 0.85;
     }
+
     nextTick(() => setTimeout(centerTree, 60));
 };
 
 const toggleFullscreen = () => {
     isFullscreen.value = !isFullscreen.value;
+
     if (isFullscreen.value) {
         document.body.style.overflow = 'hidden';
     } else {
         document.body.style.overflow = '';
     }
+
     setTimeout(centerTree, 100);
 };
 
 const handlePersonSelect = (id: string) => {
-    if (dragMoved || isDragging.value) return;
+    if (dragMoved || isDragging.value) {
+        return;
+    }
+
     emit('select-person', id);
 };
 
 const handleChangeRoot = (id: string) => {
-    if (dragMoved || isDragging.value) return;
+    if (dragMoved || isDragging.value) {
+        return;
+    }
+
     focusId.value = id;
     emit('change-root', id);
 };
 
 const fetchTreeData = async (id: string) => {
-    if (!id) return;
+    if (!id) {
+        return;
+    }
+
     loading.value = true;
+
     try {
-        const res = await fetch(`/api/gedcom/tree/${id}?ancestors=${ancestorLevels.value}&descendants=${descendantLevels.value}`);
+        const res = await fetch(
+            `/api/gedcom/tree/${id}?ancestors=${ancestorLevels.value}&descendants=${descendantLevels.value}`,
+        );
+
         if (res.ok) {
             treeData.value = await res.json();
             nextTick(() => setTimeout(centerTree, 60));
@@ -378,11 +502,17 @@ const fetchTreeData = async (id: string) => {
 const handleSearch = async () => {
     if (!searchInput.value.trim()) {
         searchResults.value = [];
+
         return;
     }
+
     isSearching.value = true;
+
     try {
-        const res = await fetch(`/api/gedcom/search?q=${encodeURIComponent(searchInput.value)}&limit=8`);
+        const res = await fetch(
+            `/api/gedcom/search?q=${encodeURIComponent(searchInput.value)}&limit=8`,
+        );
+
         if (res.ok) {
             const data = await res.json();
             searchResults.value = data.data || [];
@@ -404,6 +534,7 @@ const selectSearchPerson = (person: any) => {
 const primary = computed(() => treeData.value?.primary);
 const primarySpouse = computed(() => {
     const spouses = primary.value?.spouses || [];
+
     return spouses.length > 0 ? spouses[0] : null;
 });
 
@@ -415,6 +546,7 @@ const focusParents = computed(() => {
 // Spouse's parents (Level 1 ancestors on spouse side)
 const spouseParents = computed(() => {
     const sAncestors = primarySpouse.value?.ancestors;
+
     return sAncestors?.parents || [];
 });
 
@@ -426,7 +558,9 @@ const childrenList = computed(() => {
 // Combined sibling generation list: focused person + siblings
 // Sorted chronologically by birth year (with focused person flagged with is_primary: true)
 const siblingGeneration = computed(() => {
-    if (!primary.value) return [];
+    if (!primary.value) {
+        return [];
+    }
 
     if (!showSiblings.value) {
         return [
@@ -434,8 +568,8 @@ const siblingGeneration = computed(() => {
                 ...primary.value,
                 is_primary: true,
                 children: childrenList.value,
-                spouses: primarySpouse.value ? [primarySpouse.value] : []
-            }
+                spouses: primarySpouse.value ? [primarySpouse.value] : [],
+            },
         ];
     }
 
@@ -443,14 +577,14 @@ const siblingGeneration = computed(() => {
         ...s,
         is_primary: false,
         spouses: [],
-        children: []
+        children: [],
     }));
 
     const primaryEntry = {
         ...primary.value,
         is_primary: true,
         children: childrenList.value,
-        spouses: primarySpouse.value ? [primarySpouse.value] : []
+        spouses: primarySpouse.value ? [primarySpouse.value] : [],
     };
 
     const all = [...sibs, primaryEntry];
@@ -459,7 +593,11 @@ const siblingGeneration = computed(() => {
     all.sort((a, b) => {
         const yA = a.birth_year ?? 9999;
         const yB = b.birth_year ?? 9999;
-        if (yA !== yB) return yA - yB;
+
+        if (yA !== yB) {
+            return yA - yB;
+        }
+
         return (a.name || '').localeCompare(b.name || '');
     });
 
@@ -474,18 +612,24 @@ watch(
             fetchTreeData(newId);
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const handleGlobalClick = (e: MouseEvent) => {
-    if (!showPdfExportMenu.value) return;
+    if (!showPdfExportMenu.value) {
+        return;
+    }
+
     const target = e.target as Node;
+
     if (
         (pdfMenuRef.value && pdfMenuRef.value.contains(target)) ||
-        (pdfCollapsedMenuRef.value && pdfCollapsedMenuRef.value.contains(target))
+        (pdfCollapsedMenuRef.value &&
+            pdfCollapsedMenuRef.value.contains(target))
     ) {
         return;
     }
+
     showPdfExportMenu.value = false;
 };
 
@@ -500,13 +644,19 @@ const loadExternalScript = (src: string, globalName: string): Promise<any> => {
     if ((window as any)[globalName]) {
         return Promise.resolve((window as any)[globalName]);
     }
+
     return new Promise((resolve, reject) => {
         const existing = document.querySelector(`script[src="${src}"]`);
+
         if (existing) {
-            existing.addEventListener('load', () => resolve((window as any)[globalName]));
+            existing.addEventListener('load', () =>
+                resolve((window as any)[globalName]),
+            );
             existing.addEventListener('error', reject);
+
             return;
         }
+
         const script = document.createElement('script');
         script.src = src;
         script.async = true;
@@ -517,14 +667,19 @@ const loadExternalScript = (src: string, globalName: string): Promise<any> => {
 };
 
 const exportToPdf = async (withPortraits?: boolean) => {
-    if (!isVerified.value || exportPdfLoading.value) return;
+    if (!isVerified.value || exportPdfLoading.value) {
+        return;
+    }
+
     if (!treeContentRef.value) {
         alert('Heritage tree is not available to export.');
+
         return;
     }
 
     showPdfExportMenu.value = false;
     const previousGlobalSetting = includePdfPortraits.value;
+
     if (typeof withPortraits === 'boolean') {
         includePdfPortraits.value = withPortraits;
     }
@@ -535,8 +690,14 @@ const exportToPdf = async (withPortraits?: boolean) => {
     try {
         // Load html-to-image and jspdf dynamically from CDN
         await Promise.all([
-            loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js', 'htmlToImage'),
-            loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf'),
+            loadExternalScript(
+                'https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js',
+                'htmlToImage',
+            ),
+            loadExternalScript(
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                'jspdf',
+            ),
         ]);
 
         const htmlToImage = (window as any).htmlToImage;
@@ -555,8 +716,12 @@ const exportToPdf = async (withPortraits?: boolean) => {
         const bgColor = '#ffffff';
 
         // Measure natural full dimensions of the unscaled tree
-        const contentWidth = Math.ceil(Math.max(el.scrollWidth, el.offsetWidth, el.clientWidth));
-        const contentHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight, el.clientHeight));
+        const contentWidth = Math.ceil(
+            Math.max(el.scrollWidth, el.offsetWidth, el.clientWidth),
+        );
+        const contentHeight = Math.ceil(
+            Math.max(el.scrollHeight, el.offsetHeight, el.clientHeight),
+        );
 
         const dataUrl = await htmlToImage.toJpeg(el, {
             backgroundColor: bgColor,
@@ -578,7 +743,8 @@ const exportToPdf = async (withPortraits?: boolean) => {
         });
 
         // Initialize standard ISO A3 PDF document (landscape or portrait based on chart aspect ratio)
-        const orientation = contentWidth >= contentHeight ? 'landscape' : 'portrait';
+        const orientation =
+            contentWidth >= contentHeight ? 'landscape' : 'portrait';
         const pdf = new jsPDF({
             orientation,
             unit: 'mm',
@@ -594,7 +760,10 @@ const exportToPdf = async (withPortraits?: boolean) => {
         const maxContentHeight = pageHeight * (1 - 2 * marginPercent);
 
         // Stretch chart to fill A3 page while preserving proportions
-        const scale = Math.min(maxContentWidth / contentWidth, maxContentHeight / contentHeight);
+        const scale = Math.min(
+            maxContentWidth / contentWidth,
+            maxContentHeight / contentHeight,
+        );
 
         const renderWidth = contentWidth * scale;
         const renderHeight = contentHeight * scale;
@@ -603,7 +772,16 @@ const exportToPdf = async (withPortraits?: boolean) => {
         const posX = (pageWidth - renderWidth) / 2;
         const posY = (pageHeight - renderHeight) / 2;
 
-        pdf.addImage(dataUrl, 'JPEG', posX, posY, renderWidth, renderHeight, undefined, 'FAST');
+        pdf.addImage(
+            dataUrl,
+            'JPEG',
+            posX,
+            posY,
+            renderWidth,
+            renderHeight,
+            undefined,
+            'FAST',
+        );
 
         const personName = primary.value?.name
             ? primary.value.name.replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -615,9 +793,11 @@ const exportToPdf = async (withPortraits?: boolean) => {
         alert('Failed to generate PDF: ' + (err?.message || 'Unknown error'));
     } finally {
         isPdfExporting.value = false;
+
         if (typeof withPortraits === 'boolean') {
             includePdfPortraits.value = previousGlobalSetting;
         }
+
         await nextTick();
         exportPdfLoading.value = false;
     }
@@ -633,82 +813,109 @@ onUnmounted(() => {
 <template>
     <div
         :class="[
-            'transition-all duration-300 flex flex-col',
+            'flex flex-col transition-all duration-300',
             isFullscreen
-                ? 'fixed inset-0 z-50 rounded-none w-screen h-screen min-h-screen bg-slate-50 dark:bg-slate-950 border-none p-0 shadow-none'
-                : 'relative bg-white/95 dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 overflow-hidden shadow-2xl flex-1 min-h-[500px] sm:min-h-[750px] h-[calc(100dvh-5.5rem-env(safe-area-inset-top,0px))] sm:h-[84vh]'
+                ? 'fixed inset-0 z-50 h-screen min-h-screen w-screen rounded-none border-none bg-slate-50 p-0 shadow-none dark:bg-slate-950'
+                : 'relative h-[calc(100dvh-5.5rem-env(safe-area-inset-top,0px))] min-h-[500px] flex-1 overflow-hidden rounded-3xl border border-slate-200/90 bg-white/95 shadow-2xl sm:h-[84vh] sm:min-h-[750px] dark:border-slate-800 dark:bg-slate-900',
         ]"
     >
         <!-- Floating Floating Controls Header -->
         <div
             :class="[
-                'absolute z-20 transition-all duration-300 max-w-[calc(100vw-2rem)]',
-                isFullscreen ? 'top-4 left-4 sm:top-6 sm:left-6' : 'top-3 left-3 sm:top-4 sm:left-4'
+                'absolute z-20 max-w-[calc(100vw-2rem)] transition-all duration-300',
+                isFullscreen
+                    ? 'top-4 left-4 sm:top-6 sm:left-6'
+                    : 'top-3 left-3 sm:top-4 sm:left-4',
             ]"
         >
             <!-- Collapsed Controls Pill -->
             <div
                 v-if="isControlsCollapsed"
-                class="flex items-center gap-1.5 sm:gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl"
+                class="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md sm:gap-2 dark:border-slate-800 dark:bg-slate-900/95"
             >
                 <button
                     @click="isControlsCollapsed = false"
-                    class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                    class="dark:hover:bg-slate-750 group inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-800 shadow-xs transition-all hover:bg-slate-200 sm:gap-2 sm:px-3 dark:bg-slate-800 dark:text-slate-200"
                     title="Open Heritage Chart Settings"
                 >
-                    <SlidersHorizontal class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                    <SlidersHorizontal
+                        class="h-3.5 w-3.5 text-indigo-600 transition-transform group-hover:scale-110 dark:text-indigo-400"
+                    />
                     <span>Heritage Chart</span>
-                    <span class="text-[10px] text-slate-600 dark:text-slate-400 font-medium px-1 bg-slate-200/80 dark:bg-slate-700/60 rounded-md">
-                        {{ Math.round(zoomLevel * 100) }}% ({{ ancestorLevels }}A / {{ descendantLevels }}D{{ showSiblings && treeData?.siblings?.length ? ' + Siblings' : '' }})
+                    <span
+                        class="rounded-md bg-slate-200/80 px-1 text-[10px] font-medium text-slate-600 dark:bg-slate-700/60 dark:text-slate-400"
+                    >
+                        {{ Math.round(zoomLevel * 100) }}% ({{
+                            ancestorLevels
+                        }}A / {{ descendantLevels }}D{{
+                            showSiblings && treeData?.siblings?.length
+                                ? ' + Siblings'
+                                : ''
+                        }})
                     </span>
-                    <ChevronRight class="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight
+                        class="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5"
+                    />
                 </button>
 
                 <button
                     @click="zoomIn"
-                    class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                    class="dark:hover:bg-slate-750 cursor-pointer rounded-xl bg-slate-100 p-1.5 text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
                     title="Zoom In"
                 >
-                    <ZoomIn class="w-3.5 h-3.5" />
+                    <ZoomIn class="h-3.5 w-3.5" />
                 </button>
 
                 <button
                     @click="zoomOut"
-                    class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                    class="dark:hover:bg-slate-750 cursor-pointer rounded-xl bg-slate-100 p-1.5 text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
                     title="Zoom Out"
                 >
-                    <ZoomOut class="w-3.5 h-3.5" />
+                    <ZoomOut class="h-3.5 w-3.5" />
                 </button>
 
                 <button
                     @click="toggleFullscreen"
-                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-indigo-600 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                    class="inline-flex cursor-pointer items-center gap-1 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all hover:bg-indigo-600 active:scale-95 dark:bg-slate-800"
                     :title="isFullscreen ? 'Exit Full Screen' : 'Full Screen'"
                 >
-                    <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
-                    <Expand v-else class="w-3.5 h-3.5" />
+                    <Shrink v-if="isFullscreen" class="h-3.5 w-3.5" />
+                    <Expand v-else class="h-3.5 w-3.5" />
                 </button>
 
                 <!-- PDF Export Split Button (Collapsed) -->
-                <div ref="pdfCollapsedMenuRef" class="relative inline-flex items-center">
+                <div
+                    ref="pdfCollapsedMenuRef"
+                    class="relative inline-flex items-center"
+                >
                     <button
                         v-if="isVerified"
                         @click="exportToPdf()"
                         :disabled="exportPdfLoading"
-                        class="p-1.5 rounded-l-xl bg-red-600/90 hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50"
-                        :title="includePdfPortraits ? 'Export High-Resolution A3 PDF Chart' : 'Export A3 PDF Chart (without portraits)'"
+                        class="cursor-pointer rounded-l-xl bg-red-600/90 p-1.5 text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                        :title="
+                            includePdfPortraits
+                                ? 'Export High-Resolution A3 PDF Chart'
+                                : 'Export A3 PDF Chart (without portraits)'
+                        "
                     >
-                        <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
-                        <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
+                        <Download
+                            v-if="!exportPdfLoading"
+                            class="h-3.5 w-3.5"
+                        />
+                        <RefreshCcw v-else class="h-3.5 w-3.5 animate-spin" />
                     </button>
                     <button
                         v-if="isVerified"
                         @click.stop="showPdfExportMenu = !showPdfExportMenu"
                         :disabled="exportPdfLoading"
-                        class="px-1 py-1.5 rounded-r-xl bg-red-700 hover:bg-red-800 border-l border-red-500/50 text-white transition-colors cursor-pointer"
+                        class="cursor-pointer rounded-r-xl border-l border-red-500/50 bg-red-700 px-1 py-1.5 text-white transition-colors hover:bg-red-800"
                         title="A3 PDF Export Options (Portraits on/off)"
                     >
-                        <ChevronDown class="w-3 h-3 transition-transform" :class="showPdfExportMenu ? 'rotate-180' : ''" />
+                        <ChevronDown
+                            class="h-3 w-3 transition-transform"
+                            :class="showPdfExportMenu ? 'rotate-180' : ''"
+                        />
                     </button>
                 </div>
             </div>
@@ -716,33 +923,48 @@ onUnmounted(() => {
             <!-- Expanded Controls Bar -->
             <div
                 v-else
-                class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-3 sm:p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-w-[calc(100vw-2.5rem)] overflow-x-auto"
+                class="flex max-w-[calc(100vw-2.5rem)] animate-in flex-col items-stretch gap-2.5 overflow-x-auto rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur-md duration-150 zoom-in-95 fade-in sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-2.5 dark:border-slate-800 dark:bg-slate-900/95"
             >
                 <div class="flex items-center justify-between gap-2">
                     <button
                         @click="toggleFullscreen"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all hover:bg-indigo-600 active:scale-95 dark:bg-indigo-600"
                     >
-                        <Shrink v-if="isFullscreen" class="w-3.5 h-3.5" />
-                        <Expand v-else class="w-3.5 h-3.5" />
+                        <Shrink v-if="isFullscreen" class="h-3.5 w-3.5" />
+                        <Expand v-else class="h-3.5 w-3.5" />
                         <span>{{ isFullscreen ? 'Exit' : 'Full Screen' }}</span>
                     </button>
 
                     <!-- PDF Export Split Button (Expanded) -->
-                    <div ref="pdfMenuRef" class="relative inline-flex items-center">
+                    <div
+                        ref="pdfMenuRef"
+                        class="relative inline-flex items-center"
+                    >
                         <button
                             v-if="isVerified"
                             @click="exportToPdf()"
                             :disabled="exportPdfLoading"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-l-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-                            :title="includePdfPortraits ? 'Export High-Resolution A3 PDF Chart' : 'Export A3 PDF Chart (without portraits)'"
+                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-l-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all hover:bg-red-700 active:scale-95 disabled:opacity-50"
+                            :title="
+                                includePdfPortraits
+                                    ? 'Export High-Resolution A3 PDF Chart'
+                                    : 'Export A3 PDF Chart (without portraits)'
+                            "
                         >
-                            <Download v-if="!exportPdfLoading" class="w-3.5 h-3.5" />
-                            <RefreshCcw v-else class="w-3.5 h-3.5 animate-spin" />
-                            <span>{{ exportPdfLoading ? 'Exporting...' : 'PDF (A3)' }}</span>
+                            <Download
+                                v-if="!exportPdfLoading"
+                                class="h-3.5 w-3.5"
+                            />
+                            <RefreshCcw
+                                v-else
+                                class="h-3.5 w-3.5 animate-spin"
+                            />
+                            <span>{{
+                                exportPdfLoading ? 'Exporting...' : 'PDF (A3)'
+                            }}</span>
                             <span
                                 v-if="!includePdfPortraits"
-                                class="px-1 py-0.2 rounded text-[9px] font-bold bg-black/30 text-amber-200 border border-amber-400/40"
+                                class="py-0.2 rounded border border-amber-400/40 bg-black/30 px-1 text-[9px] font-bold text-amber-200"
                                 title="Portraits disabled for PDF"
                             >
                                 No Photos
@@ -752,39 +974,64 @@ onUnmounted(() => {
                             v-if="isVerified"
                             @click.stop="showPdfExportMenu = !showPdfExportMenu"
                             :disabled="exportPdfLoading"
-                            class="px-1.5 py-1.5 rounded-r-xl bg-red-700 hover:bg-red-800 border-l border-red-500/50 text-white text-xs transition-colors cursor-pointer"
+                            class="cursor-pointer rounded-r-xl border-l border-red-500/50 bg-red-700 px-1.5 py-1.5 text-xs text-white transition-colors hover:bg-red-800"
                             :class="showPdfExportMenu ? 'bg-red-800' : ''"
                             title="A3 PDF Export Options (Portraits on/off)"
                         >
-                            <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="showPdfExportMenu ? 'rotate-180' : ''" />
+                            <ChevronDown
+                                class="h-3.5 w-3.5 transition-transform"
+                                :class="showPdfExportMenu ? 'rotate-180' : ''"
+                            />
                         </button>
 
                         <!-- Discrete PDF Options Popover Menu -->
                         <div
                             v-if="showPdfExportMenu"
                             @click.stop
-                            class="absolute top-full left-0 mt-2 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs text-slate-800 dark:text-slate-200"
+                            class="absolute top-full left-0 z-50 mt-2 w-64 animate-in rounded-2xl border border-slate-200 bg-white/95 p-2 text-xs text-slate-800 shadow-2xl backdrop-blur-md duration-100 zoom-in-95 fade-in dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-200"
                         >
-                            <div class="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center justify-between">
+                            <div
+                                class="flex items-center justify-between px-2 py-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-slate-500"
+                            >
                                 <span>A3 PDF Export Options</span>
-                                <span v-if="!includePdfPortraits" class="text-amber-500 dark:text-amber-400 font-semibold normal-case">Portraits Off</span>
+                                <span
+                                    v-if="!includePdfPortraits"
+                                    class="font-semibold text-amber-500 normal-case dark:text-amber-400"
+                                    >Portraits Off</span
+                                >
                             </div>
 
                             <!-- Toggle: Include portrait pictures in PDF export -->
-                            <label class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/70 cursor-pointer select-none transition-colors">
+                            <label
+                                class="flex cursor-pointer items-start gap-2.5 rounded-xl p-2 transition-colors select-none hover:bg-slate-100 dark:hover:bg-slate-800/70"
+                            >
                                 <input
                                     type="checkbox"
                                     v-model="includePdfPortraits"
-                                    class="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-red-600 focus:ring-red-500 cursor-pointer"
+                                    class="mt-0.5 cursor-pointer rounded border-slate-300 text-red-600 focus:ring-red-500 dark:border-slate-700"
                                 />
                                 <div class="flex-1">
-                                    <div class="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                                        <Image v-if="includePdfPortraits" class="w-3.5 h-3.5 text-emerald-500" />
-                                        <ImageOff v-else class="w-3.5 h-3.5 text-amber-500" />
+                                    <div
+                                        class="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-slate-100"
+                                    >
+                                        <Image
+                                            v-if="includePdfPortraits"
+                                            class="h-3.5 w-3.5 text-emerald-500"
+                                        />
+                                        <ImageOff
+                                            v-else
+                                            class="h-3.5 w-3.5 text-amber-500"
+                                        />
                                         <span>Include portraits</span>
                                     </div>
-                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                                        {{ includePdfPortraits ? 'Export with portrait photos included' : 'Disable portrait photos in PDF export (clean silhouette)' }}
+                                    <p
+                                        class="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{
+                                            includePdfPortraits
+                                                ? 'Export with portrait photos included'
+                                                : 'Disable portrait photos in PDF export (clean silhouette)'
+                                        }}
                                     </p>
                                 </div>
                             </label>
@@ -792,86 +1039,126 @@ onUnmounted(() => {
                             <!-- Individual exclusions summary if any -->
                             <div
                                 v-if="excludedPortraitIds.size > 0"
-                                class="mt-1 px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11px] flex items-center justify-between text-amber-800 dark:text-amber-300"
+                                class="mt-1 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300"
                             >
-                                <span>{{ excludedPortraitIds.size }} individual photo(s) disabled</span>
+                                <span
+                                    >{{ excludedPortraitIds.size }} individual
+                                    photo(s) disabled</span
+                                >
                                 <button
                                     @click="clearAllExcluded"
-                                    class="text-[10px] font-bold underline hover:text-amber-950 dark:hover:text-amber-100 cursor-pointer"
+                                    class="cursor-pointer text-[10px] font-bold underline hover:text-amber-950 dark:hover:text-amber-100"
                                 >
                                     Reset
                                 </button>
                             </div>
 
-                            <div class="my-1.5 border-t border-slate-200 dark:border-slate-800"></div>
+                            <div
+                                class="my-1.5 border-t border-slate-200 dark:border-slate-800"
+                            ></div>
 
                             <!-- Direct Actions -->
                             <div class="space-y-1">
                                 <button
                                     @click="exportToPdf(true)"
-                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer font-medium"
+                                    class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                                 >
-                                    <Image class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                    <span class="flex-1 truncate">Export A3 with portraits</span>
+                                    <Image
+                                        class="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                                    />
+                                    <span class="flex-1 truncate"
+                                        >Export A3 with portraits</span
+                                    >
                                 </button>
                                 <button
                                     @click="exportToPdf(false)"
-                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors text-left cursor-pointer font-medium text-amber-700 dark:text-amber-300"
+                                    class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-medium text-amber-700 transition-colors hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
                                 >
-                                    <ImageOff class="w-3.5 h-3.5 shrink-0" />
-                                    <span class="flex-1 truncate">Export A3 without portraits</span>
+                                    <ImageOff class="h-3.5 w-3.5 shrink-0" />
+                                    <span class="flex-1 truncate"
+                                        >Export A3 without portraits</span
+                                    >
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Zoom Controls -->
-                    <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
-                        <button @click="zoomIn" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer" title="Zoom In">
-                            <ZoomIn class="w-3.5 h-3.5" />
+                    <div
+                        class="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80"
+                    >
+                        <button
+                            @click="zoomIn"
+                            class="cursor-pointer rounded-lg p-1.5 text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"
+                            title="Zoom In"
+                        >
+                            <ZoomIn class="h-3.5 w-3.5" />
                         </button>
-                        <button @click="zoomOut" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer" title="Zoom Out">
-                            <ZoomOut class="w-3.5 h-3.5" />
+                        <button
+                            @click="zoomOut"
+                            class="cursor-pointer rounded-lg p-1.5 text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"
+                            title="Zoom Out"
+                        >
+                            <ZoomOut class="h-3.5 w-3.5" />
                         </button>
-                        <button @click="resetZoom" class="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer" title="Fit Screen">
-                            <Maximize2 class="w-3.5 h-3.5" />
+                        <button
+                            @click="resetZoom"
+                            class="cursor-pointer rounded-lg p-1.5 text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"
+                            title="Fit Screen"
+                        >
+                            <Maximize2 class="h-3.5 w-3.5" />
                         </button>
-                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 px-1">
+                        <span
+                            class="px-1 text-[11px] font-bold text-slate-700 dark:text-slate-300"
+                        >
                             {{ Math.round(zoomLevel * 100) }}%
                         </span>
                     </div>
 
                     <button
                         @click="isControlsCollapsed = true"
-                        class="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        class="cursor-pointer rounded-xl p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-white"
                         title="Collapse"
                     >
-                        <ChevronLeft class="w-4 h-4" />
+                        <ChevronLeft class="h-4 w-4" />
                     </button>
                 </div>
 
                 <!-- Generation Depth Selectors (Up to 10 Generations) -->
-                <div class="flex items-center gap-2.5 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
+                <div
+                    class="flex items-center gap-2.5 border-t border-slate-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3 dark:border-slate-800"
+                >
                     <!-- Ancestor Depth -->
-                    <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        <ArrowUp class="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <div
+                        class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                        <ArrowUp class="h-3.5 w-3.5 shrink-0 text-indigo-500" />
                         <span class="hidden sm:inline">Ancestors:</span>
-                        <div class="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300 dark:border-slate-700">
+                        <div
+                            class="flex items-center gap-0.5 rounded-lg border border-slate-300 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-800"
+                        >
                             <button
-                                @click="ancestorLevels = Math.max(0, ancestorLevels - 1)"
+                                @click="
+                                    ancestorLevels = Math.max(
+                                        0,
+                                        ancestorLevels - 1,
+                                    )
+                                "
                                 :disabled="ancestorLevels <= 0"
-                                class="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 cursor-pointer"
+                                class="cursor-pointer rounded-md p-1 hover:bg-slate-200 disabled:opacity-30 dark:hover:bg-slate-700"
                                 title="Decrease Ancestor Generations"
                             >
-                                <Minus class="w-3 h-3" />
+                                <Minus class="h-3 w-3" />
                             </button>
                             <select
                                 v-model.number="ancestorLevels"
-                                class="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 px-1.5 py-0.5 border-none focus:outline-hidden cursor-pointer"
+                                class="cursor-pointer border-none bg-transparent px-1.5 py-0.5 text-xs font-bold text-slate-800 focus:outline-hidden dark:text-slate-200"
                             >
                                 <option :value="0">0 (Hidden)</option>
                                 <option :value="1">1 Gen (Parents)</option>
-                                <option :value="2">2 Gens (Grandparents)</option>
+                                <option :value="2">
+                                    2 Gens (Grandparents)
+                                </option>
                                 <option :value="3">3 Gens (Great-GP)</option>
                                 <option :value="4">4 Gens (2nd Gt-GP)</option>
                                 <option :value="5">5 Gens (3rd Gt-GP)</option>
@@ -881,36 +1168,54 @@ onUnmounted(() => {
                                 <option :value="10">10 Generations</option>
                             </select>
                             <button
-                                @click="ancestorLevels = Math.min(10, ancestorLevels + 1)"
+                                @click="
+                                    ancestorLevels = Math.min(
+                                        10,
+                                        ancestorLevels + 1,
+                                    )
+                                "
                                 :disabled="ancestorLevels >= 10"
-                                class="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 cursor-pointer"
+                                class="cursor-pointer rounded-md p-1 hover:bg-slate-200 disabled:opacity-30 dark:hover:bg-slate-700"
                                 title="Increase Ancestor Generations"
                             >
-                                <Plus class="w-3 h-3" />
+                                <Plus class="h-3 w-3" />
                             </button>
                         </div>
                     </div>
 
                     <!-- Descendant Depth -->
-                    <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        <ArrowDown class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <div
+                        class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                        <ArrowDown
+                            class="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                        />
                         <span class="hidden sm:inline">Descendants:</span>
-                        <div class="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300 dark:border-slate-700">
+                        <div
+                            class="flex items-center gap-0.5 rounded-lg border border-slate-300 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-800"
+                        >
                             <button
-                                @click="descendantLevels = Math.max(0, descendantLevels - 1)"
+                                @click="
+                                    descendantLevels = Math.max(
+                                        0,
+                                        descendantLevels - 1,
+                                    )
+                                "
                                 :disabled="descendantLevels <= 0"
-                                class="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 cursor-pointer"
+                                class="cursor-pointer rounded-md p-1 hover:bg-slate-200 disabled:opacity-30 dark:hover:bg-slate-700"
                                 title="Decrease Descendant Generations"
                             >
-                                <Minus class="w-3 h-3" />
+                                <Minus class="h-3 w-3" />
                             </button>
                             <select
                                 v-model.number="descendantLevels"
-                                class="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 px-1.5 py-0.5 border-none focus:outline-hidden cursor-pointer"
+                                class="cursor-pointer border-none bg-transparent px-1.5 py-0.5 text-xs font-bold text-slate-800 focus:outline-hidden dark:text-slate-200"
                             >
                                 <option :value="0">0 (Hidden)</option>
                                 <option :value="1">1 Gen (Children)</option>
-                                <option :value="2">2 Gens (Grandchildren)</option>
+                                <option :value="2">
+                                    2 Gens (Grandchildren)
+                                </option>
                                 <option :value="3">3 Gens (Great-GC)</option>
                                 <option :value="4">4 Gens (2nd Gt-GC)</option>
                                 <option :value="5">5 Gens (3rd Gt-GC)</option>
@@ -920,35 +1225,49 @@ onUnmounted(() => {
                                 <option :value="10">10 Generations</option>
                             </select>
                             <button
-                                @click="descendantLevels = Math.min(10, descendantLevels + 1)"
+                                @click="
+                                    descendantLevels = Math.min(
+                                        10,
+                                        descendantLevels + 1,
+                                    )
+                                "
                                 :disabled="descendantLevels >= 10"
-                                class="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 cursor-pointer"
+                                class="cursor-pointer rounded-md p-1 hover:bg-slate-200 disabled:opacity-30 dark:hover:bg-slate-700"
                                 title="Increase Descendant Generations"
                             >
-                                <Plus class="w-3 h-3" />
+                                <Plus class="h-3 w-3" />
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Siblings Toggle Button -->
-                <div class="flex items-center border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
+                <div
+                    class="flex items-center border-t border-slate-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3 dark:border-slate-800"
+                >
                     <button
                         @click="showSiblings = !showSiblings"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-xs transition-all"
                         :class="[
                             showSiblings
-                                ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800/50 shadow-sm'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                ? 'border border-purple-300 bg-purple-100 text-purple-700 shadow-sm dark:border-purple-800/50 dark:bg-purple-950/80 dark:text-purple-300'
+                                : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700',
                         ]"
                         title="Toggle siblings and their descendants"
                     >
-                        <Users class="w-3.5 h-3.5" />
+                        <Users class="h-3.5 w-3.5" />
                         <span>Siblings</span>
                         <span
-                            v-if="treeData?.siblings && treeData.siblings.length > 0"
-                            class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold"
-                            :class="showSiblings ? 'bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
+                            v-if="
+                                treeData?.siblings &&
+                                treeData.siblings.length > 0
+                            "
+                            class="py-0.2 rounded-full px-1.5 text-[10px] font-extrabold"
+                            :class="
+                                showSiblings
+                                    ? 'bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                    : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                            "
                         >
                             {{ treeData.siblings.length }}
                         </span>
@@ -956,33 +1275,41 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Search Input -->
-                <div class="relative min-w-[180px] border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
+                <div
+                    class="relative min-w-[180px] border-t border-slate-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3 dark:border-slate-800"
+                >
                     <div class="relative">
-                        <Search class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                        <Search
+                            class="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-slate-400"
+                        />
                         <input
                             v-model="searchInput"
                             @input="handleSearch"
                             type="text"
                             placeholder="Change focus person..."
-                            class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-medium"
+                            class="w-full rounded-xl border border-slate-300 bg-slate-100 py-1.5 pr-3 pl-8 text-xs font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                         />
                     </div>
 
                     <!-- Search dropdown -->
                     <div
                         v-if="searchResults.length > 0"
-                        class="absolute left-0 right-0 top-10 z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl p-1.5 space-y-1 max-h-48 overflow-y-auto"
+                        class="absolute top-10 right-0 left-0 z-30 max-h-48 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                     >
                         <button
                             v-for="p in searchResults"
                             :key="'sr-' + p.id"
                             @click="selectSearchPerson(p)"
-                            class="w-full p-2 rounded-lg text-left hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between group cursor-pointer text-xs"
+                            class="group flex w-full cursor-pointer items-center justify-between rounded-lg p-2 text-left text-xs transition-colors hover:bg-indigo-50 dark:hover:bg-slate-800"
                         >
-                            <span class="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 truncate">
+                            <span
+                                class="truncate font-bold text-slate-900 group-hover:text-indigo-600 dark:text-white"
+                            >
                                 {{ p.name }}
                             </span>
-                            <span class="text-[10px] text-slate-400 ml-2 shrink-0">
+                            <span
+                                class="ml-2 shrink-0 text-[10px] text-slate-400"
+                            >
                                 b.{{ p.birth_year || '?' }}
                             </span>
                         </button>
@@ -995,8 +1322,8 @@ onUnmounted(() => {
         <div
             ref="canvasContainerRef"
             :class="[
-                'flex-1 w-full h-full relative overflow-hidden select-none touch-none bg-slate-50/50 dark:bg-slate-950/70',
-                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+                'relative h-full w-full flex-1 touch-none overflow-hidden bg-slate-50/50 select-none dark:bg-slate-950/70',
+                isDragging ? 'cursor-grabbing' : 'cursor-grab',
             ]"
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
@@ -1011,11 +1338,17 @@ onUnmounted(() => {
             <!-- Loading Indicator -->
             <div
                 v-if="loading"
-                class="absolute inset-0 z-30 flex items-center justify-center bg-white/60 dark:bg-slate-950/60 backdrop-blur-xs"
+                class="absolute inset-0 z-30 flex items-center justify-center bg-white/60 backdrop-blur-xs dark:bg-slate-950/60"
             >
-                <div class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl">
-                    <RefreshCcw class="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-spin" />
-                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                <div
+                    class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <RefreshCcw
+                        class="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400"
+                    />
+                    <span
+                        class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                    >
                         Loading Generations...
                     </span>
                 </div>
@@ -1024,25 +1357,35 @@ onUnmounted(() => {
             <!-- Scaled and Panned Canvas Content -->
             <div
                 ref="treeContentRef"
-                class="absolute top-0 left-0 min-w-max flex flex-col items-center gap-0 shrink-0 transition-transform duration-75 ease-out"
+                class="absolute top-0 left-0 flex min-w-max shrink-0 flex-col items-center gap-0 transition-transform duration-75 ease-out"
                 :class="isPdfExporting ? 'p-0' : 'p-4 sm:p-8'"
                 :style="{
-                    transform: isPdfExporting ? 'none' : `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
+                    transform: isPdfExporting
+                        ? 'none'
+                        : `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomLevel})`,
                     transformOrigin: '0 0',
                     willChange: isPdfExporting ? 'auto' : 'transform',
-                    transition: isPdfExporting ? 'none' : undefined
+                    transition: isPdfExporting ? 'none' : undefined,
                 }"
             >
                 <!-- ================= ANCESTORS SECTION (RECURSIVE MULTI-GENERATION) ================= -->
                 <div
-                    v-if="ancestorLevels >= 1 && (focusParents.length > 0 || spouseParents.length > 0)"
-                    class="flex items-start justify-center gap-1 sm:gap-1.5 mb-1.5 sm:mb-2"
+                    v-if="
+                        ancestorLevels >= 1 &&
+                        (focusParents.length > 0 || spouseParents.length > 0)
+                    "
+                    class="mb-1.5 flex items-start justify-center gap-1 sm:mb-2 sm:gap-1.5"
                 >
                     <!-- Focus Person Ancestor Tree (Recursive Parents/Grandparents/Great-GP) -->
-                    <div v-if="focusParents.length > 0" class="flex flex-col items-center">
-                        <div class="flex items-start justify-center relative">
+                    <div
+                        v-if="focusParents.length > 0"
+                        class="flex flex-col items-center"
+                    >
+                        <div class="relative flex items-start justify-center">
                             <!-- Father Side Ancestors Column -->
-                            <div class="flex flex-col items-center relative px-0.5">
+                            <div
+                                class="relative flex flex-col items-center px-0.5"
+                            >
                                 <GedcomHeritageAncestorNode
                                     :person="focusParents[0]"
                                     :level="1"
@@ -1055,17 +1398,27 @@ onUnmounted(() => {
 
                             <!-- Marriage Bar between Focus Person's Parents (only when parents have no parents above them) -->
                             <div
-                                v-if="focusParents.length > 1 && (!focusParents[0].parents || focusParents[0].parents.length === 0) && (!focusParents[1].parents || focusParents[1].parents.length === 0)"
-                                class="absolute top-[250px] left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                v-if="
+                                    focusParents.length > 1 &&
+                                    (!focusParents[0].parents ||
+                                        focusParents[0].parents.length === 0) &&
+                                    (!focusParents[1].parents ||
+                                        focusParents[1].parents.length === 0)
+                                "
+                                class="pointer-events-none absolute top-[250px] left-1/2 z-0 flex h-[3px] w-10 -translate-x-1/2 items-center justify-between bg-slate-900 dark:bg-slate-300"
                             >
-                                <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
-                                <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
+                                <span
+                                    class="-ml-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                                ></span>
+                                <span
+                                    class="-mr-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                                ></span>
                             </div>
 
                             <!-- Mother Side Ancestors Column -->
                             <div
                                 v-if="focusParents.length > 1"
-                                class="flex flex-col items-center relative px-0.5"
+                                class="relative flex flex-col items-center px-0.5"
                             >
                                 <GedcomHeritageAncestorNode
                                     :person="focusParents[1]"
@@ -1080,10 +1433,15 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Spouse Side Ancestor Tree (Recursive Parents/Grandparents/Great-GP) -->
-                    <div v-if="spouseParents.length > 0" class="flex flex-col items-center">
-                        <div class="flex items-start justify-center relative">
+                    <div
+                        v-if="spouseParents.length > 0"
+                        class="flex flex-col items-center"
+                    >
+                        <div class="relative flex items-start justify-center">
                             <!-- Spouse Father Side Ancestors Column -->
-                            <div class="flex flex-col items-center relative px-0.5">
+                            <div
+                                class="relative flex flex-col items-center px-0.5"
+                            >
                                 <GedcomHeritageAncestorNode
                                     :person="spouseParents[0]"
                                     :level="1"
@@ -1096,17 +1454,28 @@ onUnmounted(() => {
 
                             <!-- Marriage Bar between Spouse's Parents (only when parents have no parents above them) -->
                             <div
-                                v-if="spouseParents.length > 1 && (!spouseParents[0].parents || spouseParents[0].parents.length === 0) && (!spouseParents[1].parents || spouseParents[1].parents.length === 0)"
-                                class="absolute top-[250px] left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                v-if="
+                                    spouseParents.length > 1 &&
+                                    (!spouseParents[0].parents ||
+                                        spouseParents[0].parents.length ===
+                                            0) &&
+                                    (!spouseParents[1].parents ||
+                                        spouseParents[1].parents.length === 0)
+                                "
+                                class="pointer-events-none absolute top-[250px] left-1/2 z-0 flex h-[3px] w-10 -translate-x-1/2 items-center justify-between bg-slate-900 dark:bg-slate-300"
                             >
-                                <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
-                                <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
+                                <span
+                                    class="-ml-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                                ></span>
+                                <span
+                                    class="-mr-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                                ></span>
                             </div>
 
                             <!-- Spouse Mother Side Ancestors Column -->
                             <div
                                 v-if="spouseParents.length > 1"
-                                class="flex flex-col items-center relative px-0.5"
+                                class="relative flex flex-col items-center px-0.5"
                             >
                                 <GedcomHeritageAncestorNode
                                     :person="spouseParents[1]"
@@ -1122,49 +1491,71 @@ onUnmounted(() => {
                 </div>
 
                 <!-- ================= SIBLINGS & PRIMARY GENERATION SECTION ================= -->
-                <div v-if="siblingGeneration.length > 0" class="flex flex-col items-center relative">
+                <div
+                    v-if="siblingGeneration.length > 0"
+                    class="relative flex flex-col items-center"
+                >
                     <!-- Row of Siblings & Primary Couple Branches -->
                     <div class="flex items-start justify-center">
                         <div
                             v-for="(member, sIdx) in siblingGeneration"
                             :key="member.id"
-                            class="flex flex-col items-center relative px-1.5 sm:px-2.5"
+                            class="relative flex flex-col items-center px-1.5 sm:px-2.5"
                         >
                             <!-- Horizontal Distribution Bracket across Siblings (when parents exist & multiple siblings) -->
                             <div
-                                v-if="focusParents.length > 0 && siblingGeneration.length > 1"
-                                class="absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                v-if="
+                                    focusParents.length > 0 &&
+                                    siblingGeneration.length > 1
+                                "
+                                class="pointer-events-none absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300"
                                 :class="[
                                     sIdx === 0
-                                        ? (member.is_primary && member.spouses && member.spouses.length > 0
-                                            ? 'left-[calc(50%-134px)] sm:left-[calc(50%-135px)] right-0'
-                                            : 'left-1/2 right-0')
+                                        ? member.is_primary &&
+                                          member.spouses &&
+                                          member.spouses.length > 0
+                                            ? 'right-0 left-[calc(50%-134px)] sm:left-[calc(50%-135px)]'
+                                            : 'right-0 left-1/2'
                                         : '',
                                     sIdx === siblingGeneration.length - 1
-                                        ? (member.is_primary && member.spouses && member.spouses.length > 0
-                                            ? 'left-0 right-[calc(50%-134px)] sm:right-[calc(50%-135px)]'
-                                            : 'left-0 right-1/2')
+                                        ? member.is_primary &&
+                                          member.spouses &&
+                                          member.spouses.length > 0
+                                            ? 'right-[calc(50%-134px)] left-0 sm:right-[calc(50%-135px)]'
+                                            : 'right-1/2 left-0'
                                         : '',
-                                    sIdx > 0 && sIdx < siblingGeneration.length - 1 ? 'left-0 right-0' : ''
+                                    sIdx > 0 &&
+                                    sIdx < siblingGeneration.length - 1
+                                        ? 'right-0 left-0'
+                                        : '',
                                 ]"
                             ></div>
 
                             <!-- Horizontal Bar above Focused Person with Spouse -->
                             <div
-                                v-if="focusParents.length > 0 && member.is_primary && member.spouses && member.spouses.length > 0"
-                                class="absolute top-0 left-[calc(50%-134px)] right-[calc(50%-134px)] sm:left-[calc(50%-135px)] sm:right-[calc(50%-135px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                v-if="
+                                    focusParents.length > 0 &&
+                                    member.is_primary &&
+                                    member.spouses &&
+                                    member.spouses.length > 0
+                                "
+                                class="pointer-events-none absolute top-0 right-[calc(50%-134px)] left-[calc(50%-134px)] h-[3px] bg-slate-900 sm:right-[calc(50%-135px)] sm:left-[calc(50%-135px)] dark:bg-slate-300"
                             ></div>
 
                             <!-- Vertical Drop Line from Parents' Bracket into this Sibling/Primary -->
                             <div
                                 v-if="focusParents.length > 0"
-                                class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0 mb-0.5"
+                                class="z-0 mb-0.5 h-4 w-[3px] bg-slate-900 sm:h-5 dark:bg-slate-300"
                             ></div>
 
                             <!-- Couple Row: Member + Partner (if any) -->
-                            <div class="flex items-start gap-2 sm:gap-2.5 relative">
+                            <div
+                                class="relative flex items-start gap-2 sm:gap-2.5"
+                            >
                                 <!-- Person Node (Primary or Sibling) -->
-                                <div class="relative flex flex-col items-center">
+                                <div
+                                    class="relative flex flex-col items-center"
+                                >
                                     <GedcomHeritageNode
                                         :person="member"
                                         :is-primary="member.is_primary"
@@ -1176,16 +1567,28 @@ onUnmounted(() => {
 
                                 <!-- Marriage Horizontal Bar with Anchor Pins (only for primary couple) -->
                                 <div
-                                    v-if="member.is_primary && member.spouses && member.spouses.length > 0"
-                                    class="absolute top-[250px] left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-900 dark:bg-slate-300 z-0 flex items-center justify-between pointer-events-none"
+                                    v-if="
+                                        member.is_primary &&
+                                        member.spouses &&
+                                        member.spouses.length > 0
+                                    "
+                                    class="pointer-events-none absolute top-[250px] left-1/2 z-0 flex h-[3px] w-10 -translate-x-1/2 items-center justify-between bg-slate-900 dark:bg-slate-300"
                                 >
-                                    <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -ml-1"></span>
-                                    <span class="w-2.5 h-2.5 bg-slate-900 dark:bg-slate-300 rounded-sm -mr-1"></span>
+                                    <span
+                                        class="-ml-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                                    ></span>
+                                    <span
+                                        class="-mr-1 h-2.5 w-2.5 rounded-sm bg-slate-900 dark:bg-slate-300"
+                                    ></span>
                                 </div>
 
                                 <!-- Partner / Spouse Node (only for primary person) -->
                                 <GedcomHeritageNode
-                                    v-if="member.is_primary && member.spouses && member.spouses.length > 0"
+                                    v-if="
+                                        member.is_primary &&
+                                        member.spouses &&
+                                        member.spouses.length > 0
+                                    "
                                     :person="member.spouses[0]"
                                     :spouse="member"
                                     @select-person="handlePersonSelect"
@@ -1195,45 +1598,66 @@ onUnmounted(() => {
 
                             <!-- Vertical Drop Line from Couple down to Children Bracket (only for primary couple) -->
                             <div
-                                v-if="member.is_primary && descendantLevels >= 1 && member.children && member.children.length > 0"
-                                class="w-[3px] h-4 sm:h-5 bg-slate-900 dark:bg-slate-300 z-0"
+                                v-if="
+                                    member.is_primary &&
+                                    descendantLevels >= 1 &&
+                                    member.children &&
+                                    member.children.length > 0
+                                "
+                                class="z-0 h-4 w-[3px] bg-slate-900 sm:h-5 dark:bg-slate-300"
                             ></div>
 
                             <!-- Descendants of this Member & Spouse (only for primary couple) -->
                             <div
-                                v-if="member.is_primary && descendantLevels >= 1 && member.children && member.children.length > 0"
-                                class="flex flex-col items-center relative"
+                                v-if="
+                                    member.is_primary &&
+                                    descendantLevels >= 1 &&
+                                    member.children &&
+                                    member.children.length > 0
+                                "
+                                class="relative flex flex-col items-center"
                             >
                                 <!-- Row of Children -->
                                 <div class="flex items-start justify-center">
                                     <div
                                         v-for="(child, cIdx) in member.children"
                                         :key="child.id"
-                                        class="flex flex-col items-center relative px-1 sm:px-1.5 pt-4 sm:pt-5"
+                                        class="relative flex flex-col items-center px-1 pt-4 sm:px-1.5 sm:pt-5"
                                     >
                                         <!-- Horizontal Distribution Bracket across Children -->
                                         <div
                                             v-if="member.children.length > 1"
-                                            class="absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                            class="pointer-events-none absolute top-0 h-[3px] bg-slate-900 dark:bg-slate-300"
                                             :class="[
                                                 cIdx === 0
-                                                    ? (child.spouses && child.spouses.length > 0
-                                                        ? 'left-[calc(50%-134px)] sm:left-[calc(50%-135px)] right-0'
-                                                        : 'left-1/2 right-0')
+                                                    ? child.spouses &&
+                                                      child.spouses.length > 0
+                                                        ? 'right-0 left-[calc(50%-134px)] sm:left-[calc(50%-135px)]'
+                                                        : 'right-0 left-1/2'
                                                     : '',
-                                                cIdx === member.children.length - 1
-                                                    ? (child.spouses && child.spouses.length > 0
-                                                        ? 'left-0 right-[calc(50%-134px)] sm:right-[calc(50%-135px)]'
-                                                        : 'left-0 right-1/2')
+                                                cIdx ===
+                                                member.children.length - 1
+                                                    ? child.spouses &&
+                                                      child.spouses.length > 0
+                                                        ? 'right-[calc(50%-134px)] left-0 sm:right-[calc(50%-135px)]'
+                                                        : 'right-1/2 left-0'
                                                     : '',
-                                                cIdx > 0 && cIdx < member.children.length - 1 ? 'left-0 right-0' : ''
+                                                cIdx > 0 &&
+                                                cIdx <
+                                                    member.children.length - 1
+                                                    ? 'right-0 left-0'
+                                                    : '',
                                             ]"
                                         ></div>
 
                                         <!-- Horizontal Bar above Single Child with Spouse/Partner -->
                                         <div
-                                            v-if="member.children.length === 1 && child.spouses && child.spouses.length > 0"
-                                            class="absolute top-0 left-[calc(50%-134px)] right-[calc(50%-134px)] sm:left-[calc(50%-135px)] sm:right-[calc(50%-135px)] h-[3px] bg-slate-900 dark:bg-slate-300 pointer-events-none"
+                                            v-if="
+                                                member.children.length === 1 &&
+                                                child.spouses &&
+                                                child.spouses.length > 0
+                                            "
+                                            class="pointer-events-none absolute top-0 right-[calc(50%-134px)] left-[calc(50%-134px)] h-[3px] bg-slate-900 sm:right-[calc(50%-135px)] sm:left-[calc(50%-135px)] dark:bg-slate-300"
                                         ></div>
 
                                         <!-- Recursive Descendant Node for Child, Spouses, Grandchildren, etc. -->
@@ -1265,7 +1689,11 @@ onUnmounted(() => {
     body {
         background: #ffffff !important;
     }
-    .btn, button, nav, header, aside {
+    .btn,
+    button,
+    nav,
+    header,
+    aside {
         display: none !important;
     }
     * {

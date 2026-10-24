@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PersonContributionSubmittedMail;
+use App\Models\User;
 use App\Services\GedcomParserService;
 use App\Services\LineagePermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -22,7 +26,7 @@ class GedcomController extends Controller
         $hasEnvDefault = false;
 
         // Check if user has an assigned start_person_id
-        if ($user && !$user->isSuperuser() && !empty($user->start_person_id)) {
+        if ($user && ! $user->isSuperuser() && ! empty($user->start_person_id)) {
             $cleanUserStartId = trim($user->start_person_id, '@');
             if (isset($data['individuals'][$cleanUserStartId])) {
                 $rootPersonId = $cleanUserStartId;
@@ -31,7 +35,6 @@ class GedcomController extends Controller
         }
 
         $envPerson = trim((string) config('gedcom.start_person', ''));
-
 
         if ($rootPersonId === null && $envPerson !== '') {
             $cleanEnvId = trim($envPerson, '@');
@@ -55,7 +58,7 @@ class GedcomController extends Controller
                     }
                 }
 
-                if (!$rootPersonId && $partialMatchId !== null) {
+                if (! $rootPersonId && $partialMatchId !== null) {
                     $rootPersonId = $partialMatchId;
                     $hasEnvDefault = true;
                 }
@@ -93,7 +96,7 @@ class GedcomController extends Controller
             ]);
         } catch (\Throwable $e) {
             return response()->json([
-                'error' => 'Failed to re-import GEDCOM archive: ' . $e->getMessage(),
+                'error' => 'Failed to re-import GEDCOM archive: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -103,8 +106,8 @@ class GedcomController extends Controller
         $request->validate([
             'file' => ['required', 'file', function ($attribute, $value, $fail) {
                 $ext = strtolower($value->getClientOriginalExtension());
-                if (!in_array($ext, ['ged', 'gedcom', 'txt'])) {
-                    $fail('The ' . $attribute . ' must be a .ged or .gedcom file.');
+                if (! in_array($ext, ['ged', 'gedcom', 'txt'])) {
+                    $fail('The '.$attribute.' must be a .ged or .gedcom file.');
                 }
             }],
         ]);
@@ -115,7 +118,7 @@ class GedcomController extends Controller
         File::ensureDirectoryExists($privateDir);
 
         // Remove any existing ZIP archives so GedcomParserService detects gedcom.ged as the active source
-        $zipFiles = File::glob($privateDir . '/*.zip');
+        $zipFiles = File::glob($privateDir.'/*.zip');
         foreach ($zipFiles as $zip) {
             File::delete($zip);
         }
@@ -138,7 +141,7 @@ class GedcomController extends Controller
             'file' => ['required', 'file', function ($attribute, $value, $fail) {
                 $ext = strtolower($value->getClientOriginalExtension());
                 if ($ext !== 'json') {
-                    $fail('The ' . $attribute . ' must be a valid .json file.');
+                    $fail('The '.$attribute.' must be a valid .json file.');
                 }
             }],
         ]);
@@ -152,7 +155,7 @@ class GedcomController extends Controller
         }
 
         $decoded = json_decode($content, true);
-        if (!is_array($decoded) || (!isset($decoded['by_person']) && !isset($decoded['all_tags']))) {
+        if (! is_array($decoded) || (! isset($decoded['by_person']) && ! isset($decoded['all_tags']))) {
             return response()->json([
                 'error' => 'Invalid faces.json format. Expected JSON containing "by_person" or "all_tags".',
             ], 422);
@@ -160,7 +163,7 @@ class GedcomController extends Controller
 
         $privateDir = storage_path('app/private');
         File::ensureDirectoryExists($privateDir);
-        File::put($privateDir . '/faces.json', $content);
+        File::put($privateDir.'/faces.json', $content);
 
         // Re-parse and cache data to regenerate crops while preserving media
         $data = $parser->parseAndCache(false);
@@ -182,7 +185,7 @@ class GedcomController extends Controller
     public function downloadFaceScript(): BinaryFileResponse
     {
         $path = base_path('scripts/mft11_export_faces.py');
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             abort(404, 'Script file not found');
         }
 
@@ -209,13 +212,13 @@ class GedcomController extends Controller
 
         $filtered = [];
         foreach ($data['individuals'] as $ind) {
-            if ($allowedMap !== null && !isset($allowedMap[$ind['id']])) {
+            if ($allowedMap !== null && ! isset($allowedMap[$ind['id']])) {
                 continue;
             }
             if ($q !== '') {
                 $nameMatch = str_contains(strtolower($ind['name']), $q);
                 $placeMatch = str_contains(strtolower($ind['birth_place']), $q) || str_contains(strtolower($ind['death_place']), $q);
-                if (!$nameMatch && !$placeMatch) {
+                if (! $nameMatch && ! $placeMatch) {
                     $altMatch = false;
                     foreach ($ind['all_names'] ?? [] as $an) {
                         if (str_contains(strtolower($an['name']), $q)) {
@@ -223,7 +226,7 @@ class GedcomController extends Controller
                             break;
                         }
                     }
-                    if (!$altMatch) {
+                    if (! $altMatch) {
                         continue;
                     }
                 }
@@ -231,7 +234,7 @@ class GedcomController extends Controller
 
             if ($surnameFilter !== '') {
                 $surnameMatch = strtolower($ind['surname']) === $surnameFilter;
-                if (!$surnameMatch) {
+                if (! $surnameMatch) {
                     foreach ($ind['all_names'] ?? [] as $an) {
                         if (strtolower($an['surname']) === $surnameFilter) {
                             $surnameMatch = true;
@@ -239,7 +242,7 @@ class GedcomController extends Controller
                         }
                     }
                 }
-                if (!$surnameMatch) {
+                if (! $surnameMatch) {
                     continue;
                 }
             }
@@ -307,7 +310,7 @@ class GedcomController extends Controller
             $targetId = $id;
         }
 
-        if (!isset($data['individuals'][$targetId]) || ($allowedMap !== null && !isset($allowedMap[$targetId]))) {
+        if (! isset($data['individuals'][$targetId]) || ($allowedMap !== null && ! isset($allowedMap[$targetId]))) {
             return response()->json(['error' => 'Person not found'], 404);
         }
 
@@ -315,13 +318,14 @@ class GedcomController extends Controller
 
         // Format compact relation helper
         $formatMini = function (string $relId) use ($data, $allowedMap) {
-            if ($allowedMap !== null && !isset($allowedMap[$relId])) {
+            if ($allowedMap !== null && ! isset($allowedMap[$relId])) {
                 return null;
             }
-            if (!isset($data['individuals'][$relId])) {
+            if (! isset($data['individuals'][$relId])) {
                 return ['id' => $relId, 'name' => 'Unknown', 'surname' => ''];
             }
             $r = $data['individuals'][$relId];
+
             return [
                 'id' => $r['id'] ?? $relId,
                 'name' => $r['name'] ?? 'Unknown',
@@ -343,7 +347,9 @@ class GedcomController extends Controller
         // Enrich spouses with marriage details from shared family records
         $spouses = array_values(array_filter(array_map(function ($sId) use ($formatMini, $ind, $data) {
             $mini = $formatMini($sId);
-            if (!$mini) return null;
+            if (! $mini) {
+                return null;
+            }
 
             $marrDate = null;
             $marrYear = null;
@@ -369,7 +375,7 @@ class GedcomController extends Controller
 
         $tagLabels = [
             'BIRT' => 'Birth',
-            'CHR'  => 'Christening',
+            'CHR' => 'Christening',
             'BAPT' => 'Baptism',
             'CONF' => 'Confirmation',
             'FCOM' => 'First Communion',
@@ -397,8 +403,8 @@ class GedcomController extends Controller
             'EVEN' => 'Event',
             'MARR' => 'Marriage',
             '_PRS' => 'Civil Partnership',
-            'DIV'  => 'Divorce',
-            'ENG'  => 'Engagement',
+            'DIV' => 'Divorce',
+            'ENG' => 'Engagement',
             'ANUL' => 'Annulment',
             'MARS' => 'Marriage Settlement',
             'MARB' => 'Marriage Banns',
@@ -420,8 +426,8 @@ class GedcomController extends Controller
             $type = $ev['type'] ?? '';
 
             // If this is an individual marriage event and person has family records, let the family loop handle it with full spouse details
-            $isMarrEvent = in_array($tag, ['MARR', '_PRS']) || ($tag === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', $type . ' ' . $val));
-            if ($isMarrEvent && !empty($ind['fams'])) {
+            $isMarrEvent = in_array($tag, ['MARR', '_PRS']) || ($tag === 'EVEN' && preg_match('/\b(marriage|married|wedding|partner)\b/i', $type.' '.$val));
+            if ($isMarrEvent && ! empty($ind['fams'])) {
                 continue;
             }
 
@@ -432,7 +438,7 @@ class GedcomController extends Controller
             }
             $seenKeys[$key] = true;
 
-            $title = !empty($type) ? $type : ($tagLabels[$tag] ?? $tag);
+            $title = ! empty($type) ? $type : ($tagLabels[$tag] ?? $tag);
 
             $timelineEvents[] = [
                 'id' => "ev_ind_{$idx}",
@@ -450,7 +456,7 @@ class GedcomController extends Controller
         }
 
         // Add birth event if not present in events array
-        if (!empty($ind['birth_date']) || !empty($ind['birth_place'])) {
+        if (! empty($ind['birth_date']) || ! empty($ind['birth_place'])) {
             $hasBirth = false;
             foreach ($timelineEvents as $te) {
                 if ($te['tag'] === 'BIRT') {
@@ -458,7 +464,7 @@ class GedcomController extends Controller
                     break;
                 }
             }
-            if (!$hasBirth) {
+            if (! $hasBirth) {
                 $bYear = $ind['birth_year'] ?? null;
                 $timelineEvents[] = [
                     'id' => 'ev_birt_fallback',
@@ -477,7 +483,7 @@ class GedcomController extends Controller
         }
 
         // Add death event if not present in events array
-        if (!empty($ind['death_date']) || !empty($ind['death_place'])) {
+        if (! empty($ind['death_date']) || ! empty($ind['death_place'])) {
             $hasDeath = false;
             foreach ($timelineEvents as $te) {
                 if ($te['tag'] === 'DEAT') {
@@ -485,7 +491,7 @@ class GedcomController extends Controller
                     break;
                 }
             }
-            if (!$hasDeath) {
+            if (! $hasDeath) {
                 $dYear = $ind['death_year'] ?? null;
                 $timelineEvents[] = [
                     'id' => 'ev_deat_fallback',
@@ -504,7 +510,7 @@ class GedcomController extends Controller
         }
 
         // Add burial event if not present in events array
-        if (!empty($ind['burial_date']) || !empty($ind['burial_place'])) {
+        if (! empty($ind['burial_date']) || ! empty($ind['burial_place'])) {
             $hasBurial = false;
             foreach ($timelineEvents as $te) {
                 if ($te['tag'] === 'BURI') {
@@ -512,7 +518,7 @@ class GedcomController extends Controller
                     break;
                 }
             }
-            if (!$hasBurial) {
+            if (! $hasBurial) {
                 $timelineEvents[] = [
                     'id' => 'ev_buri_fallback',
                     'tag' => 'BURI',
@@ -531,7 +537,7 @@ class GedcomController extends Controller
 
         // Add family events (Marriage, Divorce, etc.)
         foreach ($ind['fams'] ?? [] as $fIdx => $famId) {
-            if (!isset($data['families'][$famId])) {
+            if (! isset($data['families'][$famId])) {
                 continue;
             }
             $fam = $data['families'][$famId];
@@ -544,7 +550,7 @@ class GedcomController extends Controller
             $spouseInfo = $spouseId ? $formatMini($spouseId) : null;
 
             $famEvs = $fam['events'] ?? [];
-            if (!empty($famEvs)) {
+            if (! empty($famEvs)) {
                 foreach ($famEvs as $feIdx => $fev) {
                     $tag = $fev['tag'] ?? 'MARR';
                     $date = $fev['date'] ?? '';
@@ -559,11 +565,11 @@ class GedcomController extends Controller
                     $seenKeys[$key] = true;
 
                     if ($tag === '_PRS') {
-                        $title = !empty($val) ? $val : (!empty($type) ? $type : 'Civil Partnership');
-                    } elseif ($tag === 'MARR' && !empty($fam['relationship_type'])) {
+                        $title = ! empty($val) ? $val : (! empty($type) ? $type : 'Civil Partnership');
+                    } elseif ($tag === 'MARR' && ! empty($fam['relationship_type'])) {
                         $title = $fam['relationship_type'];
                     } else {
-                        $title = !empty($type) ? $type : ($tagLabels[$tag] ?? $tag);
+                        $title = ! empty($type) ? $type : ($tagLabels[$tag] ?? $tag);
                     }
 
                     $timelineEvents[] = [
@@ -580,18 +586,18 @@ class GedcomController extends Controller
                         'spouse' => $spouseInfo,
                     ];
                 }
-            } elseif (!empty($fam['marriage_date']) || !empty($fam['marriage_place']) || !empty($fam['relationship_type'])) {
+            } elseif (! empty($fam['marriage_date']) || ! empty($fam['marriage_place']) || ! empty($fam['relationship_type'])) {
                 $mYear = null;
                 if (preg_match('/\b(1\d{3}|20\d{2})\b/', $fam['marriage_date'] ?? '', $ym)) {
                     $mYear = (int) $ym[1];
                 }
-                $relType = !empty($fam['relationship_type']) ? $fam['relationship_type'] : 'Marriage';
+                $relType = ! empty($fam['relationship_type']) ? $fam['relationship_type'] : 'Marriage';
                 $key = "fam_{$famId}_{$relType}_{$fam['marriage_date']}_{$fam['marriage_place']}";
-                if (!isset($seenKeys[$key])) {
+                if (! isset($seenKeys[$key])) {
                     $seenKeys[$key] = true;
                     $timelineEvents[] = [
                         'id' => "ev_fam_marr_{$famId}",
-                        'tag' => !empty($fam['relationship_type']) ? '_PRS' : 'MARR',
+                        'tag' => ! empty($fam['relationship_type']) ? '_PRS' : 'MARR',
                         'title' => $relType,
                         'date' => $fam['marriage_date'] ?? '',
                         'place' => $fam['marriage_place'] ?? '',
@@ -604,13 +610,13 @@ class GedcomController extends Controller
                     ];
                 }
             } elseif ($spouseInfo) {
-                $relType = !empty($fam['relationship_type']) ? $fam['relationship_type'] : 'Marriage';
+                $relType = ! empty($fam['relationship_type']) ? $fam['relationship_type'] : 'Marriage';
                 $key = "fam_{$famId}_{$relType}_undated";
-                if (!isset($seenKeys[$key])) {
+                if (! isset($seenKeys[$key])) {
                     $seenKeys[$key] = true;
                     $timelineEvents[] = [
                         'id' => "ev_fam_marr_{$famId}",
-                        'tag' => !empty($fam['relationship_type']) ? '_PRS' : 'MARR',
+                        'tag' => ! empty($fam['relationship_type']) ? '_PRS' : 'MARR',
                         'title' => $relType,
                         'date' => '',
                         'place' => '',
@@ -629,7 +635,7 @@ class GedcomController extends Controller
         usort($timelineEvents, function ($a, $b) {
             $tagWeights = [
                 'BIRT' => 1,
-                'CHR'  => 2,
+                'CHR' => 2,
                 'BAPT' => 3,
                 'CONF' => 4,
                 'DEAT' => 98,
@@ -671,7 +677,7 @@ class GedcomController extends Controller
         $ind['burial_place'] = GedcomParserService::cleanPlace($ind['burial_place'] ?? null);
 
         foreach ($timelineEvents as &$te) {
-            if (!empty($te['place'])) {
+            if (! empty($te['place'])) {
                 $te['place'] = GedcomParserService::cleanPlace($te['place']);
             }
         }
@@ -699,7 +705,7 @@ class GedcomController extends Controller
         $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
         $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
 
-        if (!isset($data['individuals'][$id]) || ($allowedMap !== null && !isset($allowedMap[$id]))) {
+        if (! isset($data['individuals'][$id]) || ($allowedMap !== null && ! isset($allowedMap[$id]))) {
             return response()->json(['error' => 'Person not found'], 404);
         }
 
@@ -709,262 +715,283 @@ class GedcomController extends Controller
         $ancestorMaxDepth = $ancestorLevels + 1;
         $descendantMaxDepth = $descendantLevels + 1;
 
-        $getMarriageInfo = function (string $personId) use ($data) {
-            if (!isset($data['individuals'][$personId])) return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null, 'type' => null];
-            $ind = $data['individuals'][$personId];
-            foreach ($ind['fams'] ?? [] as $famId) {
-                if (isset($data['families'][$famId])) {
-                    $fam = $data['families'][$famId];
-                    $spouseId = ($fam['husband_id'] ?? null) === $personId ? ($fam['wife_id'] ?? null) : ($fam['husband_id'] ?? null);
-                    $spouseName = ($spouseId && isset($data['individuals'][$spouseId])) ? $data['individuals'][$spouseId]['name'] : null;
-
-                    $date = $fam['marriage_date'] ?? null;
-                    $place = GedcomParserService::cleanPlace($fam['marriage_place'] ?? null);
-                    $year = null;
-                    $type = !empty($fam['relationship_type']) ? $fam['relationship_type'] : null;
-
-                    if ($date) {
-                        if (preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $m)) {
-                            $year = (int) $m[1];
-                        }
-                    }
-
-                    if (!$date) {
-                        foreach ($fam['events'] ?? [] as $fev) {
-                            if ((($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') && !empty($fev['date'])) {
-                                $date = $fev['date'];
-                                $year = $fev['year'] ?? null;
-                                $place = GedcomParserService::cleanPlace($fev['place'] ?? $place);
-                                if (!empty($fev['type'])) {
-                                    $type = $fev['type'];
-                                } elseif (!empty($fev['value'])) {
-                                    $type = $fev['value'];
-                                }
-                                break;
-                            }
-                        }
-                    }
-
-                    if ($date || $place || $spouseName || $type) {
-                        return [
-                            'date' => $date,
-                            'year' => $year,
-                            'place' => $place,
-                            'spouse_name' => $spouseName,
-                            'type' => $type ?: 'Marriage',
-                        ];
-                    }
-                }
-            }
-            return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null, 'type' => null];
-        };
-
-        $formatPersonData = function (array $ind) use ($getMarriageInfo) {
-            $mInfo = $getMarriageInfo($ind['id']);
-
-            $occupations = [];
-            foreach ($ind['events'] ?? [] as $ev) {
-                if (($ev['tag'] ?? '') === 'OCCU') {
-                    $occu = trim($ev['value'] ?? '');
-                    $place = GedcomParserService::cleanPlace($ev['place'] ?? '');
-                    if ($occu === '' && !empty($ev['type'])) {
-                        $occu = trim($ev['type']);
-                    }
-                    if ($occu !== '' && $place) {
-                        if (stripos($occu, $place) === false) {
-                            $occu .= " ({$place})";
-                        }
-                    } elseif ($occu === '' && $place) {
-                        $occu = $place;
-                    }
-                    if ($occu !== '' && !in_array($occu, $occupations, true)) {
-                        $occupations[] = $occu;
-                    }
-                }
-            }
-            $occupation = !empty($occupations) ? implode(', ', $occupations) : ($ind['occupation'] ?? null);
-
-            return [
-                'id' => $ind['id'],
-                'name' => $ind['name'] ?? 'Unknown',
-                'given_name' => $ind['given_name'] ?? '',
-                'surname' => $ind['surname'] ?? '',
-                'all_names' => $ind['all_names'] ?? [],
-                'sex' => $ind['sex'] ?? 'U',
-                'birth_date' => $ind['birth_date'] ?? null,
-                'birth_place' => GedcomParserService::cleanPlace($ind['birth_place'] ?? null),
-                'birth_year' => $ind['birth_year'] ?? null,
-                'death_date' => $ind['death_date'] ?? null,
-                'death_place' => GedcomParserService::cleanPlace($ind['death_place'] ?? null),
-                'death_year' => $ind['death_year'] ?? null,
-                'death_note' => null,
-                'burial_date' => $ind['burial_date'] ?? null,
-                'burial_place' => GedcomParserService::cleanPlace($ind['burial_place'] ?? null),
-                'occupation' => $occupation,
-                'marriage_date' => $mInfo['date'],
-                'marriage_year' => $mInfo['year'],
-                'marriage_place' => GedcomParserService::cleanPlace($mInfo['place']),
-                'marriage_spouse_name' => $mInfo['spouse_name'],
-                'marriage_type' => $mInfo['type'] ?? 'Marriage',
-                'relationship_type' => $mInfo['type'] ?? null,
-                'primary_media' => $ind['primary_media'] ?? null,
-                'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
-            ];
-        };
-
-        $formatMiniSpouses = null;
-        $buildAncestorTree = null;
-        $buildDescendantTree = null;
-        $getSiblingsForPerson = null;
-
-        /**
-         * @return array<string, mixed>|null
-         */
-        $buildAncestorTree = function (string $personId, int $depth = 0) use (&$buildAncestorTree, &$formatMiniSpouses, $data, $ancestorMaxDepth, $allowedMap, $formatPersonData): ?array {
-            if ($depth >= $ancestorMaxDepth || ! isset($data['individuals'][$personId]) || ($allowedMap !== null && ! isset($allowedMap[$personId]))) {
-                return null;
-            }
-
-            $ind = $data['individuals'][$personId];
-            $node = $formatPersonData($ind);
-            $node['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($ind['spouses'] ?? [], false) : [];
-            $node['parents'] = [];
-
-            foreach ($ind['parents'] as $pId) {
-                $pNode = is_callable($buildAncestorTree) ? $buildAncestorTree($pId, $depth + 1) : null;
-                if ($pNode) {
-                    $node['parents'][] = $pNode;
-                }
-            }
-
-            return $node;
-        };
-
-        /**
-         * @param array<int, string> $spouseIds
-         * @return array<int, array<string, mixed>>
-         */
-        $formatMiniSpouses = function (array $spouseIds, bool $includeDetails = false) use ($data, $allowedMap, $formatPersonData, &$buildAncestorTree, &$getSiblingsForPerson): array {
-            $result = [];
-            foreach ($spouseIds as $sId) {
-                if ($allowedMap !== null && ! isset($allowedMap[$sId])) {
-                    continue;
-                }
-                if (! isset($data['individuals'][$sId])) {
-                    continue;
-                }
-                $s = $data['individuals'][$sId];
-                $spouseData = $formatPersonData($s);
-
-                if ($includeDetails) {
-                    $spouseData['ancestors'] = is_callable($buildAncestorTree) ? $buildAncestorTree($sId) : null;
-                    $spouseData['siblings'] = is_callable($getSiblingsForPerson) ? $getSiblingsForPerson($sId) : [];
-                }
-
-                $result[] = $spouseData;
-            }
-
-            return $result;
-        };
-
-        /**
-         * @return array<string, mixed>|null
-         */
-        $buildDescendantTree = function (string $personId, int $depth = 0) use (&$buildDescendantTree, $data, $descendantMaxDepth, $allowedMap, &$formatMiniSpouses, $formatPersonData): ?array {
-            if ($depth >= $descendantMaxDepth || ! isset($data['individuals'][$personId]) || ($allowedMap !== null && ! isset($allowedMap[$personId]))) {
-                return null;
-            }
-
-            $ind = $data['individuals'][$personId];
-            $node = $formatPersonData($ind);
-            $node['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($ind['spouses'] ?? []) : [];
-            $node['children'] = [];
-
-            foreach ($ind['children'] as $cId) {
-                $cNode = is_callable($buildDescendantTree) ? $buildDescendantTree($cId, $depth + 1) : null;
-                if ($cNode) {
-                    $node['children'][] = $cNode;
-                }
-            }
-
-            return $node;
-        };
-
-        /**
-         * @return array<int, array<string, mixed>>
-         */
-        $getSiblingsForPerson = function (string $personId) use ($data, $allowedMap, $formatPersonData, &$formatMiniSpouses, &$buildDescendantTree, $descendantLevels): array {
-            $siblingsList = [];
-            $ind = $data['individuals'][$personId] ?? null;
-            if (! $ind) {
-                return [];
-            }
-
-            $parentIds = $ind['parents'] ?? [];
-            $siblingIdsSet = [];
-
-            foreach ($parentIds as $pId) {
-                if (isset($data['individuals'][$pId])) {
-                    $parentInd = $data['individuals'][$pId];
-                    foreach ($parentInd['children'] ?? [] as $childId) {
-                        if ($childId !== $personId) {
-                            $siblingIdsSet[$childId] = true;
-                        }
-                    }
-                }
-            }
-
-            foreach (array_keys($siblingIdsSet) as $sibId) {
-                if ($allowedMap !== null && ! isset($allowedMap[$sibId])) {
-                    continue;
-                }
-                if (isset($data['individuals'][$sibId])) {
-                    $sib = $data['individuals'][$sibId];
-                    $sibData = $formatPersonData($sib);
-                    $sibData['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($sib['spouses'] ?? []) : [];
-
-                    if ($descendantLevels > 0) {
-                        $sibTree = is_callable($buildDescendantTree) ? $buildDescendantTree($sibId, 0) : null;
-                        $sibData['children'] = $sibTree['children'] ?? [];
-                    } else {
-                        $sibData['children'] = [];
-                    }
-
-                    $siblingsList[] = $sibData;
-                }
-            }
-
-            usort($siblingsList, function (array $a, array $b): int {
-                $yA = $a['birth_year'] ?? 9999;
-                $yB = $b['birth_year'] ?? 9999;
-                if ($yA !== $yB) {
-                    return $yA <=> $yB;
-                }
-
-                return strcmp((string) $a['name'], (string) $b['name']);
-            });
-
-            return $siblingsList;
-        };
-
         $focusInd = $data['individuals'][$id] ?? null;
         $primaryData = null;
         if ($focusInd) {
-            $primaryData = $formatPersonData($focusInd);
-            $primaryData['spouses'] = is_callable($formatMiniSpouses) ? $formatMiniSpouses($focusInd['spouses'] ?? [], includeDetails: true) : [];
+            $primaryData = $this->formatTreePersonData($data, $focusInd);
+            $primaryData['spouses'] = $this->formatMiniSpouses($data, $allowedMap, $focusInd['spouses'] ?? [], true, $ancestorMaxDepth, $descendantLevels, $descendantMaxDepth);
         }
-        $descendantsTree = ($descendantLevels > 0 && is_callable($buildDescendantTree)) ? $buildDescendantTree($id) : null;
+        $descendantsTree = $descendantLevels > 0 ? $this->buildDescendantTree($data, $allowedMap, $descendantMaxDepth, $id) : null;
         if ($primaryData && $descendantsTree) {
             $primaryData['children'] = $descendantsTree['children'] ?? [];
         }
-        $siblingsList = ($focusInd && is_callable($getSiblingsForPerson)) ? $getSiblingsForPerson($id) : [];
+        $siblingsList = $focusInd ? $this->getSiblingsForPerson($data, $allowedMap, $id, $descendantLevels, $descendantMaxDepth) : [];
 
         return response()->json([
             'primary' => $primaryData,
             'siblings' => $siblingsList,
-            'ancestors' => ($ancestorLevels > 0 && is_callable($buildAncestorTree)) ? $buildAncestorTree($id) : null,
-            'descendants' => ($descendantLevels > 0 && is_callable($buildDescendantTree)) ? $buildDescendantTree($id) : null,
+            'ancestors' => $ancestorLevels > 0 ? $this->buildAncestorTree($data, $allowedMap, $ancestorMaxDepth, $id) : null,
+            'descendants' => $descendantLevels > 0 ? $this->buildDescendantTree($data, $allowedMap, $descendantMaxDepth, $id) : null,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{date: ?string, year: ?int, place: ?string, spouse_name: ?string, type: ?string}
+     */
+    private function getTreeMarriageInfo(array $data, string $personId): array
+    {
+        if (! isset($data['individuals'][$personId])) {
+            return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null, 'type' => null];
+        }
+        $ind = $data['individuals'][$personId];
+        foreach ($ind['fams'] ?? [] as $famId) {
+            if (isset($data['families'][$famId])) {
+                $fam = $data['families'][$famId];
+                $spouseId = ($fam['husband_id'] ?? null) === $personId ? ($fam['wife_id'] ?? null) : ($fam['husband_id'] ?? null);
+                $spouseName = ($spouseId && isset($data['individuals'][$spouseId])) ? $data['individuals'][$spouseId]['name'] : null;
+
+                $date = $fam['marriage_date'] ?? null;
+                $place = GedcomParserService::cleanPlace($fam['marriage_place'] ?? null);
+                $year = null;
+                $type = ! empty($fam['relationship_type']) ? $fam['relationship_type'] : null;
+
+                if ($date) {
+                    if (preg_match('/\b(1\d{3}|20\d{2})\b/', $date, $m)) {
+                        $year = (int) $m[1];
+                    }
+                }
+
+                if (! $date) {
+                    foreach ($fam['events'] ?? [] as $fev) {
+                        if ((($fev['tag'] ?? '') === 'MARR' || ($fev['tag'] ?? '') === '_PRS') && ! empty($fev['date'])) {
+                            $date = $fev['date'];
+                            $year = $fev['year'] ?? null;
+                            $place = GedcomParserService::cleanPlace($fev['place'] ?? $place);
+                            if (! empty($fev['type'])) {
+                                $type = $fev['type'];
+                            } elseif (! empty($fev['value'])) {
+                                $type = $fev['value'];
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if ($date || $place || $spouseName || $type) {
+                    return [
+                        'date' => $date,
+                        'year' => $year,
+                        'place' => $place,
+                        'spouse_name' => $spouseName,
+                        'type' => $type ?: 'Marriage',
+                    ];
+                }
+            }
+        }
+
+        return ['date' => null, 'year' => null, 'place' => null, 'spouse_name' => null, 'type' => null];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $ind
+     * @return array<string, mixed>
+     */
+    private function formatTreePersonData(array $data, array $ind): array
+    {
+        $mInfo = $this->getTreeMarriageInfo($data, $ind['id']);
+
+        $occupations = [];
+        foreach ($ind['events'] ?? [] as $ev) {
+            if (($ev['tag'] ?? '') === 'OCCU') {
+                $occu = trim($ev['value'] ?? '');
+                $place = GedcomParserService::cleanPlace($ev['place'] ?? '');
+                if ($occu === '' && ! empty($ev['type'])) {
+                    $occu = trim($ev['type']);
+                }
+                if ($occu !== '' && $place) {
+                    if (stripos($occu, $place) === false) {
+                        $occu .= " ({$place})";
+                    }
+                } elseif ($occu === '' && $place) {
+                    $occu = $place;
+                }
+                if ($occu !== '' && ! in_array($occu, $occupations, true)) {
+                    $occupations[] = $occu;
+                }
+            }
+        }
+        $occupation = ! empty($occupations) ? implode(', ', $occupations) : ($ind['occupation'] ?? null);
+
+        return [
+            'id' => $ind['id'],
+            'name' => $ind['name'] ?? 'Unknown',
+            'given_name' => $ind['given_name'] ?? '',
+            'surname' => $ind['surname'] ?? '',
+            'all_names' => $ind['all_names'] ?? [],
+            'sex' => $ind['sex'] ?? 'U',
+            'birth_date' => $ind['birth_date'] ?? null,
+            'birth_place' => GedcomParserService::cleanPlace($ind['birth_place'] ?? null),
+            'birth_year' => $ind['birth_year'] ?? null,
+            'death_date' => $ind['death_date'] ?? null,
+            'death_place' => GedcomParserService::cleanPlace($ind['death_place'] ?? null),
+            'death_year' => $ind['death_year'] ?? null,
+            'death_note' => null,
+            'burial_date' => $ind['burial_date'] ?? null,
+            'burial_place' => GedcomParserService::cleanPlace($ind['burial_place'] ?? null),
+            'occupation' => $occupation,
+            'marriage_date' => $mInfo['date'],
+            'marriage_year' => $mInfo['year'],
+            'marriage_place' => GedcomParserService::cleanPlace($mInfo['place']),
+            'marriage_spouse_name' => $mInfo['spouse_name'],
+            'marriage_type' => $mInfo['type'] ?? 'Marriage',
+            'relationship_type' => $mInfo['type'] ?? null,
+            'primary_media' => $ind['primary_media'] ?? null,
+            'portrait_url' => $ind['portrait_url'] ?? $ind['primary_media']['portrait_url'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, int>|null  $allowedMap
+     * @return array<string, mixed>|null
+     */
+    private function buildAncestorTree(array $data, ?array $allowedMap, int $ancestorMaxDepth, string $personId, int $depth = 0): ?array
+    {
+        if ($depth >= $ancestorMaxDepth || ! isset($data['individuals'][$personId]) || ($allowedMap !== null && ! isset($allowedMap[$personId]))) {
+            return null;
+        }
+
+        $ind = $data['individuals'][$personId];
+        $node = $this->formatTreePersonData($data, $ind);
+        $node['spouses'] = $this->formatMiniSpouses($data, $allowedMap, $ind['spouses'] ?? [], false, $ancestorMaxDepth);
+        $node['parents'] = [];
+
+        foreach ($ind['parents'] ?? [] as $pId) {
+            $pNode = $this->buildAncestorTree($data, $allowedMap, $ancestorMaxDepth, $pId, $depth + 1);
+            if ($pNode) {
+                $node['parents'][] = $pNode;
+            }
+        }
+
+        return $node;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, int>|null  $allowedMap
+     * @param  array<int, string>  $spouseIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatMiniSpouses(array $data, ?array $allowedMap, array $spouseIds, bool $includeDetails = false, int $ancestorMaxDepth = 0, int $descendantLevels = 0, int $descendantMaxDepth = 0): array
+    {
+        $result = [];
+        foreach ($spouseIds as $sId) {
+            if ($allowedMap !== null && ! isset($allowedMap[$sId])) {
+                continue;
+            }
+            if (! isset($data['individuals'][$sId])) {
+                continue;
+            }
+            $s = $data['individuals'][$sId];
+            $spouseData = $this->formatTreePersonData($data, $s);
+
+            if ($includeDetails) {
+                $spouseData['ancestors'] = $this->buildAncestorTree($data, $allowedMap, $ancestorMaxDepth, $sId);
+                $spouseData['siblings'] = $this->getSiblingsForPerson($data, $allowedMap, $sId, $descendantLevels, $descendantMaxDepth);
+            }
+
+            $result[] = $spouseData;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, int>|null  $allowedMap
+     * @return array<string, mixed>|null
+     */
+    private function buildDescendantTree(array $data, ?array $allowedMap, int $descendantMaxDepth, string $personId, int $depth = 0): ?array
+    {
+        if ($depth >= $descendantMaxDepth || ! isset($data['individuals'][$personId]) || ($allowedMap !== null && ! isset($allowedMap[$personId]))) {
+            return null;
+        }
+
+        $ind = $data['individuals'][$personId];
+        $node = $this->formatTreePersonData($data, $ind);
+        $node['spouses'] = $this->formatMiniSpouses($data, $allowedMap, $ind['spouses'] ?? []);
+        $node['children'] = [];
+
+        foreach ($ind['children'] ?? [] as $cId) {
+            $cNode = $this->buildDescendantTree($data, $allowedMap, $descendantMaxDepth, $cId, $depth + 1);
+            if ($cNode) {
+                $node['children'][] = $cNode;
+            }
+        }
+
+        return $node;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, int>|null  $allowedMap
+     * @return array<int, array<string, mixed>>
+     */
+    private function getSiblingsForPerson(array $data, ?array $allowedMap, string $personId, int $descendantLevels, int $descendantMaxDepth): array
+    {
+        $siblingsList = [];
+        $ind = $data['individuals'][$personId] ?? null;
+        if (! $ind) {
+            return [];
+        }
+
+        $parentIds = $ind['parents'] ?? [];
+        $siblingIdsSet = [];
+
+        foreach ($parentIds as $pId) {
+            if (isset($data['individuals'][$pId])) {
+                $parentInd = $data['individuals'][$pId];
+                foreach ($parentInd['children'] ?? [] as $childId) {
+                    if ($childId !== $personId) {
+                        $siblingIdsSet[$childId] = true;
+                    }
+                }
+            }
+        }
+
+        foreach (array_keys($siblingIdsSet) as $sibId) {
+            if ($allowedMap !== null && ! isset($allowedMap[$sibId])) {
+                continue;
+            }
+            if (isset($data['individuals'][$sibId])) {
+                $sib = $data['individuals'][$sibId];
+                $sibData = $this->formatTreePersonData($data, $sib);
+                $sibData['spouses'] = $this->formatMiniSpouses($data, $allowedMap, $sib['spouses'] ?? []);
+
+                if ($descendantLevels > 0) {
+                    $sibTree = $this->buildDescendantTree($data, $allowedMap, $descendantMaxDepth, $sibId, 0);
+                    $sibData['children'] = $sibTree['children'] ?? [];
+                } else {
+                    $sibData['children'] = [];
+                }
+
+                $siblingsList[] = $sibData;
+            }
+        }
+
+        usort($siblingsList, function (array $a, array $b): int {
+            $yA = $a['birth_year'] ?? 9999;
+            $yB = $b['birth_year'] ?? 9999;
+            if ($yA !== $yB) {
+                return $yA <=> $yB;
+            }
+
+            return strcmp((string) $a['name'], (string) $b['name']);
+        });
+
+        return $siblingsList;
     }
 
     public function media(Request $request, GedcomParserService $parser, LineagePermissionService $lineageService): JsonResponse
@@ -982,7 +1009,7 @@ class GedcomController extends Controller
         // Build person linkage map for each media object
         $objectPeopleMap = [];
         foreach ($data['individuals'] as $ind) {
-            if ($allowedMap !== null && !isset($allowedMap[$ind['id']])) {
+            if ($allowedMap !== null && ! isset($allowedMap[$ind['id']])) {
                 continue;
             }
             foreach ($ind['media_items'] ?? [] as $mItem) {
@@ -1003,7 +1030,7 @@ class GedcomController extends Controller
             $title = strtolower($obj['title']);
             $mime = strtolower($obj['mime']);
 
-            if ($q !== '' && !str_contains($file, $q) && !str_contains($title, $q)) {
+            if ($q !== '' && ! str_contains($file, $q) && ! str_contains($title, $q)) {
                 continue;
             }
 
@@ -1011,13 +1038,13 @@ class GedcomController extends Controller
             $isPdf = str_contains($mime, 'pdf') || preg_match('/\.pdf$/i', $file);
             $isAudio = str_contains($mime, 'audio') || preg_match('/\.(m4a|mp3|wav|ogg)$/i', $file);
 
-            if ($type === 'photo' && !$isImage) {
+            if ($type === 'photo' && ! $isImage) {
                 continue;
             }
-            if ($type === 'document' && !$isPdf) {
+            if ($type === 'document' && ! $isPdf) {
                 continue;
             }
-            if ($type === 'audio' && !$isAudio) {
+            if ($type === 'audio' && ! $isAudio) {
                 continue;
             }
 
@@ -1044,9 +1071,9 @@ class GedcomController extends Controller
     {
         // Sanitize filename to prevent directory traversal
         $safeFilename = basename($filename);
-        $path = storage_path('app/public/gedcom/media/' . $safeFilename);
+        $path = storage_path('app/public/gedcom/media/'.$safeFilename);
 
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             abort(404, 'Media file not found');
         }
 
@@ -1074,39 +1101,39 @@ class GedcomController extends Controller
         $data = $parser->getOrParseData();
         $targetId = trim($id, '@');
 
-        if (!isset($data['individuals'][$targetId])) {
+        if (! isset($data['individuals'][$targetId])) {
             abort(404, 'Person not found');
         }
 
         $person = $data['individuals'][$targetId];
         $primary = $person['primary_media'] ?? null;
 
-        if (!$primary || empty($primary['file'])) {
+        if (! $primary || empty($primary['file'])) {
             abort(404, 'No portrait image found');
         }
 
         $filename = $primary['file'];
         $crop = $primary['crop'] ?? null;
 
-        $sourcePath = storage_path('app/public/gedcom/media/' . basename($filename));
-        if (!File::exists($sourcePath)) {
-            $sourcePath = storage_path('app/private/' . basename($filename));
+        $sourcePath = storage_path('app/public/gedcom/media/'.basename($filename));
+        if (! File::exists($sourcePath)) {
+            $sourcePath = storage_path('app/private/'.basename($filename));
         }
 
-        if (!File::exists($sourcePath)) {
+        if (! File::exists($sourcePath)) {
             abort(404, 'Source image file not found');
         }
 
         // If no crop is specified, serve the original media
-        if (!$crop) {
+        if (! $crop) {
             return $this->serveMedia($filename);
         }
 
         $cropsDir = storage_path('app/public/gedcom/crops');
         File::ensureDirectoryExists($cropsDir);
-        $cachedCropPath = $cropsDir . '/' . $targetId . '_' . pathinfo($filename, PATHINFO_FILENAME) . '_v2.jpg';
+        $cachedCropPath = $cropsDir.'/'.$targetId.'_'.pathinfo($filename, PATHINFO_FILENAME).'_v2.jpg';
 
-        if (!File::exists($cachedCropPath) || File::size($cachedCropPath) === 0) {
+        if (! File::exists($cachedCropPath) || File::size($cachedCropPath) === 0) {
             $parser->cropFaceImage($sourcePath, $crop, $cachedCropPath);
         }
 
@@ -1123,9 +1150,9 @@ class GedcomController extends Controller
     public function serveCropMedia(string $filename): BinaryFileResponse
     {
         $safeFilename = basename($filename);
-        $path = storage_path('app/public/gedcom/crops/' . $safeFilename);
+        $path = storage_path('app/public/gedcom/crops/'.$safeFilename);
 
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             abort(404, 'Cropped media file not found');
         }
 
@@ -1139,7 +1166,7 @@ class GedcomController extends Controller
     {
         $data = $parser->getOrParseData();
 
-        if (!isset($data['individuals'][$id])) {
+        if (! isset($data['individuals'][$id])) {
             return response()->json(['error' => 'Person not found'], 404);
         }
 
@@ -1154,7 +1181,7 @@ class GedcomController extends Controller
         $note = trim((string) $request->input('note', ''));
         $hasFile = $request->hasFile('media');
 
-        if (empty($note) && !$hasFile) {
+        if (empty($note) && ! $hasFile) {
             return response()->json([
                 'error' => 'Please provide a note or select a file to upload.',
             ], 422);
@@ -1166,22 +1193,22 @@ class GedcomController extends Controller
         if ($hasFile) {
             $file = $request->file('media');
             $originalFilename = $file->getClientOriginalName();
-            $filename = uniqid('contrib_') . '_' . preg_replace('/[^a-zA-Z0-9_.-]/', '_', $originalFilename);
+            $filename = uniqid('contrib_').'_'.preg_replace('/[^a-zA-Z0-9_.-]/', '_', $originalFilename);
 
             $targetDir = storage_path('app/public/contributions');
             File::ensureDirectoryExists($targetDir);
 
             $link = public_path('storage');
-            if (!File::exists($link)) {
+            if (! File::exists($link)) {
                 @symlink(storage_path('app/public'), $link);
             }
 
             $file->move($targetDir, $filename);
-            $mediaUrl = url('/storage/contributions/' . $filename);
+            $mediaUrl = url('/storage/contributions/'.$filename);
         }
 
         // Send email to superusers
-        $superusers = \App\Models\User::where('is_superuser', true)->get();
+        $superusers = User::where('is_superuser', true)->get();
         $recipients = $superusers->pluck('email')->filter()->toArray();
 
         if (empty($recipients)) {
@@ -1189,8 +1216,8 @@ class GedcomController extends Controller
         }
 
         try {
-            \Illuminate\Support\Facades\Mail::to($recipients)->send(
-                new \App\Mail\PersonContributionSubmittedMail(
+            Mail::to($recipients)->send(
+                new PersonContributionSubmittedMail(
                     $user,
                     $ind,
                     $note ?: null,
@@ -1199,7 +1226,7 @@ class GedcomController extends Controller
                 )
             );
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send contribution email: ' . $e->getMessage());
+            Log::error('Failed to send contribution email: '.$e->getMessage());
         }
 
         return response()->json([
@@ -1210,9 +1237,9 @@ class GedcomController extends Controller
     public function serveContributionMedia(string $filename): BinaryFileResponse
     {
         $safeFilename = basename($filename);
-        $path = storage_path('app/public/contributions/' . $safeFilename);
+        $path = storage_path('app/public/contributions/'.$safeFilename);
 
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             abort(404, 'Contribution media file not found');
         }
 
@@ -1280,22 +1307,24 @@ class GedcomController extends Controller
         foreach ($filteredIndividuals as $ind) {
             $places = array_filter([$ind['birth_place'] ?? null, $ind['death_place'] ?? null]);
             foreach ($ind['events'] ?? [] as $evt) {
-                if (!empty($evt['place'])) {
+                if (! empty($evt['place'])) {
                     $places[] = $evt['place'];
                 }
             }
 
             foreach ($places as $rawPlace) {
                 $place = trim($rawPlace);
-                if ($place === '') continue;
+                if ($place === '') {
+                    continue;
+                }
 
                 $placeCounts[$place] = ($placeCounts[$place] ?? 0) + 1;
 
                 // Extract country/state (last component in comma-separated location)
                 $parts = array_map('trim', explode(',', $place));
                 $countryCandidate = end($parts);
-                if (!empty($countryCandidate) && strlen($countryCandidate) >= 2) {
-                    $normCountry = match(strtolower($countryCandidate)) {
+                if (! empty($countryCandidate) && strlen($countryCandidate) >= 2) {
+                    $normCountry = match (strtolower($countryCandidate)) {
                         'usa', 'united states', 'united states of america' => 'USA',
                         'uk', 'united kingdom', 'england', 'scotland', 'wales' => 'United Kingdom',
                         'no', 'norge', 'norway' => 'Norway',
@@ -1430,15 +1459,19 @@ class GedcomController extends Controller
         }
 
         // 6. Lifespan Averages
-        $avgLifespan = !empty($allLifespans) ? round(array_sum($allLifespans) / count($allLifespans), 1) : null;
-        $avgMaleLifespan = !empty($maleLifespans) ? round(array_sum($maleLifespans) / count($maleLifespans), 1) : null;
-        $avgFemaleLifespan = !empty($femaleLifespans) ? round(array_sum($femaleLifespans) / count($femaleLifespans), 1) : null;
+        $avgLifespan = ! empty($allLifespans) ? round(array_sum($allLifespans) / count($allLifespans), 1) : null;
+        $avgMaleLifespan = ! empty($maleLifespans) ? round(array_sum($maleLifespans) / count($maleLifespans), 1) : null;
+        $avgFemaleLifespan = ! empty($femaleLifespans) ? round(array_sum($femaleLifespans) / count($femaleLifespans), 1) : null;
 
         $maleCount = 0;
         $femaleCount = 0;
         foreach ($filteredIndividuals as $ind) {
-            if (($ind['sex'] ?? '') === 'M') $maleCount++;
-            if (($ind['sex'] ?? '') === 'F') $femaleCount++;
+            if (($ind['sex'] ?? '') === 'M') {
+                $maleCount++;
+            }
+            if (($ind['sex'] ?? '') === 'F') {
+                $femaleCount++;
+            }
         }
 
         return response()->json([
@@ -1447,8 +1480,8 @@ class GedcomController extends Controller
                 'total_families' => count($filteredFamilies),
                 'males' => $maleCount,
                 'females' => $femaleCount,
-                'living' => count(array_filter($filteredIndividuals, fn($i) => empty($i['death_year']) && empty($i['death_date']))),
-                'deceased' => count(array_filter($filteredIndividuals, fn($i) => !empty($i['death_year']) || !empty($i['death_date']))),
+                'living' => count(array_filter($filteredIndividuals, fn ($i) => empty($i['death_year']) && empty($i['death_date']))),
+                'deceased' => count(array_filter($filteredIndividuals, fn ($i) => ! empty($i['death_year']) || ! empty($i['death_date']))),
             ],
             'top_surnames' => $topSurnames,
             'top_places' => $topPlaces,
@@ -1477,7 +1510,7 @@ class GedcomController extends Controller
         $allowedIds = $lineageService->getAllowedPersonIds($request->user(), $data['individuals']);
         $allowedMap = $allowedIds !== null ? array_flip($allowedIds) : null;
 
-        if (!isset($data['individuals'][$id]) || ($allowedMap !== null && !isset($allowedMap[$id]))) {
+        if (! isset($data['individuals'][$id]) || ($allowedMap !== null && ! isset($allowedMap[$id]))) {
             return response()->json(['error' => 'Person not found or access denied'], 404);
         }
 
@@ -1485,13 +1518,27 @@ class GedcomController extends Controller
 
         // Helper for Ahnentafel relationship titles
         $getRelationshipTitle = function (int $n) {
-            if ($n === 1) return 'Primary Individual';
-            if ($n === 2) return 'Father';
-            if ($n === 3) return 'Mother';
-            if ($n === 4) return 'Paternal Grandfather';
-            if ($n === 5) return 'Paternal Grandmother';
-            if ($n === 6) return 'Maternal Grandfather';
-            if ($n === 7) return 'Maternal Grandmother';
+            if ($n === 1) {
+                return 'Primary Individual';
+            }
+            if ($n === 2) {
+                return 'Father';
+            }
+            if ($n === 3) {
+                return 'Mother';
+            }
+            if ($n === 4) {
+                return 'Paternal Grandfather';
+            }
+            if ($n === 5) {
+                return 'Paternal Grandmother';
+            }
+            if ($n === 6) {
+                return 'Maternal Grandfather';
+            }
+            if ($n === 7) {
+                return 'Maternal Grandmother';
+            }
 
             $gen = (int) floor(log($n, 2));
             $isMale = ($n % 2 === 0);
@@ -1501,7 +1548,7 @@ class GedcomController extends Controller
                 3 => 'Great-',
                 4 => '2nd Great-',
                 5 => '3rd Great-',
-                default => ($gen - 2) . 'th Great-',
+                default => ($gen - 2).'th Great-',
             };
 
             $paternal = (($n >> ($gen - 1)) & 1) === 0;
@@ -1518,7 +1565,7 @@ class GedcomController extends Controller
                 3 => 'Great-Grandparents',
                 4 => '2nd Great-Grandparents',
                 5 => '3rd Great-Grandparents',
-                default => ($gen - 2) . 'th Great-Grandparents',
+                default => ($gen - 2).'th Great-Grandparents',
             };
         };
 
@@ -1528,10 +1575,10 @@ class GedcomController extends Controller
         $maxGen = 0;
 
         $traverseAncestors = function (string $currId, int $ahnentafelNum, int $gen) use (&$traverseAncestors, &$ancestorsByGen, &$allAncestorsList, &$maxGen, $data, $allowedMap, $getRelationshipTitle, $getGenTitle) {
-            if ($allowedMap !== null && !isset($allowedMap[$currId])) {
+            if ($allowedMap !== null && ! isset($allowedMap[$currId])) {
                 return;
             }
-            if (!isset($data['individuals'][$currId])) {
+            if (! isset($data['individuals'][$currId])) {
                 return;
             }
 
@@ -1559,7 +1606,7 @@ class GedcomController extends Controller
             ];
 
             $allAncestorsList[] = $record;
-            if (!isset($ancestorsByGen[$gen])) {
+            if (! isset($ancestorsByGen[$gen])) {
                 $ancestorsByGen[$gen] = [
                     'generation' => $gen,
                     'generation_title' => $getGenTitle($gen),
@@ -1569,7 +1616,7 @@ class GedcomController extends Controller
             $ancestorsByGen[$gen]['ancestors'][] = $record;
 
             $parents = $ind['parents'] ?? [];
-            if (!empty($parents)) {
+            if (! empty($parents)) {
                 $fatherId = $parents[0] ?? null;
                 $motherId = $parents[1] ?? null;
 
@@ -1600,4 +1647,3 @@ class GedcomController extends Controller
         ]);
     }
 }
-

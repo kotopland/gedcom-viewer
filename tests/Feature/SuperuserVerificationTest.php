@@ -81,7 +81,6 @@ class SuperuserVerificationTest extends TestCase
         $jsonResponse->assertStatus(403);
     }
 
-
     public function test_superuser_can_verify_a_pending_user(): void
     {
         $superuser = User::factory()->create([

@@ -28,9 +28,11 @@ class ImportGedcomCommand extends Command
                 ['Documents', $data['stats']['media_types']['documents']],
                 ['Audio Clips', $data['stats']['media_types']['audio']],
             ]);
+
             return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('Failed to import GEDCOM: ' . $e->getMessage());
+            $this->error('Failed to import GEDCOM: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }
