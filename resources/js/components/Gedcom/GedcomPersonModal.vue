@@ -56,6 +56,10 @@ const submittingContribution = ref(false);
 const contributionSuccess = ref(false);
 const contributionError = ref<string | null>(null);
 
+const printProfile = () => {
+    window.print();
+};
+
 const handleFileSelect = (e: Event) => {
     const target = e.target as HTMLInputElement;
 
@@ -525,7 +529,7 @@ const getEventBadgeStyle = (tag: string, title?: string) => {
                                 Add Note / Media
                             </button>
                             <button
-                                @click="window.print()"
+                                @click="printProfile"
                                 class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-slate-700 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-slate-600 sm:px-3"
                                 title="Print this individual profile"
                             >

@@ -33,11 +33,6 @@ initializeTheme();
 // This will listen for flash toast data from the server...
 initializeFlashToast();
 
-// Force browser hard reload when server asset version changes
-router.on('invalid', () => {
-    window.location.reload();
-});
-
 router.on('navigate', (event: any) => {
     const newVersion = event.detail.page.version;
     const cachedVersion = localStorage.getItem('app_asset_version');

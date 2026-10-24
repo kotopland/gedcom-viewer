@@ -88,7 +88,17 @@ class GedcomParserService
             }
         }
 
-        return $this->parseAndCache($forceRefresh);
+        try {
+            return $this->parseAndCache($forceRefresh);
+        } catch (\Throwable) {
+            return [
+                'stats' => ['total_individuals' => 0, 'total_families' => 0],
+                'individuals' => [],
+                'families' => [],
+                'media' => [],
+                'notes' => [],
+            ];
+        }
     }
 
     /**
